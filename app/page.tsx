@@ -286,7 +286,7 @@ const pillars: Pillar[] = [
 ];
 
 const marqueeItems = [
-  "// Proyecto CQB",
+  "// Experiencia Airsoft",
   "Máximo 330 FPS",
   "Reservas por WhatsApp",
   "Gral. Conesa 1858 · Buenos Aires",
@@ -300,7 +300,6 @@ const businessJsonLd = {
   "@type": "SportsActivityLocation",
   "@id": `${SITE_URL}/#business`,
   name: "Experiencia Airsoft",
-  alternateName: "Proyecto CQB",
   description:
     "Centro de airsoft CQB indoor en Buenos Aires. Partidas públicas, grupos privados y eventos corporativos con equipo incluido. Máximo 330 FPS, +18.",
   url: SITE_URL,
@@ -482,7 +481,7 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/img/07_zona_fria_hero.jpg"
-          alt="Interior de Proyecto CQB, centro de airsoft indoor en Buenos Aires"
+          alt="Interior de Experiencia Airsoft, centro de airsoft CQB indoor en Buenos Aires"
           fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -525,11 +524,11 @@ export default function Home() {
               }}
             >
               <span className="sr-only">
-                Airsoft CQB indoor en Buenos Aires — Experiencia Airsoft,
+                Airsoft CQB indoor en Buenos Aires —{" "}
               </span>
-              Proyecto
+              Experiencia
               <br />
-              <span className="text-orange">CQB</span>
+              <span className="text-orange">Airsoft</span>
             </h1>
             <span className="absolute -top-5 -left-5 w-5 h-5 border-l border-t border-orange/80"></span>
             <span className="absolute -top-5 -right-5 w-5 h-5 border-r border-t border-orange/80"></span>
@@ -940,11 +939,10 @@ export default function Home() {
                 </h3>
                 <p className="text-ash fluid-base leading-relaxed">
                   Ofrecer la experiencia táctica más segura, inmersiva y
-                  profesional de Argentina. Creamos espacios como Proyecto CQB
-                  para entrenar estrategia, trabajo en equipo y toma de
-                  decisiones bajo presión — con reglas claras, seguridad
-                  estricta (R.U.N + normas internas) y equipamiento de
-                  calidad.
+                  profesional de Argentina. Creamos espacios para entrenar
+                  estrategia, trabajo en equipo y toma de decisiones bajo
+                  presión — con reglas claras, seguridad estricta (R.U.N +
+                  normas internas) y equipamiento de calidad.
                 </p>
               </article>
 
@@ -989,10 +987,10 @@ export default function Home() {
               <span className="text-bone">
                 categoría más baja permitida para CQB: máximo 330 FPS
               </span>
-              . Lo hacemos porque Proyecto CQB es un entorno cerrado, con
-              espacios reducidos, múltiples niveles y combate cercano — y
-              porque queremos cambiar la falsa creencia de que &ldquo;más
-              potencia es mejor&rdquo;.
+              . Lo hacemos porque nuestro espacio es un entorno cerrado,
+              con superficies reducidas, múltiples niveles y combate cercano
+              — y porque queremos cambiar la falsa creencia de que
+              &ldquo;más potencia es mejor&rdquo;.
             </p>
 
             <figure className="relative mt-12 md:mt-14 p-8 md:p-10 bg-carbon clip-notch-lg border-l-2 border-orange reveal reveal-delay-2">
@@ -1228,7 +1226,7 @@ export default function Home() {
                   </h3>
                   <p className="mt-4 text-ash fluid-base max-w-[44ch]">
                     Fotos, resultados, &ldquo;Manija del mes&rdquo; y todo lo
-                    que pasa dentro de Proyecto CQB.
+                    que pasa dentro de Experiencia Airsoft.
                   </p>
                   <span className="mt-6 inline-flex items-center gap-3 font-mono fluid-xs tracking-[.28em] uppercase text-bone group-hover:text-orange transition-colors">
                     <span className="w-8 h-px bg-bone group-hover:bg-orange group-hover:w-12 transition-all"></span>

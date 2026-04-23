@@ -1,9 +1,9 @@
-# Experiencia Airsoft — Proyecto CQB
+# Experiencia Airsoft
 
 > Centro de airsoft CQB indoor en Buenos Aires, Argentina. Partidas públicas, privadas y corporativas con equipo incluido. Máximo 330 FPS, solo mayores de 18 años.
 
 ## Sobre nosotros
-Experiencia Airsoft opera Proyecto CQB, un centro de airsoft indoor en la Ciudad Autónoma de Buenos Aires. Ofrecemos la experiencia táctica más inmersiva de Argentina: escenarios de close-quarters-battle (CQB), múltiples niveles y zonas, combate cercano con equipamiento alquilado en el lugar.
+Experiencia Airsoft es un centro de airsoft CQB indoor en la Ciudad Autónoma de Buenos Aires. Ofrecemos la experiencia táctica más inmersiva de Argentina: escenarios de close-quarters-battle (CQB), múltiples niveles y zonas, combate cercano con equipamiento alquilado en el lugar.
 
 ## Información clave
 - **Dirección**: Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina.
@@ -31,7 +31,7 @@ Experiencia Airsoft opera Proyecto CQB, un centro de airsoft indoor en la Ciudad
 - **¿Se puede jugar sin mínimo de personas?** Sí, en partidas públicas. Las privadas requieren mínimo 10.
 
 ## Filosofía
-"No es potencia. Es táctica." Trabajamos únicamente con 330 FPS máximos porque Proyecto CQB es un entorno cerrado y queremos cambiar la falsa creencia de que "más potencia es mejor". La verdadera experiencia táctica se mide en cómo jugás, cómo te movés, cómo colaborás y cómo disfrutás.
+"No es potencia. Es táctica." Trabajamos únicamente con 330 FPS máximos porque nuestro espacio es un entorno cerrado y queremos cambiar la falsa creencia de que "más potencia es mejor". La verdadera experiencia táctica se mide en cómo jugás, cómo te movés, cómo colaborás y cómo disfrutás.
 
 ## Pilares
 Seguridad ante todo · juego limpio · comunidad activa · innovación táctica · profesionalismo · diversión.
