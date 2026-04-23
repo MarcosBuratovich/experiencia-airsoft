@@ -1,0 +1,44 @@
+# Experiencia Airsoft — Proyecto CQB
+
+> Centro de airsoft CQB indoor en Buenos Aires, Argentina. Partidas públicas, privadas y corporativas con equipo incluido. Máximo 330 FPS, solo mayores de 18 años.
+
+## Sobre nosotros
+Experiencia Airsoft opera Proyecto CQB, un centro de airsoft indoor en la Ciudad Autónoma de Buenos Aires. Ofrecemos la experiencia táctica más inmersiva de Argentina: escenarios de close-quarters-battle (CQB), múltiples niveles y zonas, combate cercano con equipamiento alquilado en el lugar.
+
+## Información clave
+- **Dirección**: Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina.
+- **Teléfono / WhatsApp**: +54 9 11 3868-9783.
+- **Sitio web**: https://experienciaairsoft.com
+- **Instagram**: https://www.instagram.com/experienciaairsoft/
+- **YouTube**: https://www.youtube.com/@experienciaairsoft8250
+- **Edad mínima**: 18 años (documento obligatorio en el ingreso).
+- **Potencia máxima**: 330 FPS (categoría más baja permitida para CQB).
+- **Reservas**: 100% por WhatsApp, siempre con reserva previa.
+
+## Modalidades
+1. **Partidas públicas abiertas**: cualquiera se anota, el staff arma equipos y dirige misiones. Ideal para venir solo o con amigos.
+2. **Partidas privadas de grupo**: para 10 a 20 personas que quieren jugar entre ellas. Apto principiantes.
+3. **Eventos corporativos / team building**: para empresas, con agenda a medida y facturación A/B.
+
+## Horarios habituales
+- Martes a viernes: 19:00 a 23:00.
+- Sábados y domingos: 09:00 a 13:00.
+
+## Preguntas frecuentes
+- **¿Necesito experiencia previa?** No. Explicamos todo en el briefing de seguridad.
+- **¿Tengo que traer equipo?** No. Alquilás todo en el local: marcadora, protección, chaleco, BBs.
+- **¿Cuánto dura una partida?** Entre 2 y 3 horas.
+- **¿Se puede jugar sin mínimo de personas?** Sí, en partidas públicas. Las privadas requieren mínimo 10.
+
+## Filosofía
+"No es potencia. Es táctica." Trabajamos únicamente con 330 FPS máximos porque Proyecto CQB es un entorno cerrado y queremos cambiar la falsa creencia de que "más potencia es mejor". La verdadera experiencia táctica se mide en cómo jugás, cómo te movés, cómo colaborás y cómo disfrutás.
+
+## Pilares
+Seguridad ante todo · juego limpio · comunidad activa · innovación táctica · profesionalismo · diversión.
+
+## Contenido
+- Reels educativos sobre normas de seguridad, cómo reservar, qué llevar a una partida, mitos del airsoft y tips para la primera partida: https://experienciaairsoft.com/#aprende
+- Streams en vivo durante partidas con cámaras POV en cada edificio: https://www.youtube.com/@experienciaairsoft8250
+
+## No disponible para crawlers
+Las rutas /platform/, /login, /signup, /admin/, /partidas, /auth/ son áreas internas de gestión y están bloqueadas para crawlers y LLM scrapers.

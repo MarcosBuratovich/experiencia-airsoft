@@ -30,16 +30,75 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL = "https://experienciaairsoft.com";
+const TITLE = "Experiencia Airsoft — Airsoft CQB indoor en Buenos Aires";
+const DESCRIPTION =
+  "Centro de airsoft CQB indoor en Buenos Aires. Partidas abiertas, grupos privados y eventos corporativos. Máximo 330 FPS, equipo incluido, +18. Reservas por WhatsApp.";
+
 export const metadata: Metadata = {
-  title: "Experiencia Airsoft — Proyecto CQB · CABA",
-  description:
-    "Centro de airsoft CQB indoor en CABA. Máximo 330 FPS. Reservas por WhatsApp.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: TITLE,
+    template: "%s · Experiencia Airsoft",
+  },
+  description: DESCRIPTION,
+  keywords: [
+    "airsoft",
+    "airsoft Buenos Aires",
+    "airsoft Argentina",
+    "CQB",
+    "CQB Buenos Aires",
+    "airsoft indoor",
+    "Proyecto CQB",
+    "airsoft CABA",
+    "TacSim",
+    "speedsoft",
+    "partidas airsoft",
+    "alquiler airsoft",
+    "Experiencia Airsoft",
+  ],
+  authors: [{ name: "Experiencia Airsoft" }],
+  creator: "Experiencia Airsoft",
+  publisher: "Experiencia Airsoft",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Experiencia Airsoft — Proyecto CQB · CABA",
-    description:
-      "Centro de airsoft CQB indoor en CABA. Máximo 330 FPS. Reservas por WhatsApp.",
-    locale: "es_AR",
     type: "website",
+    locale: "es_AR",
+    url: SITE_URL,
+    siteName: "Experiencia Airsoft",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [
+      {
+        url: "/img/07_zona_fria_hero.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Proyecto CQB — zona fría",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/img/07_zona_fria_hero.jpg"],
+  },
+  icons: {
+    icon: "/img/00_logo_cropped.png",
+    shortcut: "/img/00_logo_cropped.png",
+    apple: "/img/00_logo_cropped.png",
+  },
+  category: "sports",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 

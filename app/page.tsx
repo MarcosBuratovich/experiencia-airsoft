@@ -38,7 +38,7 @@ const partidas: Partida[] = [
     time: "19:00 — 23:00 HS",
     tag: "PÚBLICA",
     image: "/img/01_partida_martes.jpg",
-    alt: "Partida del martes",
+    alt: "Partida de airsoft CQB indoor del martes 19hs en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del martes",
     delayClass: "",
   },
@@ -49,7 +49,7 @@ const partidas: Partida[] = [
     time: "19:00 — 23:00 HS",
     tag: "PÚBLICA",
     image: "/img/02_partida_miercoles.jpg",
-    alt: "Partida del miércoles",
+    alt: "Partida de airsoft CQB indoor del miércoles 19hs en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del miércoles",
     delayClass: "reveal-delay-1",
   },
@@ -60,7 +60,7 @@ const partidas: Partida[] = [
     time: "19:00 — 23:00 HS",
     tag: "PÚBLICA",
     image: "/img/03_partida_jueves.jpg",
-    alt: "Partida del jueves",
+    alt: "Partida de airsoft CQB indoor del jueves 19hs en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del jueves",
     delayClass: "reveal-delay-2",
   },
@@ -71,7 +71,7 @@ const partidas: Partida[] = [
     time: "19:00 — 23:00 HS",
     tag: "PÚBLICA",
     image: "/img/04_partida_viernes.jpg",
-    alt: "Partida del viernes",
+    alt: "Partida de airsoft CQB indoor del viernes 19hs en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del viernes",
     delayClass: "",
   },
@@ -82,7 +82,7 @@ const partidas: Partida[] = [
     time: "09:00 — 13:00 HS",
     tag: "PÚBLICA · AM",
     image: "/img/05_partida_sabado.jpg",
-    alt: "Partida del sábado",
+    alt: "Partida de airsoft CQB indoor del sábado por la mañana en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del sábado",
     delayClass: "reveal-delay-1",
   },
@@ -93,7 +93,7 @@ const partidas: Partida[] = [
     time: "09:00 — 13:00 HS",
     tag: "PÚBLICA · AM",
     image: "/img/06_partida_domingo.jpg",
-    alt: "Partida del domingo",
+    alt: "Partida de airsoft CQB indoor del domingo por la mañana en Buenos Aires",
     waText: "Hola! Quiero reservar para la partida del domingo",
     delayClass: "reveal-delay-2",
   },
@@ -293,12 +293,127 @@ const marqueeItems = [
   "Mayores de 18",
 ];
 
+const SITE_URL = "https://experienciaairsoft.com";
+
+const businessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SportsActivityLocation",
+  "@id": `${SITE_URL}/#business`,
+  name: "Experiencia Airsoft",
+  alternateName: "Proyecto CQB",
+  description:
+    "Centro de airsoft CQB indoor en Buenos Aires. Partidas públicas, grupos privados y eventos corporativos con equipo incluido. Máximo 330 FPS, +18.",
+  url: SITE_URL,
+  telephone: "+541138689783",
+  image: [`${SITE_URL}/img/07_zona_fria_hero.jpg`],
+  logo: `${SITE_URL}/img/00_logo_principal.png`,
+  priceRange: "$$",
+  sport: "Airsoft",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Gral. Conesa 1858",
+    addressLocality: "Ciudad Autónoma de Buenos Aires",
+    postalCode: "C1870",
+    addressRegion: "CABA",
+    addressCountry: "AR",
+  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "19:00",
+      closes: "23:00",
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Saturday", "Sunday"],
+      opens: "09:00",
+      closes: "13:00",
+    },
+  ],
+  sameAs: [
+    "https://www.instagram.com/experienciaairsoft/",
+    "https://www.youtube.com/@experienciaairsoft8250",
+  ],
+  areaServed: {
+    "@type": "City",
+    name: "Buenos Aires",
+  },
+  isAccessibleForFree: false,
+  audience: { "@type": "Audience", suggestedMinAge: 18 },
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "¿Quiénes pueden jugar al airsoft en Experiencia Airsoft?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Mayores de 18 años con documento al momento del ingreso. Aceptamos jugadores nuevos y con experiencia — no hace falta tener equipo propio.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Necesito traer equipo propio?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. Alquilás el equipo completo en el lugar: marcadora, protección facial, chaleco y BBs. Solo venís a jugar.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Cómo reservo una partida?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Todas las reservas son por WhatsApp al +54 9 11 3868-9783. Trabajamos 100% bajo reserva previa.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Dónde queda Experiencia Airsoft?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina. Somos un centro de airsoft CQB indoor.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Cuál es la potencia máxima permitida?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Máximo 330 FPS. Es la categoría más baja permitida para CQB y la usamos porque jugamos en espacios cerrados y combate cercano — la experiencia táctica no se mide en potencia, sino en estrategia y trabajo en equipo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "¿Qué modalidades de partida ofrecen?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Partidas públicas abiertas (cualquiera se anota), privadas de grupo (10 a 20 personas) y eventos corporativos para empresas y team building.",
+      },
+    },
+  ],
+};
+
 export default function Home() {
   const year = new Date().getFullYear();
 
   return (
     <>
       <ScrollFx />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
 
       {/* NAV */}
       <header
@@ -367,7 +482,8 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/img/07_zona_fria_hero.jpg"
-          alt="Proyecto CQB — zona fría"
+          alt="Interior de Proyecto CQB, centro de airsoft indoor en Buenos Aires"
+          fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div
@@ -408,6 +524,9 @@ export default function Home() {
                 letterSpacing: "-.01em",
               }}
             >
+              <span className="sr-only">
+                Airsoft CQB indoor en Buenos Aires — Experiencia Airsoft,
+              </span>
               Proyecto
               <br />
               <span className="text-orange">CQB</span>
