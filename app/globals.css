@@ -1,26 +1,365 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #0a0a0a;
+  --color-carbon: #141414;
+  --color-steel: #1c1c1c;
+  --color-rail: #2a2a2a;
+  --color-bone: #f5f5f0;
+  --color-ash: #b8b8b8;
+  --color-smoke: #6e6e6e;
+  --color-orange: #ff6b1a;
+  --color-orange-600: #e85a0f;
+  --color-orange-300: #ffb085;
+
+  --font-display: var(--font-oswald), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-anton: var(--font-anton), system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  /* Fluid type scale — min at 360px viewport, max at 1440px */
+  --fs-xs: clamp(0.625rem, 0.59rem + 0.16vw, 0.75rem);      /* 10 → 12 */
+  --fs-sm: clamp(0.75rem, 0.71rem + 0.19vw, 0.875rem);      /* 12 → 14 */
+  --fs-base: clamp(0.875rem, 0.82rem + 0.23vw, 1rem);       /* 14 → 16 */
+  --fs-md: clamp(0.9375rem, 0.86rem + 0.36vw, 1.125rem);    /* 15 → 18 */
+  --fs-lg: clamp(1rem, 0.9rem + 0.47vw, 1.25rem);           /* 16 → 20 */
+  --fs-xl: clamp(1.125rem, 0.95rem + 0.75vw, 1.5rem);       /* 18 → 24 */
+  --fs-2xl: clamp(1.375rem, 1.1rem + 1.17vw, 1.875rem);     /* 22 → 30 */
+  --fs-3xl: clamp(1.75rem, 1.34rem + 1.77vw, 2.5rem);       /* 28 → 40 */
+  --fs-4xl: clamp(2.25rem, 1.52rem + 3.14vw, 3.75rem);      /* 36 → 60 */
+  --fs-5xl: clamp(2.75rem, 1.49rem + 5.44vw, 5.25rem);      /* 44 → 84 */
+  --fs-6xl: clamp(3.25rem, 1.49rem + 7.56vw, 6.75rem);      /* 52 → 108 */
+  --fs-display: clamp(4rem, 1.2rem + 12vw, 10.5rem);        /* 64 → 168 */
+
+  /* Fluid spacing */
+  --sp-gutter: clamp(1rem, 0.6rem + 1.6vw, 2.5rem);         /* 16 → 40 */
+  --sp-section: clamp(3.5rem, 2rem + 6.5vw, 8.5rem);        /* 56 → 136 */
+  --sp-stack: clamp(0.75rem, 0.6rem + 0.6vw, 1.5rem);       /* 12 → 24 */
+  --sp-card: clamp(1.5rem, 1.1rem + 1.6vw, 2.5rem);         /* 24 → 40 */
+
+  /* Nav height (fluid so hero padding can reference it) */
+  --nav-h: clamp(4rem, 3.4rem + 2.4vw, 5.5rem);             /* 64 → 88 */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #0a0a0a;
+  color: #f5f5f0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: clip;
+}
+
+/* subtle grain noise overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* diagonal line pattern utility */
+.diag-lines {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 107, 26, 0.1) 0 1px,
+    transparent 1px 12px
+  );
+}
+.diag-lines-faint {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(245, 245, 240, 0.04) 0 1px,
+    transparent 1px 14px
+  );
+}
+
+/* stencil/notched corners */
+.clip-notch {
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+}
+.clip-notch-lg {
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  );
+}
+.clip-tag {
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+/* reveal animation — only hide when JS has armed the effect */
+html.js-reveal .reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+html.js-reveal .reveal.in {
+  opacity: 1;
+  transform: none;
+}
+.reveal-delay-1 {
+  transition-delay: 0.08s;
+}
+.reveal-delay-2 {
+  transition-delay: 0.16s;
+}
+.reveal-delay-3 {
+  transition-delay: 0.24s;
+}
+.reveal-delay-4 {
+  transition-delay: 0.32s;
+}
+
+/* buttons */
+.btn-wa {
+  background: #ff6b1a;
+  color: #0a0a0a;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+  box-shadow:
+    0 0 0 1px #ff6b1a inset,
+    0 12px 40px -12px rgba(255, 107, 26, 0.6);
+}
+.btn-wa:hover {
+  background: #ffb085;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px #ffb085 inset,
+    0 18px 50px -12px rgba(255, 107, 26, 0.9);
+}
+.btn-ghost {
+  border: 1px solid rgba(245, 245, 240, 0.25);
+  color: #f5f5f0;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.btn-ghost:hover {
+  border-color: #ff6b1a;
+  color: #ff6b1a;
+  background: rgba(255, 107, 26, 0.06);
+}
+
+/* image card hover */
+.imgcard {
+  overflow: hidden;
+  position: relative;
+}
+.imgcard img {
+  transition:
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.5s ease;
+}
+.imgcard:hover img {
+  transform: scale(1.06);
+  filter: brightness(0.75) contrast(1.05);
+}
+
+/* nav default: soft top gradient so text stays legible over any hero */
+#nav {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 10, 0.85) 0%,
+    rgba(10, 10, 10, 0.55) 55%,
+    rgba(10, 10, 10, 0) 100%
+  );
+  backdrop-filter: blur(6px);
+  transition:
+    background 0.3s ease,
+    backdrop-filter 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* nav scrolled: solid, tighter backdrop */
+.nav-scrolled {
+  background: rgba(10, 10, 10, 0.82) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid rgba(245, 245, 240, 0.08);
+}
+
+/* marquee */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+
+/* pulse dot */
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 26, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 107, 26, 0);
+  }
+}
+.pulse-dot {
+  animation: pulseDot 1.8s infinite;
+}
+
+/* focus ring */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #ff6b1a;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* section label / title */
+.sect-label {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.28em;
+  color: #b8b8b8;
+  text-transform: uppercase;
+}
+.sect-title {
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+/* Fluid typography utilities — usable alongside Tailwind */
+.fluid-xs { font-size: var(--fs-xs); }
+.fluid-sm { font-size: var(--fs-sm); }
+.fluid-base { font-size: var(--fs-base); }
+.fluid-md { font-size: var(--fs-md); }
+.fluid-lg { font-size: var(--fs-lg); }
+.fluid-xl { font-size: var(--fs-xl); }
+.fluid-2xl { font-size: var(--fs-2xl); }
+.fluid-3xl { font-size: var(--fs-3xl); }
+.fluid-4xl { font-size: var(--fs-4xl); }
+.fluid-5xl { font-size: var(--fs-5xl); }
+.fluid-6xl { font-size: var(--fs-6xl); }
+.fluid-display { font-size: var(--fs-display); line-height: 0.85; }
+
+/* Fluid spacing utilities */
+.fluid-section-y { padding-top: var(--sp-section); padding-bottom: var(--sp-section); }
+.fluid-gutter-x { padding-left: var(--sp-gutter); padding-right: var(--sp-gutter); }
+.fluid-card { padding: var(--sp-card); }
+
+/* map filter */
+.map-wrap iframe {
+  filter: grayscale(1) contrast(1.1) invert(0.92) hue-rotate(180deg);
+}
+
+/* checkered stencil tag */
+.mil-tag {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  padding: 0.35em 0.9em 0.3em;
+  border: 1px solid rgba(255, 107, 26, 0.55);
+  color: #ff6b1a;
+  background: rgba(255, 107, 26, 0.06);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.mil-tag.bone {
+  color: #f5f5f0;
+  border-color: rgba(245, 245, 240, 0.35);
+  background: rgba(245, 245, 240, 0.04);
+}
+
+/* day-card stencil number */
+.op-num {
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 700;
+  font-size: clamp(5rem, 2.5rem + 8vw, 8.75rem);
+  line-height: 1;
+  -webkit-text-stroke: 1px rgba(245, 245, 240, 0.15);
+  color: transparent;
+  letter-spacing: -0.02em;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff6b1a;
+}
+
+/* sections */
+section {
+  position: relative;
+}
+
+/* spec rows */
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-top: 1px solid rgba(245, 245, 240, 0.08);
+  font-family: var(--font-jetbrains), monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.spec-row:last-child {
+  border-bottom: 1px solid rgba(245, 245, 240, 0.08);
+}
+.spec-row .k {
+  color: #6e6e6e;
+}
+.spec-row .v {
+  color: #f5f5f0;
+}
+
+/* hover glow on image cards */
+.glow-on-hover:hover {
+  box-shadow:
+    0 0 0 1px #ff6b1a,
+    0 30px 80px -30px rgba(255, 107, 26, 0.45);
 }
