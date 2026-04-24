@@ -3,13 +3,21 @@
 import { useActionState, useState } from "react";
 import { solicitarPrivadaAction, type SolicitarPrivadaState } from "../actions";
 import { slotRecurrentePisado } from "@/lib/horarios";
+import { Select } from "../../components/select";
 
 const initial: SolicitarPrivadaState = undefined;
+
+const MODALIDAD_OPTS = [
+  { value: "dinamica", label: "Dinámica" },
+  { value: "tacsim", label: "TacSim" },
+  { value: "speedsoft", label: "Speedsoft" },
+];
 
 export function SolicitarPrivadaForm() {
   const [state, action, pending] = useActionState(solicitarPrivadaAction, initial);
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
+  const [modalidad, setModalidad] = useState("dinamica");
 
   const slotPisado =
     fecha && hora ? slotRecurrentePisado(fecha, hora) : null;
@@ -57,7 +65,7 @@ export function SolicitarPrivadaForm() {
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="block">
           <span className="sect-label mb-1 block">Duración (min)</span>
           <input
@@ -95,16 +103,12 @@ export function SolicitarPrivadaForm() {
         </label>
         <label className="block">
           <span className="sect-label mb-1 block">Modalidad</span>
-          <select
+          <Select
             name="modalidad"
-            defaultValue="dinamica"
-            required
-            className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
-          >
-            <option value="dinamica">Dinámica</option>
-            <option value="tacsim">TacSim</option>
-            <option value="speedsoft">Speedsoft</option>
-          </select>
+            value={modalidad}
+            onChange={setModalidad}
+            options={MODALIDAD_OPTS}
+          />
         </label>
       </div>
 

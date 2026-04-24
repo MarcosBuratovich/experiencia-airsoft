@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { registrarPagoAction, borrarPagoAction } from "./actions";
+import { Select } from "../../components/select";
+
+const METODO_OPTS = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+];
 
 type Pago = { monto: number; metodo: string; fecha_pago: string } | null;
 
@@ -36,8 +42,8 @@ export function SociosGrid({ socios, periodos }: { socios: Socio[]; periodos: st
         {pendientes > 0 && <span className="mil-tag bone">{pendientes} con cuota {labelPeriodo(periodos[0])} pendiente</span>}
       </div>
 
-      <div className="border border-rail/60 clip-notch overflow-hidden">
-        <table className="w-full">
+      <div className="border border-rail/60 clip-notch overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead className="bg-carbon">
             <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
               <th className="text-left px-3 py-3">Socio</th>
@@ -132,9 +138,13 @@ function RegistrarPagoModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [metodo, setMetodo] = useState<"efectivo" | "transferencia">("efectivo");
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink/80 backdrop-blur flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-ink/80 backdrop-blur flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <form
         onClick={(e) => e.stopPropagation()}
         className="bg-carbon border border-rail/80 clip-notch-lg w-full max-w-sm p-6"
@@ -147,7 +157,7 @@ function RegistrarPagoModal({
               user_id: socio.id,
               periodo,
               monto: Number(fd.get("monto")) || 0,
-              metodo: ((fd.get("metodo") as string) || "efectivo") as "efectivo" | "transferencia",
+              metodo,
               fecha_pago: (fd.get("fecha_pago") as string) || new Date().toISOString().slice(0, 10),
             });
             if (r.error) setError(r.error);
@@ -171,14 +181,11 @@ function RegistrarPagoModal({
         </label>
         <label className="block mb-3">
           <span className="sect-label mb-1 block">Método</span>
-          <select
-            name="metodo"
-            defaultValue="efectivo"
-            className="w-full bg-ink border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none"
-          >
-            <option value="efectivo">Efectivo</option>
-            <option value="transferencia">Transferencia</option>
-          </select>
+          <Select
+            value={metodo}
+            onChange={(v) => setMetodo(v as "efectivo" | "transferencia")}
+            options={METODO_OPTS}
+          />
         </label>
         <label className="block mb-4">
           <span className="sect-label mb-1 block">Fecha</span>

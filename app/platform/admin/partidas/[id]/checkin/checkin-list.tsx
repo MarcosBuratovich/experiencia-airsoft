@@ -121,154 +121,274 @@ export function CheckinList({
     });
   };
 
+  const togglePresente = (r: Inscripcion, checked: boolean) => {
+    const patch: Partial<Checkin> = { presente: checked };
+    if (checked && !r.checkin?.pago_estado) {
+      if (r.socio && r.precio_alquiler === 0) {
+        patch.pago_estado = "socio_presente";
+        patch.pago_monto = 0;
+      } else {
+        patch.pago_monto = r.precio_total;
+      }
+    }
+    update(r.id, patch);
+  };
+
   return (
     <div>
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Stat label="Presentes" value={`${totals.presentes}/${rows.length}`} />
         <Stat label="Efectivo" value={ars(totals.efectivo)} />
-        <Stat label="Transferencia" value={ars(totals.transferencia)} />
+        <Stat label="Transfer." value={ars(totals.transferencia)} />
         <Stat label="Debe" value={ars(totals.debe)} tone="warn" />
       </div>
 
-      <div className="border border-rail/60 clip-notch overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-carbon">
-            <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
-              <th className="text-left px-3 py-3">Jugador</th>
-              <th className="text-center px-3 py-3">Presente</th>
-              <th className="text-left px-3 py-3">Pago</th>
-              <th className="text-left px-3 py-3">Monto</th>
-              <th className="text-left px-3 py-3">Nota</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const c = r.checkin;
-              const isPending = pendingId === r.id;
-              const equipo = equipoLabel(r);
-              return (
-                <tr key={r.id} className={`border-t border-rail/40 ${isPending ? "opacity-60" : ""}`}>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-bone">{r.nombre}</span>
-                      {r.bando && (
-                        <span
-                          className="px-1.5 py-0.5 font-mono fluid-xs uppercase tracking-[.15em]"
-                          style={{
-                            backgroundColor: BANDO_STYLES[r.bando].bg,
-                            color: BANDO_STYLES[r.bando].fg,
-                          }}
-                        >
-                          {r.bando}
-                        </span>
-                      )}
-                      {r.socio && (
-                        <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
-                          Socio
-                        </span>
-                      )}
-                      {r.tipo_jugador === "alquiler" && (
-                        <span className="px-1.5 py-0.5 bg-ink border border-rail/60 text-ash font-mono fluid-xs uppercase tracking-[.15em]">
-                          Alquiler
-                        </span>
-                      )}
-                    </div>
-                    <div className="font-mono fluid-xs text-smoke">
-                      DNI {r.dni} · {r.celular}
-                    </div>
-                    {equipo && (
-                      <div className="font-mono fluid-xs text-ash mt-1">Equipo: {equipo}</div>
-                    )}
-                    <div
-                      className="font-mono fluid-xs text-smoke mt-1"
-                      title={`Entrada ${ars(r.precio_entrada)} · Alquiler ${ars(r.precio_alquiler)}`}
-                    >
-                      Snapshot: {ars(r.precio_total)}
-                    </div>
-                    {r.estado === "waitlist" && (
-                      <span className="mil-tag bone mt-1 inline-block">Waitlist</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={!!c?.presente}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        const patch: Partial<Checkin> = { presente: checked };
-                        if (checked && !c?.pago_estado) {
-                          // pre-fill inteligente: socio y no alquila → socio_presente $0
-                          // socio que alquila → efectivo con solo el alquiler
-                          // no socio → efectivo con total
-                          if (r.socio && r.precio_alquiler === 0) {
-                            patch.pago_estado = "socio_presente";
-                            patch.pago_monto = 0;
-                          } else {
-                            patch.pago_monto = r.precio_total;
-                          }
-                        }
-                        update(r.id, patch);
-                      }}
-                      className="w-5 h-5 accent-orange cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {PAGO_OPTS.map((o) => (
-                        <button
-                          key={o.value}
-                          type="button"
-                          onClick={() => update(r.id, { pago_estado: o.value })}
-                          className={`px-2 py-1 font-mono fluid-xs uppercase tracking-[.15em] border transition cursor-pointer ${
-                            c?.pago_estado === o.value
-                              ? "bg-orange text-ink border-orange"
-                              : "border-rail/60 text-ash hover:border-orange"
-                          }`}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <input
-                      type="number"
-                      defaultValue={c?.pago_monto ?? r.precio_total}
-                      onBlur={(e) => update(r.id, { pago_monto: Number(e.target.value) || 0 })}
-                      className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <input
-                      type="text"
-                      defaultValue={c?.nota ?? ""}
-                      onBlur={(e) => update(r.id, { nota: e.target.value || null })}
-                      placeholder="—"
-                      className="w-full bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-            {!rows.length && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-smoke font-mono fluid-xs">
-                  Sin inscriptos.
-                </td>
+      {!rows.length && (
+        <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
+          <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
+            Sin inscriptos.
+          </p>
+        </div>
+      )}
+
+      {/* Mobile — cards */}
+      <ul className="lg:hidden space-y-3">
+        {rows.map((r) => (
+          <MobileCheckinCard
+            key={r.id}
+            r={r}
+            pending={pendingId === r.id}
+            onToggle={togglePresente}
+            onPatch={update}
+          />
+        ))}
+      </ul>
+
+      {/* Desktop — tabla */}
+      {!!rows.length && (
+        <div className="hidden lg:block border border-rail/60 clip-notch overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-carbon">
+              <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
+                <th className="text-left px-3 py-3">Jugador</th>
+                <th className="text-center px-3 py-3">Presente</th>
+                <th className="text-left px-3 py-3">Pago</th>
+                <th className="text-left px-3 py-3">Monto</th>
+                <th className="text-left px-3 py-3">Nota</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const c = r.checkin;
+                const isPending = pendingId === r.id;
+                const equipo = equipoLabel(r);
+                return (
+                  <tr key={r.id} className={`border-t border-rail/40 ${isPending ? "opacity-60" : ""}`}>
+                    <td className="px-3 py-3 align-top">
+                      <JugadorBadges r={r} />
+                      <div className="font-mono fluid-xs text-smoke mt-1">
+                        DNI {r.dni} · {r.celular}
+                      </div>
+                      {equipo && (
+                        <div className="font-mono fluid-xs text-ash mt-1">Equipo: {equipo}</div>
+                      )}
+                      <div
+                        className="font-mono fluid-xs text-smoke mt-1"
+                        title={`Entrada ${ars(r.precio_entrada)} · Alquiler ${ars(r.precio_alquiler)}`}
+                      >
+                        Snapshot: {ars(r.precio_total)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 align-top text-center">
+                      <input
+                        type="checkbox"
+                        checked={!!c?.presente}
+                        onChange={(e) => togglePresente(r, e.target.checked)}
+                        className="w-5 h-5 accent-orange cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-3 py-3 align-top">
+                      <PagoGroup
+                        value={c?.pago_estado ?? null}
+                        onChange={(pago_estado) => update(r.id, { pago_estado })}
+                      />
+                    </td>
+                    <td className="px-3 py-3 align-top">
+                      <input
+                        type="number"
+                        defaultValue={c?.pago_monto ?? r.precio_total}
+                        onBlur={(e) =>
+                          update(r.id, { pago_monto: Number(e.target.value) || 0 })
+                        }
+                        className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
+                      />
+                    </td>
+                    <td className="px-3 py-3 align-top">
+                      <input
+                        type="text"
+                        defaultValue={c?.nota ?? ""}
+                        onBlur={(e) => update(r.id, { nota: e.target.value || null })}
+                        placeholder="—"
+                        className="w-full bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileCheckinCard({
+  r,
+  pending,
+  onToggle,
+  onPatch,
+}: {
+  r: Inscripcion;
+  pending: boolean;
+  onToggle: (r: Inscripcion, checked: boolean) => void;
+  onPatch: (id: string, patch: Partial<Checkin>) => void;
+}) {
+  const equipo = equipoLabel(r);
+  return (
+    <li
+      className={`border border-rail/60 bg-carbon clip-notch p-4 ${pending ? "opacity-60" : ""}`}
+    >
+      <div className="flex items-start gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <JugadorBadges r={r} />
+          <div className="font-mono fluid-xs text-smoke mt-1">
+            DNI {r.dni} · {r.celular}
+          </div>
+          {equipo && (
+            <div className="font-mono fluid-xs text-ash mt-0.5">Equipo: {equipo}</div>
+          )}
+          <div className="font-mono fluid-xs text-smoke mt-0.5">
+            Snapshot: {ars(r.precio_total)}
+          </div>
+        </div>
+        <label className="flex flex-col items-center gap-1 pt-1 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!r.checkin?.presente}
+            onChange={(e) => onToggle(r, e.target.checked)}
+            className="w-6 h-6 accent-orange cursor-pointer"
+          />
+          <span className="sect-label mb-0">Pres.</span>
+        </label>
       </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <span className="sect-label mb-1 block">Pago</span>
+          <PagoGroup
+            value={r.checkin?.pago_estado ?? null}
+            onChange={(pago_estado) => onPatch(r.id, { pago_estado })}
+            wrap
+          />
+        </div>
+        <div>
+          <span className="sect-label mb-1 block">Monto</span>
+          <input
+            type="number"
+            defaultValue={r.checkin?.pago_monto ?? r.precio_total}
+            onBlur={(e) =>
+              onPatch(r.id, { pago_monto: Number(e.target.value) || 0 })
+            }
+            className="w-full bg-ink border border-rail/60 px-2 py-2 text-bone font-mono fluid-xs focus:border-orange outline-none"
+          />
+        </div>
+      </div>
+
+      <div>
+        <span className="sect-label mb-1 block">Nota</span>
+        <input
+          type="text"
+          defaultValue={r.checkin?.nota ?? ""}
+          onBlur={(e) => onPatch(r.id, { nota: e.target.value || null })}
+          placeholder="—"
+          className="w-full bg-ink border border-rail/60 px-2 py-2 text-bone font-mono fluid-xs focus:border-orange outline-none"
+        />
+      </div>
+    </li>
+  );
+}
+
+function JugadorBadges({ r }: { r: Inscripcion }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-bone">{r.nombre}</span>
+      {r.bando && (
+        <span
+          className="px-1.5 py-0.5 font-mono fluid-xs uppercase tracking-[.15em]"
+          style={{
+            backgroundColor: BANDO_STYLES[r.bando].bg,
+            color: BANDO_STYLES[r.bando].fg,
+          }}
+        >
+          {r.bando}
+        </span>
+      )}
+      {r.socio && (
+        <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
+          Socio
+        </span>
+      )}
+      {r.tipo_jugador === "alquiler" && (
+        <span className="px-1.5 py-0.5 bg-ink border border-rail/60 text-ash font-mono fluid-xs uppercase tracking-[.15em]">
+          Alquiler
+        </span>
+      )}
+      {r.estado === "waitlist" && (
+        <span className="mil-tag bone">Waitlist</span>
+      )}
+    </div>
+  );
+}
+
+function PagoGroup({
+  value,
+  onChange,
+  wrap,
+}: {
+  value: string | null;
+  onChange: (v: string) => void;
+  wrap?: boolean;
+}) {
+  return (
+    <div className={`flex gap-1.5 ${wrap ? "flex-wrap" : "flex-wrap"}`}>
+      {PAGO_OPTS.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={`px-2 py-1 font-mono fluid-xs uppercase tracking-[.15em] border transition cursor-pointer ${
+            value === o.value
+              ? "bg-orange text-ink border-orange"
+              : "border-rail/60 text-ash hover:border-orange"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
   return (
-    <div className={`border border-rail/60 clip-notch p-4 ${tone === "warn" ? "bg-orange/5" : "bg-carbon"}`}>
+    <div
+      className={`border border-rail/60 clip-notch p-3 sm:p-4 ${
+        tone === "warn" ? "bg-orange/5" : "bg-carbon"
+      }`}
+    >
       <div className="sect-label mb-1">{label}</div>
-      <div className="font-display fluid-2xl text-bone">{value}</div>
+      <div className="font-display fluid-xl sm:fluid-2xl text-bone">{value}</div>
     </div>
   );
 }

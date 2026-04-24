@@ -3,6 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { actualizarTemplateAction } from "./actions";
+import { Select } from "../../components/select";
+
+const MODALIDAD_OPTS = [
+  { value: "dinamica", label: "Dinámica" },
+  { value: "tacsim", label: "TacSim" },
+  { value: "speedsoft", label: "Speedsoft" },
+];
 
 type Template = {
   id: string;
@@ -98,15 +105,11 @@ export function TemplateRow({ template }: { template: Template }) {
         </label>
         <label className="block">
           <span className="sect-label mb-1 block">Modalidad</span>
-          <select
+          <Select
             value={modalidad}
-            onChange={(e) => setModalidad(e.target.value)}
-            className="w-full bg-ink border border-rail/60 px-2 py-1.5 text-bone focus:border-orange outline-none"
-          >
-            <option value="dinamica">Dinámica</option>
-            <option value="tacsim">TacSim</option>
-            <option value="speedsoft">Speedsoft</option>
-          </select>
+            onChange={setModalidad}
+            options={MODALIDAD_OPTS}
+          />
         </label>
         <label className="block">
           <span className="sect-label mb-1 block">Cupo</span>

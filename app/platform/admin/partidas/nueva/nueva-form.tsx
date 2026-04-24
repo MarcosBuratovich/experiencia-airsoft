@@ -1,39 +1,62 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { crearPartidaAction, type CrearPartidaState } from "./actions";
+import { Select } from "../../../components/select";
 
 const initial: CrearPartidaState = undefined;
 
+const MODALIDAD_OPTS = [
+  { value: "dinamica", label: "Dinámica" },
+  { value: "tacsim", label: "TacSim" },
+  { value: "speedsoft", label: "Speedsoft" },
+];
+
+const VISIBILIDAD_OPTS = [
+  { value: "publica", label: "Pública" },
+  { value: "privada", label: "Privada (link)" },
+];
+
 export function NuevaPartidaForm() {
   const [state, action, pending] = useActionState(crearPartidaAction, initial);
+  const [modalidad, setModalidad] = useState("dinamica");
+  const [visibilidad, setVisibilidad] = useState("publica");
 
   return (
     <form action={action} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Fecha" name="fecha" type="date" error={state?.errors?.fecha} />
         <Field label="Hora" name="hora_inicio" type="time" error={state?.errors?.hora_inicio} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Select
-          label="Modalidad"
-          name="modalidad"
-          error={state?.errors?.modalidad}
-          options={[
-            { value: "dinamica", label: "Dinámica" },
-            { value: "tacsim", label: "TacSim" },
-            { value: "speedsoft", label: "Speedsoft" },
-          ]}
-        />
-        <Select
-          label="Visibilidad"
-          name="visibilidad"
-          error={state?.errors?.visibilidad}
-          options={[
-            { value: "publica", label: "Pública" },
-            { value: "privada", label: "Privada (link)" },
-          ]}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="block">
+          <span className="sect-label mb-1 block">Modalidad</span>
+          <Select
+            name="modalidad"
+            value={modalidad}
+            onChange={setModalidad}
+            options={MODALIDAD_OPTS}
+          />
+          {state?.errors?.modalidad?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.modalidad[0]}
+            </span>
+          )}
+        </label>
+        <label className="block">
+          <span className="sect-label mb-1 block">Visibilidad</span>
+          <Select
+            name="visibilidad"
+            value={visibilidad}
+            onChange={setVisibilidad}
+            options={VISIBILIDAD_OPTS}
+          />
+          {state?.errors?.visibilidad?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.visibilidad[0]}
+            </span>
+          )}
+        </label>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field
@@ -56,7 +79,7 @@ export function NuevaPartidaForm() {
         <textarea
           name="notas"
           rows={3}
-          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none"
+          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none resize-y"
         />
       </label>
 
@@ -92,24 +115,6 @@ function Field({ label, name, type = "text", defaultValue, error }: {
         required
         className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none"
       />
-      {error?.[0] && <span className="mt-1 block font-mono fluid-xs text-orange-300">{error[0]}</span>}
-    </label>
-  );
-}
-
-function Select({ label, name, options, error }: {
-  label: string; name: string; options: { value: string; label: string }[]; error?: string[];
-}) {
-  return (
-    <label className="block">
-      <span className="sect-label mb-1 block">{label}</span>
-      <select
-        name={name}
-        required
-        className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none"
-      >
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
       {error?.[0] && <span className="mt-1 block font-mono fluid-xs text-orange-300">{error[0]}</span>}
     </label>
   );
