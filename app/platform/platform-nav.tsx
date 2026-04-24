@@ -64,9 +64,14 @@ export function PlatformNav({
                 )}
               </Link>
               {isSuperAdmin && (
-                <Link href="/admin/precios" className="text-orange hover:text-bone transition">
-                  Precios
-                </Link>
+                <>
+                  <Link href="/admin/precios" className="text-orange hover:text-bone transition">
+                    Precios
+                  </Link>
+                  <Link href="/admin/templates" className="text-orange hover:text-bone transition">
+                    Templates
+                  </Link>
+                </>
               )}
             </>
           )}

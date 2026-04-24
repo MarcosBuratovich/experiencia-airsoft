@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
+import { GenerarSemanaButton } from "./generar-semana-button";
 
 export default async function AdminPartidas() {
   const supabase = await createClient();
@@ -13,14 +14,20 @@ export default async function AdminPartidas() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <p className="sect-label mb-2">Admin · listas</p>
           <h1 className="sect-title fluid-3xl">Partidas</h1>
         </div>
-        <Link href="/admin/partidas/nueva" className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold">
-          + Nueva
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <GenerarSemanaButton />
+          <Link
+            href="/admin/partidas/nueva"
+            className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold"
+          >
+            + Nueva
+          </Link>
+        </div>
       </div>
 
       <div className="border border-rail/60 clip-notch overflow-hidden">
