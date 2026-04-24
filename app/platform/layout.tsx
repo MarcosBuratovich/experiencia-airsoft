@@ -14,6 +14,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const { data: { user } } = await supabase.auth.getUser();
 
   let profile: { nombre: string; apellido: string; role: string } | null = null;
+  let solicitudesPendientes = 0;
   if (user) {
     const { data } = await supabase
       .from("profiles")
@@ -21,6 +22,14 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       .eq("id", user.id)
       .maybeSingle();
     profile = data;
+
+    if (profile?.role === "admin" || profile?.role === "super_admin") {
+      const { count } = await supabase
+        .from("solicitudes_privada")
+        .select("*", { count: "exact", head: true })
+        .eq("estado", "pendiente");
+      solicitudesPendientes = count ?? 0;
+    }
   }
 
   return (
@@ -35,6 +44,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             isAdmin={profile?.role === "admin" || profile?.role === "super_admin"}
             isSuperAdmin={profile?.role === "super_admin"}
             userLabel={profile ? `${profile.nombre} ${profile.apellido}` : null}
+            solicitudesPendientes={solicitudesPendientes}
           />
         </div>
       </header>

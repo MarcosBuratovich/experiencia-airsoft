@@ -9,9 +9,16 @@ type Props = {
   isAdmin: boolean;
   isSuperAdmin?: boolean;
   userLabel: string | null;
+  solicitudesPendientes?: number;
 };
 
-export function PlatformNav({ isAuthed, isAdmin, isSuperAdmin, userLabel }: Props) {
+export function PlatformNav({
+  isAuthed,
+  isAdmin,
+  isSuperAdmin,
+  userLabel,
+  solicitudesPendientes,
+}: Props) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -31,6 +38,9 @@ export function PlatformNav({ isAuthed, isAdmin, isSuperAdmin, userLabel }: Prop
           <Link href="/clanes" className="text-bone hover:text-orange transition">
             Clanes
           </Link>
+          <Link href="/mis-solicitudes" className="text-bone hover:text-orange transition">
+            Privadas
+          </Link>
           {isAdmin && (
             <>
               <Link href="/admin/partidas" className="text-orange hover:text-bone transition">
@@ -41,6 +51,17 @@ export function PlatformNav({ isAuthed, isAdmin, isSuperAdmin, userLabel }: Prop
               </Link>
               <Link href="/admin/usuarios" className="text-orange hover:text-bone transition">
                 Usuarios
+              </Link>
+              <Link
+                href="/admin/solicitudes"
+                className="text-orange hover:text-bone transition flex items-center gap-1.5"
+              >
+                Solicitudes
+                {!!solicitudesPendientes && solicitudesPendientes > 0 && (
+                  <span className="px-1.5 py-0.5 bg-orange text-ink rounded-full fluid-xs tracking-normal">
+                    {solicitudesPendientes}
+                  </span>
+                )}
               </Link>
               {isSuperAdmin && (
                 <Link href="/admin/precios" className="text-orange hover:text-bone transition">
