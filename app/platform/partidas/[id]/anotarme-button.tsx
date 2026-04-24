@@ -1,22 +1,66 @@
 "use client";
 
-import { useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anotarmeAction, desanotarmeAction } from "./actions";
+import type { TipoJugador } from "@/lib/precios";
 
 type Inscripcion = { id: string; estado: string };
 
+type PreciosMin = {
+  entrada_alquiler: number;
+  entrada_byop: number;
+  entrada_socio: number;
+  alquiler_marcadora: number;
+  alquiler_premium: number;
+  alquiler_chaleco: number;
+};
+
 type Props = {
   partidaId: string;
-  userId: string;
   inscripcion: Inscripcion | null;
   estado: string;
   lleno: boolean;
+  tipo_jugador: TipoJugador;
+  socio: boolean;
+  precios: PreciosMin;
 };
 
-export function AnotarmeButton({ partidaId, inscripcion, estado, lleno }: Props) {
+function ars(n: number) {
+  return `$${n.toLocaleString("es-AR")}`;
+}
+
+export function AnotarmeButton({
+  partidaId,
+  inscripcion,
+  estado,
+  lleno,
+  tipo_jugador,
+  socio,
+  precios,
+}: Props) {
   const [pending, startTransition] = useTransition();
+  const [marcadora, setMarcadora] = useState<"comun" | "premium">("comun");
+  const [chaleco, setChaleco] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const entrada = socio
+    ? precios.entrada_socio
+    : tipo_jugador === "alquiler"
+      ? precios.entrada_alquiler
+      : precios.entrada_byop;
+
+  const alquilerMonto = useMemo(() => {
+    if (tipo_jugador !== "alquiler") return 0;
+    let t = 0;
+    if (marcadora === "comun") t += precios.alquiler_marcadora;
+    else t += precios.alquiler_premium;
+    if (chaleco) t += precios.alquiler_chaleco;
+    return t;
+  }, [tipo_jugador, marcadora, chaleco, precios]);
+
+  const total = entrada + alquilerMonto;
 
   if (estado === "cancelada") {
     return <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">Partida cancelada.</p>;
@@ -44,19 +88,134 @@ export function AnotarmeButton({ partidaId, inscripcion, estado, lleno }: Props)
     );
   }
 
+  const onAnotarme = () => {
+    setError(null);
+    startTransition(async () => {
+      const res = await anotarmeAction(partidaId, {
+        alquila_marcadora: tipo_jugador === "alquiler" && marcadora === "comun",
+        alquila_premium: tipo_jugador === "alquiler" && marcadora === "premium",
+        alquila_chaleco: tipo_jugador === "alquiler" && chaleco,
+      });
+      if ("error" in res && res.error) {
+        setError(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  };
+
+  const btnLabel = pending
+    ? "..."
+    : lleno
+      ? `Anotarme a lista de espera · ${ars(total)}`
+      : `Anotarme · ${ars(total)}`;
+
+  return (
+    <div className="space-y-4">
+      {tipo_jugador === "alquiler" ? (
+        <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
+          <legend className="sect-label px-2">Equipo a alquilar</legend>
+
+          <div className="space-y-2">
+            <MarcadoraOpt
+              value="comun"
+              current={marcadora}
+              setValue={setMarcadora}
+              title="Marcadora común"
+              precio={precios.alquiler_marcadora}
+            />
+            <MarcadoraOpt
+              value="premium"
+              current={marcadora}
+              setValue={setMarcadora}
+              title="Marcadora premium (tracer)"
+              precio={precios.alquiler_premium}
+            />
+          </div>
+
+          <label className="flex items-center gap-3 px-2 py-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={chaleco}
+              onChange={(e) => setChaleco(e.target.checked)}
+              className="w-4 h-4 accent-orange cursor-pointer"
+            />
+            <span className="text-bone font-sans flex-1">Chaleco</span>
+            <span className="font-mono fluid-xs text-ash">{ars(precios.alquiler_chaleco)}</span>
+          </label>
+        </fieldset>
+      ) : (
+        <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
+          {socio ? "Socio · sin cargo de entrada" : "BYOP · traés tu propio equipo"}
+        </p>
+      )}
+
+      <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
+        <dl className="space-y-1 font-mono fluid-xs">
+          <Row label="Entrada" value={ars(entrada)} />
+          {tipo_jugador === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
+          <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
+            <span className="sect-label">Total</span>
+            <span className="font-display fluid-xl text-bone">{ars(total)}</span>
+          </div>
+        </dl>
+      </div>
+
+      {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
+
+      <button
+        type="button"
+        disabled={pending || estado === "cerrada"}
+        onClick={onAnotarme}
+        className="btn-wa w-full px-6 py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {btnLabel}
+      </button>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-ash uppercase tracking-[.2em]">{label}</span>
+      <span className="text-bone">{value}</span>
+    </div>
+  );
+}
+
+function MarcadoraOpt({
+  value,
+  current,
+  setValue,
+  title,
+  precio,
+}: {
+  value: "comun" | "premium";
+  current: "comun" | "premium";
+  setValue: (v: "comun" | "premium") => void;
+  title: string;
+  precio: number;
+}) {
+  const active = current === value;
   return (
     <button
       type="button"
-      disabled={pending || estado === "cerrada"}
-      onClick={() =>
-        startTransition(async () => {
-          await anotarmeAction(partidaId);
-          router.refresh();
-        })
-      }
-      className="btn-wa px-6 py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      onClick={() => setValue(value)}
+      className={`w-full text-left px-3 py-2 border transition clip-notch cursor-pointer ${
+        active ? "bg-ink/60 border-orange" : "bg-ink/30 border-rail/60 hover:border-rail"
+      }`}
     >
-      {pending ? "..." : lleno ? "Anotarme a lista de espera" : "Anotarme"}
+      <div className="flex items-center gap-3">
+        <span
+          className={`inline-block w-3 h-3 rounded-full border-2 transition ${
+            active ? "bg-orange border-orange" : "border-rail"
+          }`}
+          aria-hidden
+        />
+        <span className="text-bone flex-1">{title}</span>
+        <span className="font-mono fluid-xs text-ash">${precio.toLocaleString("es-AR")}</span>
+      </div>
     </button>
   );
 }

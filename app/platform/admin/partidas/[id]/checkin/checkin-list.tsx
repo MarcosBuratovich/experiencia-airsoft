@@ -17,7 +17,14 @@ type Inscripcion = {
   dni: string;
   celular: string;
   socio: boolean;
+  tipo_jugador: string;
   estado: string;
+  alquila_marcadora: boolean;
+  alquila_premium: boolean;
+  alquila_chaleco: boolean;
+  precio_entrada: number;
+  precio_alquiler: number;
+  precio_total: number;
   checkin: Checkin | null;
 };
 
@@ -28,49 +35,79 @@ const PAGO_OPTS = [
   { value: "socio_presente", label: "Socio" },
 ];
 
+function ars(n: number) {
+  return `$${n.toLocaleString("es-AR")}`;
+}
+
+function equipoLabel(i: Inscripcion): string | null {
+  if (i.tipo_jugador !== "alquiler") return null;
+  const bits: string[] = [];
+  if (i.alquila_marcadora) bits.push("Marcadora");
+  if (i.alquila_premium) bits.push("Premium");
+  if (i.alquila_chaleco) bits.push("Chaleco");
+  return bits.length ? bits.join(" · ") : "—";
+}
+
 export function CheckinList({
-  partidaId,
-  precio,
+  partidaId: _partidaId,
   inscripciones,
 }: {
   partidaId: string;
-  precio: number;
   inscripciones: Inscripcion[];
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [_, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const router = useRouter();
 
   const totals = useMemo(() => {
-    let efectivo = 0, transferencia = 0, debe = 0, presentes = 0;
+    let efectivo = 0,
+      transferencia = 0,
+      debe = 0,
+      presentes = 0;
     for (const r of rows) {
       if (!r.checkin?.presente) continue;
       presentes++;
-      const monto = r.checkin?.pago_monto ?? precio;
+      const monto = r.checkin?.pago_monto ?? r.precio_total;
       if (r.checkin?.pago_estado === "efectivo") efectivo += monto;
       else if (r.checkin?.pago_estado === "transferencia") transferencia += monto;
       else if (r.checkin?.pago_estado === "debe") debe += monto;
     }
     return { efectivo, transferencia, debe, presentes };
-  }, [rows, precio]);
+  }, [rows]);
 
   const update = (id: string, patch: Partial<Checkin>) => {
     setPendingId(id);
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+
     setRows((prev) =>
       prev.map((r) =>
         r.id === id
-          ? { ...r, checkin: { presente: false, pago_estado: null, pago_monto: null, nota: null, ...r.checkin, ...patch } }
+          ? {
+              ...r,
+              checkin: {
+                presente: false,
+                pago_estado: null,
+                pago_monto: null,
+                nota: null,
+                ...r.checkin,
+                ...patch,
+              },
+            }
           : r,
       ),
     );
     startTransition(async () => {
-      const row = rows.find((r) => r.id === id);
       const merged: Checkin = {
-        presente: patch.presente ?? row?.checkin?.presente ?? false,
-        pago_estado: patch.pago_estado !== undefined ? patch.pago_estado : row?.checkin?.pago_estado ?? null,
-        pago_monto: patch.pago_monto !== undefined ? patch.pago_monto : row?.checkin?.pago_monto ?? precio,
-        nota: patch.nota !== undefined ? patch.nota : row?.checkin?.nota ?? null,
+        presente: patch.presente ?? row.checkin?.presente ?? false,
+        pago_estado:
+          patch.pago_estado !== undefined ? patch.pago_estado : row.checkin?.pago_estado ?? null,
+        pago_monto:
+          patch.pago_monto !== undefined
+            ? patch.pago_monto
+            : row.checkin?.pago_monto ?? row.precio_total,
+        nota: patch.nota !== undefined ? patch.nota : row.checkin?.nota ?? null,
       };
       await upsertCheckinAction(id, merged);
       setPendingId(null);
@@ -82,9 +119,9 @@ export function CheckinList({
     <div>
       <div className="grid grid-cols-4 gap-3 mb-6">
         <Stat label="Presentes" value={`${totals.presentes}/${rows.length}`} />
-        <Stat label="Efectivo" value={`$${totals.efectivo.toLocaleString("es-AR")}`} />
-        <Stat label="Transferencia" value={`$${totals.transferencia.toLocaleString("es-AR")}`} />
-        <Stat label="Debe" value={`$${totals.debe.toLocaleString("es-AR")}`} tone="warn" />
+        <Stat label="Efectivo" value={ars(totals.efectivo)} />
+        <Stat label="Transferencia" value={ars(totals.transferencia)} />
+        <Stat label="Debe" value={ars(totals.debe)} tone="warn" />
       </div>
 
       <div className="border border-rail/60 clip-notch overflow-hidden">
@@ -102,15 +139,38 @@ export function CheckinList({
             {rows.map((r) => {
               const c = r.checkin;
               const isPending = pendingId === r.id;
+              const equipo = equipoLabel(r);
               return (
                 <tr key={r.id} className={`border-t border-rail/40 ${isPending ? "opacity-60" : ""}`}>
                   <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-bone">{r.nombre}</span>
-                      {r.socio && <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">Socio</span>}
+                      {r.socio && (
+                        <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
+                          Socio
+                        </span>
+                      )}
+                      {r.tipo_jugador === "alquiler" && (
+                        <span className="px-1.5 py-0.5 bg-ink border border-rail/60 text-ash font-mono fluid-xs uppercase tracking-[.15em]">
+                          Alquiler
+                        </span>
+                      )}
                     </div>
-                    <div className="font-mono fluid-xs text-smoke">DNI {r.dni} · {r.celular}</div>
-                    {r.estado === "waitlist" && <span className="mil-tag bone mt-1 inline-block">Waitlist</span>}
+                    <div className="font-mono fluid-xs text-smoke">
+                      DNI {r.dni} · {r.celular}
+                    </div>
+                    {equipo && (
+                      <div className="font-mono fluid-xs text-ash mt-1">Equipo: {equipo}</div>
+                    )}
+                    <div
+                      className="font-mono fluid-xs text-smoke mt-1"
+                      title={`Entrada ${ars(r.precio_entrada)} · Alquiler ${ars(r.precio_alquiler)}`}
+                    >
+                      Snapshot: {ars(r.precio_total)}
+                    </div>
+                    {r.estado === "waitlist" && (
+                      <span className="mil-tag bone mt-1 inline-block">Waitlist</span>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-center">
                     <input
@@ -119,9 +179,16 @@ export function CheckinList({
                       onChange={(e) => {
                         const checked = e.target.checked;
                         const patch: Partial<Checkin> = { presente: checked };
-                        if (checked && r.socio && !c?.pago_estado) {
-                          patch.pago_estado = "socio_presente";
-                          patch.pago_monto = 0;
+                        if (checked && !c?.pago_estado) {
+                          // pre-fill inteligente: socio y no alquila → socio_presente $0
+                          // socio que alquila → efectivo con solo el alquiler
+                          // no socio → efectivo con total
+                          if (r.socio && r.precio_alquiler === 0) {
+                            patch.pago_estado = "socio_presente";
+                            patch.pago_monto = 0;
+                          } else {
+                            patch.pago_monto = r.precio_total;
+                          }
                         }
                         update(r.id, patch);
                       }}
@@ -149,7 +216,7 @@ export function CheckinList({
                   <td className="px-3 py-3">
                     <input
                       type="number"
-                      defaultValue={c?.pago_monto ?? precio}
+                      defaultValue={c?.pago_monto ?? r.precio_total}
                       onBlur={(e) => update(r.id, { pago_monto: Number(e.target.value) || 0 })}
                       className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
                     />
@@ -167,7 +234,11 @@ export function CheckinList({
               );
             })}
             {!rows.length && (
-              <tr><td colSpan={5} className="px-3 py-8 text-center text-smoke font-mono fluid-xs">Sin inscriptos.</td></tr>
+              <tr>
+                <td colSpan={5} className="px-3 py-8 text-center text-smoke font-mono fluid-xs">
+                  Sin inscriptos.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

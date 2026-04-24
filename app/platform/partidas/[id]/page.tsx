@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
+import { getPreciosConfig, type TipoJugador } from "@/lib/precios";
 import { AnotarmeButton } from "./anotarme-button";
 
 export default async function PartidaDetail({
@@ -14,11 +15,19 @@ export default async function PartidaDetail({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const { data: partida } = await supabase
-    .from("partidas")
-    .select("id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, precio, estado, notas, visibilidad")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: partida }, { data: profile }, precios] = await Promise.all([
+    supabase
+      .from("partidas")
+      .select("id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, precio, estado, notas, visibilidad")
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("tipo_jugador, socio")
+      .eq("id", user.id)
+      .maybeSingle(),
+    getPreciosConfig(supabase),
+  ]);
   if (!partida) notFound();
 
   const { data: inscriptos } = await supabase
@@ -32,6 +41,9 @@ export default async function PartidaDetail({
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
   const lleno = confirmados.length >= partida.cupo_max;
+
+  const tipo_jugador = (profile?.tipo_jugador ?? "byop") as TipoJugador;
+  const socio = !!profile?.socio;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -49,7 +61,6 @@ export default async function PartidaDetail({
 
       <div className="border border-rail/60 bg-carbon clip-notch p-5 mb-6">
         <dl className="space-y-1">
-          <div className="spec-row"><span className="k">Precio</span><span className="v">${partida.precio.toLocaleString("es-AR")}</span></div>
           <div className="spec-row"><span className="k">Cupo</span><span className="v">{confirmados.length}/{partida.cupo_max}</span></div>
           <div className="spec-row"><span className="k">Estado</span><span className="v">{partida.estado}</span></div>
         </dl>
@@ -59,10 +70,19 @@ export default async function PartidaDetail({
       <div className="mb-8">
         <AnotarmeButton
           partidaId={partida.id}
-          userId={user.id}
           inscripcion={mine ? { id: mine.id, estado: mine.estado } : null}
           estado={partida.estado}
           lleno={lleno}
+          tipo_jugador={tipo_jugador}
+          socio={socio}
+          precios={{
+            entrada_alquiler: precios.entrada_alquiler,
+            entrada_byop: precios.entrada_byop,
+            entrada_socio: precios.entrada_socio,
+            alquiler_marcadora: precios.alquiler_marcadora,
+            alquiler_premium: precios.alquiler_premium,
+            alquiler_chaleco: precios.alquiler_chaleco,
+          }}
         />
       </div>
 

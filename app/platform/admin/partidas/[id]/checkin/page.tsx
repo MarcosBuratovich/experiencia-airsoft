@@ -17,7 +17,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
 
   const { data: inscripciones } = await supabase
     .from("inscripciones")
-    .select("id, estado, user_id, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)")
+    .select(
+      "id, estado, user_id, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio, tipo_jugador), checkins(presente, pago_estado, pago_monto, nota)",
+    )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
     .order("created_at");
@@ -32,13 +34,12 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
         <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
         <h1 className="sect-title fluid-3xl mt-3">Check-in · {partida.titulo}</h1>
         <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
-          {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)} · ${partida.precio.toLocaleString("es-AR")}
+          {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)}
         </p>
       </div>
 
       <CheckinList
         partidaId={partida.id}
-        precio={partida.precio}
         inscripciones={(inscripciones ?? []).map((i) => {
           const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
           const c = Array.isArray(i.checkins) ? i.checkins[0] : i.checkins;
@@ -48,13 +49,22 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             dni: p.dni,
             celular: p.celular,
             socio: p.socio,
+            tipo_jugador: p.tipo_jugador ?? "byop",
             estado: i.estado,
-            checkin: c ? {
-              presente: c.presente,
-              pago_estado: c.pago_estado,
-              pago_monto: c.pago_monto,
-              nota: c.nota,
-            } : null,
+            alquila_marcadora: !!i.alquila_marcadora,
+            alquila_premium: !!i.alquila_premium,
+            alquila_chaleco: !!i.alquila_chaleco,
+            precio_entrada: i.precio_entrada ?? 0,
+            precio_alquiler: i.precio_alquiler ?? 0,
+            precio_total: i.precio_total ?? (i.precio_entrada ?? 0) + (i.precio_alquiler ?? 0),
+            checkin: c
+              ? {
+                  presente: c.presente,
+                  pago_estado: c.pago_estado,
+                  pago_monto: c.pago_monto,
+                  nota: c.nota,
+                }
+              : null,
           };
         })}
       />
