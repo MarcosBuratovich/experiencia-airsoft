@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type SelectOption = { value: string; label: string };
 
@@ -16,10 +17,20 @@ type Props = {
   required?: boolean;
 };
 
+type PanelPos = {
+  top: number;
+  left: number;
+  width: number;
+  direction: "down" | "up";
+};
+
+const PANEL_MAX_HEIGHT = 256; // matches max-h-64
+
 /**
  * Custom select alineado al sistema tactico: mismo alto que los inputs,
  * clip-notch, chevron animado y panel flotante con keyboard nav.
- * Mantiene un <input type="hidden"> para compatibilidad con forms nativos.
+ * El panel se renderiza via portal a document.body para escapar de cualquier
+ * contenedor con overflow-hidden / clip-path.
  */
 export function Select({
   name,
@@ -33,17 +44,55 @@ export function Select({
   required,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [pos, setPos] = useState<PanelPos | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const autoId = useId();
   const listId = id ?? `select-${autoId}`;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const currentLabel = useMemo(
     () => options.find((o) => o.value === value)?.label ?? "",
     [options, value],
   );
   const currentIndex = options.findIndex((o) => o.value === value);
+
+  const recalcPos = () => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+    const direction: "down" | "up" =
+      spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow ? "up" : "down";
+    setPos({
+      top: direction === "down" ? r.bottom + 4 : r.top - 4,
+      left: r.left,
+      width: r.width,
+      direction,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    recalcPos();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => recalcPos();
+    const onResize = () => recalcPos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +114,6 @@ export function Select({
   useEffect(() => {
     if (open) {
       setActiveIndex(currentIndex >= 0 ? currentIndex : 0);
-      // Focus list para que los keys funcionen al abrir
       queueMicrotask(() => listRef.current?.focus());
     }
   }, [open, currentIndex]);
@@ -115,6 +163,63 @@ export function Select({
     }
   };
 
+  const panel =
+    open && pos && mounted
+      ? createPortal(
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            tabIndex={-1}
+            onKeyDown={handleKey}
+            style={{
+              position: "fixed",
+              top: pos.direction === "down" ? pos.top : undefined,
+              bottom:
+                pos.direction === "up"
+                  ? window.innerHeight - pos.top
+                  : undefined,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: PANEL_MAX_HEIGHT,
+            }}
+            className="z-[100] bg-carbon border border-orange clip-notch shadow-[0_18px_50px_-12px_rgba(255,107,26,0.55)] overflow-y-auto focus:outline-none"
+          >
+            {options.map((opt, i) => {
+              const selected = opt.value === value;
+              const active = i === activeIndex;
+              return (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={selected}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                  className={`px-3 py-2.5 cursor-pointer flex items-center gap-2 transition ${
+                    active ? "bg-orange text-ink" : "text-bone"
+                  } ${selected && !active ? "border-l-2 border-orange pl-[10px]" : ""}`}
+                >
+                  <span className="flex-1">{opt.label}</span>
+                  {selected && (
+                    <span
+                      className="font-mono fluid-xs uppercase tracking-[.2em] opacity-60"
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className={`relative ${className}`}>
       {name && (
@@ -147,47 +252,7 @@ export function Select({
         </svg>
       </button>
 
-      {open && (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
-          tabIndex={-1}
-          onKeyDown={handleKey}
-          className="absolute z-50 left-0 right-0 mt-1 bg-carbon border border-orange clip-notch shadow-[0_18px_50px_-12px_rgba(255,107,26,0.4)] max-h-64 overflow-y-auto focus:outline-none"
-        >
-          {options.map((opt, i) => {
-            const selected = opt.value === value;
-            const active = i === activeIndex;
-            return (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={selected}
-                onMouseEnter={() => setActiveIndex(i)}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                  buttonRef.current?.focus();
-                }}
-                className={`px-3 py-2.5 cursor-pointer flex items-center gap-2 transition ${
-                  active ? "bg-orange text-ink" : "text-bone"
-                } ${selected && !active ? "border-l-2 border-orange pl-[10px]" : ""}`}
-              >
-                <span className="flex-1">{opt.label}</span>
-                {selected && (
-                  <span
-                    className="font-mono fluid-xs uppercase tracking-[.2em] opacity-60"
-                    aria-hidden
-                  >
-                    ✓
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {panel}
     </div>
   );
 }
