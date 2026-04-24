@@ -19,6 +19,7 @@ type Inscripcion = {
   socio: boolean;
   tipo_jugador: string;
   estado: string;
+  bando: "rojo" | "amarillo" | null;
   alquila_marcadora: boolean;
   alquila_premium: boolean;
   alquila_chaleco: boolean;
@@ -26,6 +27,11 @@ type Inscripcion = {
   precio_alquiler: number;
   precio_total: number;
   checkin: Checkin | null;
+};
+
+const BANDO_STYLES: Record<"rojo" | "amarillo", { bg: string; fg: string }> = {
+  rojo: { bg: "#dc2626", fg: "#f5f5f5" },
+  amarillo: { bg: "#eab308", fg: "#0a0a0a" },
 };
 
 const PAGO_OPTS = [
@@ -145,6 +151,17 @@ export function CheckinList({
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-bone">{r.nombre}</span>
+                      {r.bando && (
+                        <span
+                          className="px-1.5 py-0.5 font-mono fluid-xs uppercase tracking-[.15em]"
+                          style={{
+                            backgroundColor: BANDO_STYLES[r.bando].bg,
+                            color: BANDO_STYLES[r.bando].fg,
+                          }}
+                        >
+                          {r.bando}
+                        </span>
+                      )}
                       {r.socio && (
                         <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
                           Socio

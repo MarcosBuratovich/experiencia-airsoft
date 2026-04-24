@@ -18,7 +18,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   const { data: inscripciones } = await supabase
     .from("inscripciones")
     .select(
-      "id, estado, user_id, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio, tipo_jugador), checkins(presente, pago_estado, pago_monto, nota)",
+      "id, estado, user_id, bando, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio, tipo_jugador), checkins(presente, pago_estado, pago_monto, nota)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -30,12 +30,20 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
         ← Partidas
       </Link>
 
-      <div className="mt-4 mb-8">
-        <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
-        <h1 className="sect-title fluid-3xl mt-3">Check-in · {partida.titulo}</h1>
-        <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
-          {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)}
-        </p>
+      <div className="mt-4 mb-8 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
+          <h1 className="sect-title fluid-3xl mt-3">Check-in · {partida.titulo}</h1>
+          <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
+            {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)}
+          </p>
+        </div>
+        <Link
+          href={`/admin/partidas/${partida.id}/bandos`}
+          className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
+        >
+          Armar bandos →
+        </Link>
       </div>
 
       <CheckinList
@@ -51,6 +59,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             socio: p.socio,
             tipo_jugador: p.tipo_jugador ?? "byop",
             estado: i.estado,
+            bando: (i.bando as "rojo" | "amarillo" | null) ?? null,
             alquila_marcadora: !!i.alquila_marcadora,
             alquila_premium: !!i.alquila_premium,
             alquila_chaleco: !!i.alquila_chaleco,

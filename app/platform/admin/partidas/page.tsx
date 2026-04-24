@@ -48,9 +48,20 @@ export default async function AdminPartidas() {
                   <td className="px-4 py-3 font-mono text-bone">{inscriptos}/{p.cupo_max}</td>
                   <td className="px-4 py-3 font-mono fluid-xs text-smoke uppercase">{p.visibilidad}</td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/partidas/${p.id}/checkin`} className="text-orange hover:underline font-mono fluid-xs uppercase tracking-[.2em]">
-                      Check-in →
-                    </Link>
+                    <div className="flex gap-3 justify-end font-mono fluid-xs uppercase tracking-[.2em]">
+                      <Link
+                        href={`/admin/partidas/${p.id}/bandos`}
+                        className="text-ash hover:text-orange transition"
+                      >
+                        Bandos
+                      </Link>
+                      <Link
+                        href={`/admin/partidas/${p.id}/checkin`}
+                        className="text-orange hover:underline"
+                      >
+                        Check-in →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );
