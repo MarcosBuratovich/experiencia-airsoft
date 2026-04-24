@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signupAction, type SignupState } from "../actions/auth";
 
 const initial: SignupState = undefined;
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signupAction, initial);
+  const [tipo, setTipo] = useState<"alquiler" | "byop">("alquiler");
 
   return (
     <form action={action} className="space-y-4">
@@ -18,6 +19,30 @@ export function SignupForm() {
       <Field label="Celular" name="celular" inputMode="tel" error={state?.errors?.celular} />
       <Field label="Email" name="email" type="email" error={state?.errors?.email} />
       <Field label="Contraseña" name="password" type="password" error={state?.errors?.password} />
+
+      <fieldset className="space-y-2">
+        <legend className="sect-label mb-2 block">¿Cómo vas a jugar?</legend>
+        <input type="hidden" name="tipo_jugador" value={tipo} />
+        <TipoOption
+          value="alquiler"
+          current={tipo}
+          onChange={setTipo}
+          title="Alquiler"
+          subtitle="Alquilo el equipo en el local (marcadora, chaleco)."
+        />
+        <TipoOption
+          value="byop"
+          current={tipo}
+          onChange={setTipo}
+          title="BYOP"
+          subtitle="Traigo mi propio equipo a la partida."
+        />
+        {state?.errors?.tipo_jugador?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.tipo_jugador[0]}
+          </span>
+        )}
+      </fieldset>
 
       {state?.message && (
         <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
@@ -59,5 +84,43 @@ function Field({
       />
       {error?.[0] && <span className="mt-1 block font-mono fluid-xs text-orange-300">{error[0]}</span>}
     </label>
+  );
+}
+
+function TipoOption({
+  value,
+  current,
+  onChange,
+  title,
+  subtitle,
+}: {
+  value: "alquiler" | "byop";
+  current: "alquiler" | "byop";
+  onChange: (v: "alquiler" | "byop") => void;
+  title: string;
+  subtitle: string;
+}) {
+  const active = current === value;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(value)}
+      className={`w-full text-left px-4 py-3 border transition clip-notch cursor-pointer ${
+        active
+          ? "bg-carbon border-orange"
+          : "bg-ink/40 border-rail/60 hover:border-rail"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={`inline-block w-3 h-3 rounded-full border-2 transition ${
+            active ? "bg-orange border-orange" : "border-rail"
+          }`}
+          aria-hidden
+        />
+        <span className="font-display text-bone uppercase tracking-wider">{title}</span>
+      </div>
+      <p className="mt-1 pl-6 font-mono fluid-xs text-smoke">{subtitle}</p>
+    </button>
   );
 }
