@@ -34,7 +34,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-dvh bg-ink text-bone">
-      <header className="border-b border-rail/60 bg-carbon/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-rail/60 bg-carbon/85 backdrop-blur">
         <div className="fluid-gutter-x flex items-center justify-between py-4">
           <Link href="/" className="font-display fluid-lg uppercase tracking-wider text-bone">
             Experiencia <span className="text-orange">Airsoft</span>
