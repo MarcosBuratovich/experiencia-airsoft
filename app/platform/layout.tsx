@@ -33,6 +33,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           <PlatformNav
             isAuthed={!!user}
             isAdmin={profile?.role === "admin" || profile?.role === "super_admin"}
+            isSuperAdmin={profile?.role === "super_admin"}
             userLabel={profile ? `${profile.nombre} ${profile.apellido}` : null}
           />
         </div>

@@ -10,28 +10,46 @@ export function NuevaPartidaForm() {
 
   return (
     <form action={action} className="space-y-4">
-      <Field label="Título" name="titulo" error={state?.errors?.titulo} />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Fecha" name="fecha" type="date" error={state?.errors?.fecha} />
         <Field label="Hora" name="hora_inicio" type="time" error={state?.errors?.hora_inicio} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Modalidad" name="modalidad" error={state?.errors?.modalidad}
+        <Select
+          label="Modalidad"
+          name="modalidad"
+          error={state?.errors?.modalidad}
           options={[
             { value: "dinamica", label: "Dinámica" },
             { value: "tacsim", label: "TacSim" },
             { value: "speedsoft", label: "Speedsoft" },
-          ]} />
-        <Select label="Visibilidad" name="visibilidad" error={state?.errors?.visibilidad}
+          ]}
+        />
+        <Select
+          label="Visibilidad"
+          name="visibilidad"
+          error={state?.errors?.visibilidad}
           options={[
             { value: "publica", label: "Pública" },
             { value: "privada", label: "Privada (link)" },
-          ]} />
+          ]}
+        />
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Cupo máx." name="cupo_max" type="number" defaultValue="20" error={state?.errors?.cupo_max} />
-        <Field label="Duración (min)" name="duracion_min" type="number" defaultValue="180" error={state?.errors?.duracion_min} />
-        <Field label="Precio" name="precio" type="number" defaultValue="0" error={state?.errors?.precio} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Cupo máx."
+          name="cupo_max"
+          type="number"
+          defaultValue="20"
+          error={state?.errors?.cupo_max}
+        />
+        <Field
+          label="Duración (min)"
+          name="duracion_min"
+          type="number"
+          defaultValue="180"
+          error={state?.errors?.duracion_min}
+        />
       </div>
       <label className="block">
         <span className="sect-label mb-1 block">Notas</span>
@@ -41,6 +59,12 @@ export function NuevaPartidaForm() {
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none"
         />
       </label>
+
+      <p className="font-mono fluid-xs text-smoke">
+        Los precios salen de la configuración en{" "}
+        <span className="text-orange">/admin/precios</span>. El título usa la
+        modalidad.
+      </p>
 
       {state?.message && <p className="font-mono fluid-xs text-orange-300">{state.message}</p>}
 

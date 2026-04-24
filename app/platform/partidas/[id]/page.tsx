@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
-import { getPreciosConfig, type TipoJugador } from "@/lib/precios";
+import { getPreciosConfig } from "@/lib/precios";
+import { dentroDeVentana } from "@/lib/partidas";
 import { AnotarmeButton } from "./anotarme-button";
 
 export default async function PartidaDetail({
@@ -18,12 +19,12 @@ export default async function PartidaDetail({
   const [{ data: partida }, { data: profile }, precios] = await Promise.all([
     supabase
       .from("partidas")
-      .select("id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, precio, estado, notas, visibilidad")
+      .select("id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, notas, visibilidad")
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("profiles")
-      .select("tipo_jugador, socio")
+      .select("socio")
       .eq("id", user.id)
       .maybeSingle(),
     getPreciosConfig(supabase),
@@ -41,8 +42,7 @@ export default async function PartidaDetail({
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
   const lleno = confirmados.length >= partida.cupo_max;
-
-  const tipo_jugador = (profile?.tipo_jugador ?? "byop") as TipoJugador;
+  const fueraDeVentana = !dentroDeVentana(partida.fecha, partida.hora_inicio);
   const socio = !!profile?.socio;
 
   return (
@@ -53,7 +53,7 @@ export default async function PartidaDetail({
 
       <div className="mt-4 mb-6">
         <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
-        <h1 className="sect-title fluid-3xl mt-3">{partida.titulo}</h1>
+        <h1 className="sect-title fluid-3xl mt-3">{modalidadLabel(partida.modalidad)}</h1>
         <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
           {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)} · {partida.duracion_min} min
         </p>
@@ -73,7 +73,7 @@ export default async function PartidaDetail({
           inscripcion={mine ? { id: mine.id, estado: mine.estado } : null}
           estado={partida.estado}
           lleno={lleno}
-          tipo_jugador={tipo_jugador}
+          fueraDeVentana={fueraDeVentana}
           socio={socio}
           precios={{
             entrada_alquiler: precios.entrada_alquiler,

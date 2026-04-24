@@ -6,7 +6,7 @@ export default async function AdminPartidas() {
   const supabase = await createClient();
   const { data: partidas } = await supabase
     .from("partidas")
-    .select("id, titulo, fecha, hora_inicio, modalidad, cupo_max, visibilidad, estado, inscripciones(count)")
+    .select("id, fecha, hora_inicio, modalidad, cupo_max, visibilidad, estado, inscripciones(count)")
     .order("fecha", { ascending: false })
     .order("hora_inicio", { ascending: false })
     .limit(50);
@@ -28,8 +28,8 @@ export default async function AdminPartidas() {
           <thead className="bg-carbon">
             <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
               <th className="text-left px-4 py-3">Fecha</th>
-              <th className="text-left px-4 py-3">Partida</th>
               <th className="text-left px-4 py-3">Modalidad</th>
+              <th className="text-left px-4 py-3">Estado</th>
               <th className="text-left px-4 py-3">Anotados</th>
               <th className="text-left px-4 py-3">Visibilidad</th>
               <th className="text-left px-4 py-3"></th>
@@ -43,8 +43,20 @@ export default async function AdminPartidas() {
                   <td className="px-4 py-3 font-mono fluid-xs text-ash">
                     {formatFechaLarga(p.fecha)} · {formatHora(p.hora_inicio)}
                   </td>
-                  <td className="px-4 py-3 text-bone">{p.titulo}</td>
-                  <td className="px-4 py-3 text-ash">{modalidadLabel(p.modalidad)}</td>
+                  <td className="px-4 py-3 text-bone">{modalidadLabel(p.modalidad)}</td>
+                  <td className="px-4 py-3 font-mono fluid-xs uppercase tracking-[.15em]">
+                    <span
+                      className={
+                        p.estado === "cancelada"
+                          ? "text-orange-300"
+                          : p.estado === "cerrada"
+                            ? "text-smoke"
+                            : "text-bone"
+                      }
+                    >
+                      {p.estado}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono text-bone">{inscriptos}/{p.cupo_max}</td>
                   <td className="px-4 py-3 font-mono fluid-xs text-smoke uppercase">{p.visibilidad}</td>
                   <td className="px-4 py-3 text-right">

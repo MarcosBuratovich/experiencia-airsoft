@@ -93,24 +93,33 @@ export default async function MiClanPage() {
   if (soyCapitan) {
     const { data: reqs } = await supabase
       .from("clan_requests")
-      .select("id, mensaje, created_at, profiles!clan_requests_user_id_fkey(id, nombre, apellido)")
+      .select("id, mensaje, created_at, user_id")
       .eq("clan_id", clan.id)
       .eq("estado", "pendiente")
       .order("created_at");
 
-    solicitudesPendientes = (reqs ?? []).map((r) => {
-      const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-      return {
-        id: r.id,
-        mensaje: r.mensaje,
-        created_at: r.created_at,
-        user: {
-          id: p?.id ?? "",
-          nombre: p?.nombre ?? "",
-          apellido: p?.apellido ?? "",
-        },
-      };
-    });
+    const userIds = (reqs ?? []).map((r) => r.user_id);
+    const profilesById = new Map<string, { nombre: string; apellido: string }>();
+    if (userIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, nombre, apellido")
+        .in("id", userIds);
+      for (const p of profs ?? []) {
+        profilesById.set(p.id, { nombre: p.nombre, apellido: p.apellido });
+      }
+    }
+
+    solicitudesPendientes = (reqs ?? []).map((r) => ({
+      id: r.id,
+      mensaje: r.mensaje,
+      created_at: r.created_at,
+      user: {
+        id: r.user_id,
+        nombre: profilesById.get(r.user_id)?.nombre ?? "",
+        apellido: profilesById.get(r.user_id)?.apellido ?? "",
+      },
+    }));
   }
 
   return (

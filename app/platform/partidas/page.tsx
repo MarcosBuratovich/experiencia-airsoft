@@ -7,7 +7,7 @@ export default async function PartidasPage() {
 
   const { data: partidas } = await supabase
     .from("partidas")
-    .select("id, titulo, fecha, hora_inicio, modalidad, cupo_max, precio, estado, inscripciones(count)")
+    .select("id, fecha, hora_inicio, modalidad, cupo_max, estado, inscripciones(count)")
     .eq("visibilidad", "publica")
     .in("estado", ["abierta", "cerrada"])
     .gte("fecha", new Date().toISOString().slice(0, 10))
@@ -46,13 +46,12 @@ export default async function PartidasPage() {
                 </span>
               </div>
               <h2 className="font-display fluid-xl uppercase text-bone group-hover:text-orange transition">
-                {p.titulo}
+                {modalidadLabel(p.modalidad)}
               </h2>
               <p className="mt-2 font-mono fluid-xs text-ash uppercase tracking-[.2em]">
                 {formatFechaLarga(p.fecha)} · {formatHora(p.hora_inicio)}
               </p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="font-mono fluid-sm text-bone">${p.precio.toLocaleString("es-AR")}</span>
+              <div className="mt-4 flex items-center justify-end">
                 {lleno ? (
                   <span className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">Lista de espera</span>
                 ) : p.estado === "cerrada" ? (

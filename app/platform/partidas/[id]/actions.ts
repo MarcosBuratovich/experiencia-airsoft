@@ -8,34 +8,43 @@ import {
   type AlquilerItems,
   type TipoJugador,
 } from "@/lib/precios";
+import { dentroDeVentana } from "@/lib/partidas";
 
 export type AnotarmeInput = {
+  tipo_jugador: TipoJugador;
   alquila_marcadora?: boolean;
   alquila_premium?: boolean;
   alquila_chaleco?: boolean;
 };
 
-export async function anotarmeAction(partidaId: string, input: AnotarmeInput = {}) {
+export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
+  if (input.tipo_jugador !== "alquiler" && input.tipo_jugador !== "byop") {
+    return { error: "Elegí alquiler o BYOP" };
+  }
+
   const { data: partida } = await supabase
     .from("partidas")
-    .select("cupo_max, estado")
+    .select("cupo_max, estado, fecha, hora_inicio")
     .eq("id", partidaId)
     .maybeSingle();
   if (!partida) return { error: "Partida no encontrada" };
   if (partida.estado !== "abierta") return { error: "No se acepta inscripción" };
+  if (!dentroDeVentana(partida.fecha, partida.hora_inicio)) {
+    return { error: "Ya pasó la ventana de inscripción" };
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tipo_jugador, socio")
+    .select("socio")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile) return { error: "Perfil no encontrado" };
 
-  const tipo_jugador = (profile.tipo_jugador ?? "byop") as TipoJugador;
+  const tipo_jugador = input.tipo_jugador;
   const socio = !!profile.socio;
 
   // Si es alquiler, validar que tenga al menos una marcadora y no ambas.
@@ -84,6 +93,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput = {
     user_id: user.id,
     estado,
     posicion_waitlist,
+    tipo_jugador,
     alquila_marcadora: alquila.marcadora,
     alquila_premium: alquila.premium,
     alquila_chaleco: alquila.chaleco,

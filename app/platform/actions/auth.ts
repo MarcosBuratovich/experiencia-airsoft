@@ -15,7 +15,6 @@ const signupSchema = z.object({
     .min(8, "Mínimo 8 caracteres")
     .regex(/[a-zA-Z]/, "Debe tener al menos una letra")
     .regex(/[0-9]/, "Debe tener al menos un número"),
-  tipo_jugador: z.enum(["alquiler", "byop"], { message: "Elegí alquiler o BYOP" }),
 });
 
 export type SignupState = {
@@ -31,21 +30,20 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
     celular: formData.get("celular"),
     email: formData.get("email"),
     password: formData.get("password"),
-    tipo_jugador: formData.get("tipo_jugador"),
   });
 
   if (!parsed.success) {
     return { errors: z.flattenError(parsed.error).fieldErrors };
   }
 
-  const { nombre, apellido, dni, celular, email, password, tipo_jugador } = parsed.data;
+  const { nombre, apellido, dni, celular, email, password } = parsed.data;
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { nombre, apellido, dni, celular, tipo_jugador },
+      data: { nombre, apellido, dni, celular },
     },
   });
 

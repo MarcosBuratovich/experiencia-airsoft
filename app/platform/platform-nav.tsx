@@ -7,10 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 type Props = {
   isAuthed: boolean;
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
   userLabel: string | null;
 };
 
-export function PlatformNav({ isAuthed, isAdmin, userLabel }: Props) {
+export function PlatformNav({ isAuthed, isAdmin, isSuperAdmin, userLabel }: Props) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -33,7 +34,7 @@ export function PlatformNav({ isAuthed, isAdmin, userLabel }: Props) {
           {isAdmin && (
             <>
               <Link href="/admin/partidas" className="text-orange hover:text-bone transition">
-                Partidas · Admin
+                Admin
               </Link>
               <Link href="/admin/socios" className="text-orange hover:text-bone transition">
                 Socios
@@ -41,6 +42,11 @@ export function PlatformNav({ isAuthed, isAdmin, userLabel }: Props) {
               <Link href="/admin/usuarios" className="text-orange hover:text-bone transition">
                 Usuarios
               </Link>
+              {isSuperAdmin && (
+                <Link href="/admin/precios" className="text-orange hover:text-bone transition">
+                  Precios
+                </Link>
+              )}
             </>
           )}
           {userLabel && <span className="text-smoke hidden sm:inline">{userLabel}</span>}

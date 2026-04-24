@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { CheckinList } from "./checkin-list";
+import { PartidaActionsButtons } from "./partida-actions-buttons";
 
 export default async function CheckinPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +19,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   const { data: inscripciones } = await supabase
     .from("inscripciones")
     .select(
-      "id, estado, user_id, bando, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio, tipo_jugador), checkins(presente, pago_estado, pago_monto, nota)",
+      "id, estado, user_id, bando, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -33,17 +34,29 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       <div className="mt-4 mb-8 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
-          <h1 className="sect-title fluid-3xl mt-3">Check-in · {partida.titulo}</h1>
+          <h1 className="sect-title fluid-3xl mt-3">
+            Check-in · {modalidadLabel(partida.modalidad)}
+            {partida.estado === "cancelada" && (
+              <span className="ml-3 mil-tag bone">Cancelada</span>
+            )}
+          </h1>
           <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
             {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)}
           </p>
         </div>
-        <Link
-          href={`/admin/partidas/${partida.id}/bandos`}
-          className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
-        >
-          Armar bandos →
-        </Link>
+        <div className="flex flex-col items-end gap-3">
+          <Link
+            href={`/admin/partidas/${partida.id}/bandos`}
+            className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
+          >
+            Armar bandos →
+          </Link>
+          <PartidaActionsButtons
+            partidaId={partida.id}
+            estado={partida.estado}
+            yaEmpezo={new Date(`${partida.fecha}T${partida.hora_inicio}`).getTime() <= Date.now()}
+          />
+        </div>
       </div>
 
       <CheckinList
@@ -57,7 +70,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             dni: p.dni,
             celular: p.celular,
             socio: p.socio,
-            tipo_jugador: p.tipo_jugador ?? "byop",
+            tipo_jugador: i.tipo_jugador ?? "byop",
             estado: i.estado,
             bando: (i.bando as "rojo" | "amarillo" | null) ?? null,
             alquila_marcadora: !!i.alquila_marcadora,

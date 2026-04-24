@@ -21,7 +21,7 @@ type Props = {
   inscripcion: Inscripcion | null;
   estado: string;
   lleno: boolean;
-  tipo_jugador: TipoJugador;
+  fueraDeVentana: boolean;
   socio: boolean;
   precios: PreciosMin;
 };
@@ -35,11 +35,12 @@ export function AnotarmeButton({
   inscripcion,
   estado,
   lleno,
-  tipo_jugador,
+  fueraDeVentana,
   socio,
   precios,
 }: Props) {
   const [pending, startTransition] = useTransition();
+  const [tipo, setTipo] = useState<TipoJugador>("byop");
   const [marcadora, setMarcadora] = useState<"comun" | "premium">("comun");
   const [chaleco, setChaleco] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,18 +48,18 @@ export function AnotarmeButton({
 
   const entrada = socio
     ? precios.entrada_socio
-    : tipo_jugador === "alquiler"
+    : tipo === "alquiler"
       ? precios.entrada_alquiler
       : precios.entrada_byop;
 
   const alquilerMonto = useMemo(() => {
-    if (tipo_jugador !== "alquiler") return 0;
+    if (tipo !== "alquiler") return 0;
     let t = 0;
     if (marcadora === "comun") t += precios.alquiler_marcadora;
     else t += precios.alquiler_premium;
     if (chaleco) t += precios.alquiler_chaleco;
     return t;
-  }, [tipo_jugador, marcadora, chaleco, precios]);
+  }, [tipo, marcadora, chaleco, precios]);
 
   const total = entrada + alquilerMonto;
 
@@ -73,14 +74,15 @@ export function AnotarmeButton({
         <span className="mil-tag bone">{label}</span>
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || fueraDeVentana}
           onClick={() =>
             startTransition(async () => {
               await desanotarmeAction(partidaId);
               router.refresh();
             })
           }
-          className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs cursor-pointer"
+          className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs cursor-pointer disabled:opacity-40"
+          title={fueraDeVentana ? "Ya pasó la ventana" : undefined}
         >
           {pending ? "..." : "Desanotarme"}
         </button>
@@ -88,13 +90,22 @@ export function AnotarmeButton({
     );
   }
 
+  if (fueraDeVentana) {
+    return (
+      <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">
+        Ventana de inscripción cerrada.
+      </p>
+    );
+  }
+
   const onAnotarme = () => {
     setError(null);
     startTransition(async () => {
       const res = await anotarmeAction(partidaId, {
-        alquila_marcadora: tipo_jugador === "alquiler" && marcadora === "comun",
-        alquila_premium: tipo_jugador === "alquiler" && marcadora === "premium",
-        alquila_chaleco: tipo_jugador === "alquiler" && chaleco,
+        tipo_jugador: tipo,
+        alquila_marcadora: tipo === "alquiler" && marcadora === "comun",
+        alquila_premium: tipo === "alquiler" && marcadora === "premium",
+        alquila_chaleco: tipo === "alquiler" && chaleco,
       });
       if ("error" in res && res.error) {
         setError(res.error);
@@ -112,7 +123,28 @@ export function AnotarmeButton({
 
   return (
     <div className="space-y-4">
-      {tipo_jugador === "alquiler" ? (
+      <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
+        <legend className="sect-label px-2">¿Cómo vas a jugar?</legend>
+
+        <div className="grid grid-cols-2 gap-2">
+          <TipoOpt
+            value="alquiler"
+            current={tipo}
+            onSelect={setTipo}
+            title="Alquiler"
+            subtitle="Alquilo equipo"
+          />
+          <TipoOpt
+            value="byop"
+            current={tipo}
+            onSelect={setTipo}
+            title="BYOP"
+            subtitle="Traigo el mío"
+          />
+        </div>
+      </fieldset>
+
+      {tipo === "alquiler" && (
         <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
           <legend className="sect-label px-2">Equipo a alquilar</legend>
 
@@ -144,16 +176,12 @@ export function AnotarmeButton({
             <span className="font-mono fluid-xs text-ash">{ars(precios.alquiler_chaleco)}</span>
           </label>
         </fieldset>
-      ) : (
-        <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
-          {socio ? "Socio · sin cargo de entrada" : "BYOP · traés tu propio equipo"}
-        </p>
       )}
 
       <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
         <dl className="space-y-1 font-mono fluid-xs">
-          <Row label="Entrada" value={ars(entrada)} />
-          {tipo_jugador === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
+          <Row label={socio ? "Entrada (socio)" : "Entrada"} value={ars(entrada)} />
+          {tipo === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
           <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
             <span className="sect-label">Total</span>
             <span className="font-display fluid-xl text-bone">{ars(total)}</span>
@@ -181,6 +209,42 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-ash uppercase tracking-[.2em]">{label}</span>
       <span className="text-bone">{value}</span>
     </div>
+  );
+}
+
+function TipoOpt({
+  value,
+  current,
+  onSelect,
+  title,
+  subtitle,
+}: {
+  value: TipoJugador;
+  current: TipoJugador;
+  onSelect: (v: TipoJugador) => void;
+  title: string;
+  subtitle: string;
+}) {
+  const active = current === value;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      className={`px-3 py-3 text-left border transition clip-notch cursor-pointer ${
+        active ? "bg-ink/60 border-orange" : "bg-ink/30 border-rail/60 hover:border-rail"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-block w-3 h-3 rounded-full border-2 transition ${
+            active ? "bg-orange border-orange" : "border-rail"
+          }`}
+          aria-hidden
+        />
+        <span className="font-display text-bone uppercase tracking-wider">{title}</span>
+      </div>
+      <p className="mt-1 pl-5 font-mono fluid-xs text-smoke">{subtitle}</p>
+    </button>
   );
 }
 
