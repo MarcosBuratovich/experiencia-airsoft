@@ -1,0 +1,94 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function ClanesDirectorio() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: miProfile } = await supabase
+    .from("profiles")
+    .select("clan_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const { data: clanes } = await supabase
+    .from("clanes")
+    .select("id, slug, nombre, descripcion, color_hex, logo_url, capitan_id")
+    .order("created_at", { ascending: false });
+
+  const clanIds = (clanes ?? []).map((c) => c.id);
+  const memberCounts = new Map<string, number>();
+  if (clanIds.length) {
+    const { data: counts } = await supabase
+      .from("profiles")
+      .select("clan_id")
+      .in("clan_id", clanIds);
+    for (const row of counts ?? []) {
+      if (row.clan_id) memberCounts.set(row.clan_id, (memberCounts.get(row.clan_id) ?? 0) + 1);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <p className="sect-label mb-2">Comunidad</p>
+          <h1 className="sect-title fluid-3xl">Clanes</h1>
+        </div>
+        {miProfile?.clan_id ? (
+          <Link
+            href="/mi-clan"
+            className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
+          >
+            Mi clan →
+          </Link>
+        ) : (
+          <Link
+            href="/clanes/nuevo"
+            className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
+          >
+            + Crear clan
+          </Link>
+        )}
+      </div>
+
+      {!clanes?.length ? (
+        <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
+          <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
+            Todavía no hay clanes. Creá el primero.
+          </p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {clanes.map((c) => {
+            const count = memberCounts.get(c.id) ?? 0;
+            return (
+              <Link
+                key={c.id}
+                href={`/clanes/${c.slug}`}
+                className="border border-rail/60 bg-carbon clip-notch p-5 hover:border-orange transition flex flex-col gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-block w-6 h-6 rounded-full border border-rail/60"
+                    style={{ backgroundColor: c.color_hex ?? "#666" }}
+                    aria-hidden
+                  />
+                  <span className="font-display text-bone uppercase tracking-wider">{c.nombre}</span>
+                </div>
+                {c.descripcion && (
+                  <p className="text-ash fluid-sm line-clamp-2">{c.descripcion}</p>
+                )}
+                <p className="font-mono fluid-xs text-smoke uppercase tracking-[.2em] mt-auto">
+                  {count} {count === 1 ? "miembro" : "miembros"}
+                </p>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

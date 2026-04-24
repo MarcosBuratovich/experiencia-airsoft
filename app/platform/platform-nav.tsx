@@ -27,6 +27,9 @@ export function PlatformNav({ isAuthed, isAdmin, userLabel }: Props) {
           <Link href="/partidas" className="text-bone hover:text-orange transition">
             Partidas
           </Link>
+          <Link href="/clanes" className="text-bone hover:text-orange transition">
+            Clanes
+          </Link>
           {isAdmin && (
             <>
               <Link href="/admin/partidas" className="text-orange hover:text-bone transition">

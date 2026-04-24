@@ -1,4 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { createClient } from "./supabase/server";
+
+type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
 
 export type TipoJugador = "alquiler" | "byop";
 
@@ -65,7 +67,7 @@ export const PRECIOS_KEYS_ORDER: PreciosKey[] = [
 ];
 
 export async function getPreciosConfig(
-  supabase: SupabaseClient,
+  supabase: ServerSupabase,
 ): Promise<PreciosConfig> {
   const { data } = await supabase.from("precios_config").select("key, valor");
   const out: PreciosConfig = { ...PRECIOS_DEFAULT };
