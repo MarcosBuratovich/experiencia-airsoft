@@ -16,13 +16,17 @@ type PreciosMin = {
   alquiler_chaleco: number;
 };
 
+type DeudaCuota = { meses: number; monto: number };
+
 type Props = {
   partidaId: string;
   inscripcion: Inscripcion | null;
   estado: string;
   lleno: boolean;
   fueraDeVentana: boolean;
-  socio: boolean;
+  esSocio: boolean;
+  socioAlDia: boolean;
+  deudaCuota: DeudaCuota;
   precios: PreciosMin;
 };
 
@@ -36,7 +40,9 @@ export function AnotarmeButton({
   estado,
   lleno,
   fueraDeVentana,
-  socio,
+  esSocio,
+  socioAlDia,
+  deudaCuota,
   precios,
 }: Props) {
   const [pending, startTransition] = useTransition();
@@ -46,7 +52,11 @@ export function AnotarmeButton({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const entrada = socio
+  // Solo aplica el beneficio si es socio Y está al día con la cuota
+  const aplicaBeneficio = esSocio && socioAlDia;
+  const socioConDeuda = esSocio && !socioAlDia;
+
+  const entrada = aplicaBeneficio
     ? precios.entrada_socio
     : tipo === "alquiler"
       ? precios.entrada_alquiler
@@ -64,11 +74,16 @@ export function AnotarmeButton({
   const total = entrada + alquilerMonto;
 
   if (estado === "cancelada") {
-    return <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">Partida cancelada.</p>;
+    return (
+      <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">
+        Partida cancelada.
+      </p>
+    );
   }
 
   if (inscripcion) {
-    const label = inscripcion.estado === "waitlist" ? "Estás en lista de espera" : "Confirmado";
+    const label =
+      inscripcion.estado === "waitlist" ? "Estás en lista de espera" : "Confirmado";
     return (
       <div className="flex items-center gap-3">
         <span className="mil-tag bone">{label}</span>
@@ -115,14 +130,46 @@ export function AnotarmeButton({
     });
   };
 
+  // Texto del CTA: si beneficio activo y total === 0, simplificamos
   const btnLabel = pending
     ? "..."
     : lleno
-      ? `Anotarme a lista de espera · ${ars(total)}`
-      : `Anotarme · ${ars(total)}`;
+      ? aplicaBeneficio && total === 0
+        ? "Anotarme a lista de espera"
+        : `Anotarme a lista de espera · ${ars(total)}`
+      : aplicaBeneficio && total === 0
+        ? "Anotarme · sin cargo"
+        : `Anotarme · ${ars(total)}`;
 
   return (
     <div className="space-y-4">
+      {/* Badge socio activo */}
+      {aplicaBeneficio && (
+        <div className="border border-orange/40 bg-orange/5 clip-notch p-4 flex items-start gap-3">
+          <span className="mt-0.5 px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.18em]">
+            Socio
+          </span>
+          <p className="font-mono fluid-xs uppercase tracking-[.22em] text-orange flex-1">
+            La entrada está incluida en tu cuota mensual.
+          </p>
+        </div>
+      )}
+
+      {/* Warning de cuota atrasada */}
+      {socioConDeuda && (
+        <div className="border border-orange-300/50 bg-orange-300/5 clip-notch p-4">
+          <p className="sect-label mb-1 text-orange-300">
+            // Cuota atrasada
+          </p>
+          <p className="font-sans fluid-sm text-bone">
+            Te {deudaCuota.meses === 1 ? "falta" : "faltan"} {deudaCuota.meses}{" "}
+            {deudaCuota.meses === 1 ? "mes" : "meses"} ({ars(deudaCuota.monto)}).
+            Mientras tengas deuda no se aplica el beneficio de socio: pagás la
+            entrada de la partida como cualquier jugador.
+          </p>
+        </div>
+      )}
+
       <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
         <legend className="sect-label px-2">¿Cómo vas a jugar?</legend>
 
@@ -173,21 +220,32 @@ export function AnotarmeButton({
               className="w-4 h-4 accent-orange cursor-pointer"
             />
             <span className="text-bone font-sans flex-1">Chaleco</span>
-            <span className="font-mono fluid-xs text-ash">{ars(precios.alquiler_chaleco)}</span>
+            <span className="font-mono fluid-xs text-ash">
+              {ars(precios.alquiler_chaleco)}
+            </span>
           </label>
         </fieldset>
       )}
 
-      <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
-        <dl className="space-y-1 font-mono fluid-xs">
-          <Row label={socio ? "Entrada (socio)" : "Entrada"} value={ars(entrada)} />
-          {tipo === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
-          <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
-            <span className="sect-label">Total</span>
-            <span className="font-display fluid-xl text-bone">{ars(total)}</span>
-          </div>
-        </dl>
-      </div>
+      {/* Desglose: lo escondemos completamente cuando es socio al día y no
+          alquila nada — no hay nada que mostrar y reduce ruido visual. */}
+      {!(aplicaBeneficio && tipo === "byop") && (
+        <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
+          <dl className="space-y-1 font-mono fluid-xs">
+            {!aplicaBeneficio && (
+              <Row
+                label={socioConDeuda ? "Entrada (cuota atrasada)" : "Entrada"}
+                value={ars(entrada)}
+              />
+            )}
+            {tipo === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
+            <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
+              <span className="sect-label">Total</span>
+              <span className="font-display fluid-xl text-bone">{ars(total)}</span>
+            </div>
+          </dl>
+        </div>
+      )}
 
       {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
 
@@ -278,7 +336,9 @@ function MarcadoraOpt({
           aria-hidden
         />
         <span className="text-bone flex-1">{title}</span>
-        <span className="font-mono fluid-xs text-ash">${precio.toLocaleString("es-AR")}</span>
+        <span className="font-mono fluid-xs text-ash">
+          ${precio.toLocaleString("es-AR")}
+        </span>
       </div>
     </button>
   );

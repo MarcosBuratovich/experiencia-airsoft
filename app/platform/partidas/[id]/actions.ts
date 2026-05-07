@@ -9,6 +9,7 @@ import {
   type TipoJugador,
 } from "@/lib/precios";
 import { inscripcionAbierta } from "@/lib/partidas";
+import { computarEstadoCuota } from "@/lib/socios";
 
 export type AnotarmeInput = {
   tipo_jugador: TipoJugador;
@@ -46,13 +47,28 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("socio")
+    .select("socio, socio_desde, cuota_mensual")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile) return { error: "Perfil no encontrado" };
 
   const tipo_jugador = input.tipo_jugador;
-  const socio = !!profile.socio;
+
+  // Calcular estado de cuota: socio con deuda pierde el beneficio de
+  // entrada gratis (paga como cualquier no-socio).
+  const { data: pagos } = await supabase
+    .from("socio_pagos")
+    .select("periodo")
+    .eq("user_id", user.id);
+  const cuota = computarEstadoCuota(
+    {
+      socio: !!profile.socio,
+      socio_desde: profile.socio_desde,
+      cuota_mensual: profile.cuota_mensual ?? 0,
+    },
+    pagos ?? [],
+  );
+  const aplicaBeneficioSocio = cuota.esSocio && cuota.alDia;
 
   // Si es alquiler, validar que tenga al menos una marcadora y no ambas.
   const alquila: AlquilerItems = {
@@ -72,7 +88,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   const precios = await getPreciosConfig(supabase);
   const { entrada, alquiler } = calcularPrecioInscripcion({
     tipo_jugador,
-    socio,
+    socio: aplicaBeneficioSocio,
     alquila,
     precios,
   });

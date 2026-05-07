@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
+import { computarEstadoCuota, labelPeriodoCorto } from "@/lib/socios";
 
 type PartidaCard = {
   id: string;
@@ -26,16 +27,34 @@ export default async function PartidasPage() {
     .toISOString()
     .slice(0, 10);
 
-  const { data: partidas } = await supabase
-    .from("partidas")
-    .select(
-      "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, inscripciones(count)",
-    )
-    .eq("visibilidad", "publica")
-    .neq("estado", "cancelada")
-    .gte("fecha", desde)
-    .order("fecha", { ascending: true })
-    .order("hora_inicio", { ascending: true });
+  const [{ data: partidas }, { data: profile }, { data: pagosCuota }] =
+    await Promise.all([
+      supabase
+        .from("partidas")
+        .select(
+          "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, inscripciones(count)",
+        )
+        .eq("visibilidad", "publica")
+        .neq("estado", "cancelada")
+        .gte("fecha", desde)
+        .order("fecha", { ascending: true })
+        .order("hora_inicio", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("socio, socio_desde, cuota_mensual")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase.from("socio_pagos").select("periodo").eq("user_id", user.id),
+    ]);
+
+  const cuota = computarEstadoCuota(
+    {
+      socio: !!profile?.socio,
+      socio_desde: profile?.socio_desde ?? null,
+      cuota_mensual: profile?.cuota_mensual ?? 0,
+    },
+    pagosCuota ?? [],
+  );
 
   const cards: PartidaCard[] = (partidas ?? []).map((p) => ({
     id: p.id,
@@ -72,6 +91,16 @@ export default async function PartidasPage() {
         <h1 className="sect-title fluid-3xl">Partidas</h1>
       </div>
 
+      {cuota.esSocio && !cuota.alDia && (
+        <DeudaBanner
+          meses={cuota.periodosAdeudados.length}
+          monto={cuota.montoAdeudado}
+          ultimoPeriodo={
+            cuota.periodosAdeudados[cuota.periodosAdeudados.length - 1]
+          }
+        />
+      )}
+
       <Section
         title="Abiertas"
         count={abiertas.length}
@@ -97,6 +126,32 @@ export default async function PartidasPage() {
           ))}
         </Section>
       )}
+    </div>
+  );
+}
+
+function DeudaBanner({
+  meses,
+  monto,
+  ultimoPeriodo,
+}: {
+  meses: number;
+  monto: number;
+  ultimoPeriodo?: string;
+}) {
+  return (
+    <div className="mb-6 border-l-2 border-orange bg-orange/5 clip-notch p-4 sm:p-5">
+      <p className="sect-label mb-1 text-orange">// Cuota atrasada</p>
+      <p className="font-display fluid-lg text-bone uppercase tracking-wider mb-1">
+        ${monto.toLocaleString("es-AR")} adeudado
+      </p>
+      <p className="font-sans fluid-sm text-ash">
+        Te {meses === 1 ? "falta" : "faltan"} {meses}{" "}
+        {meses === 1 ? "mes" : "meses"} de cuota
+        {ultimoPeriodo ? ` (último: ${labelPeriodoCorto(ultimoPeriodo)})` : ""}.
+        Mientras tengas deuda no se aplica el beneficio de socio: pagás la
+        entrada al anotarte. Hablá con un admin para ponerte al día.
+      </p>
     </div>
   );
 }
