@@ -86,7 +86,7 @@ export function PlatformNav({
   const pending = solicitudesPendientes ?? 0;
 
   const adminLinks: AdminLink[] = [
-    { href: "/admin/partidas", label: "Partidas", subtitle: "Listas, check-in y bandos" },
+    { href: "/admin/partidas", label: "Partidas", subtitle: "Listas y check-in" },
     { href: "/admin/socios", label: "Socios", subtitle: "Cuotas y pagos" },
     { href: "/admin/usuarios", label: "Usuarios", subtitle: "Roles y búsqueda" },
     {

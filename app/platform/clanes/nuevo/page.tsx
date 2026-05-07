@@ -30,8 +30,8 @@ export default async function NuevoClanPage() {
         <p className="sect-label mb-2">Comunidad · nuevo</p>
         <h1 className="sect-title fluid-3xl">Crear clan</h1>
         <p className="mt-3 text-ash fluid-sm">
-          Al crear el clan pasás a ser capitán. Podés aprobar solicitudes de otros
-          jugadores y todo el clan juega siempre en el mismo bando.
+          Al crear el clan pasás a ser capitán. Podés aprobar o rechazar
+          solicitudes de otros jugadores y mantener el roster.
         </p>
       </div>
       <NuevoClanForm />

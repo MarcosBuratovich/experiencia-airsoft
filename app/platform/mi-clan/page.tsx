@@ -30,8 +30,8 @@ export default async function MiClanPage() {
           <p className="sect-label mb-2">Mi clan</p>
           <h1 className="sect-title fluid-3xl">Todavía no tenés clan</h1>
           <p className="mt-3 text-ash fluid-sm">
-            Uní a un clan existente o creá el tuyo. Los clanes siempre juegan
-            en el mismo bando (rojo o amarillo) el día de la partida.
+            Uní a un clan existente o creá el tuyo. Te quedás conectado con tu
+            grupo, ves las partidas del clan y compartís roster.
           </p>
         </div>
         <div className="flex gap-3 mb-8 flex-wrap">

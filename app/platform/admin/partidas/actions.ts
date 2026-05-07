@@ -47,6 +47,48 @@ export async function cancelarPartidaAction(partidaId: string) {
   return { ok: true };
 }
 
+export async function cerrarInscripcionPartidaAction(partidaId: string) {
+  const ctx = await chequearAdminYPartida(partidaId);
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase, partida } = ctx;
+
+  if (partida.estado !== "abierta") {
+    return { error: "La inscripción ya no está abierta" };
+  }
+
+  const { error } = await supabase
+    .from("partidas")
+    .update({ estado: "cerrada" })
+    .eq("id", partidaId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/partidas");
+  revalidatePath(`/admin/partidas/${partidaId}/checkin`);
+  revalidatePath("/partidas");
+  return { ok: true };
+}
+
+export async function reabrirInscripcionPartidaAction(partidaId: string) {
+  const ctx = await chequearAdminYPartida(partidaId);
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase, partida } = ctx;
+
+  if (partida.estado !== "cerrada") {
+    return { error: "Sólo se puede reabrir una inscripción cerrada" };
+  }
+
+  const { error } = await supabase
+    .from("partidas")
+    .update({ estado: "abierta" })
+    .eq("id", partidaId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/partidas");
+  revalidatePath(`/admin/partidas/${partidaId}/checkin`);
+  revalidatePath("/partidas");
+  return { ok: true };
+}
+
 export async function eliminarPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
   if ("error" in ctx) return { error: ctx.error };

@@ -8,7 +8,7 @@ import {
   type AlquilerItems,
   type TipoJugador,
 } from "@/lib/precios";
-import { dentroDeVentana } from "@/lib/partidas";
+import { inscripcionAbierta } from "@/lib/partidas";
 
 export type AnotarmeInput = {
   tipo_jugador: TipoJugador;
@@ -28,13 +28,20 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
 
   const { data: partida } = await supabase
     .from("partidas")
-    .select("cupo_max, estado, fecha, hora_inicio")
+    .select("cupo_max, estado, fecha, hora_inicio, duracion_min")
     .eq("id", partidaId)
     .maybeSingle();
   if (!partida) return { error: "Partida no encontrada" };
-  if (partida.estado !== "abierta") return { error: "No se acepta inscripción" };
-  if (!dentroDeVentana(partida.fecha, partida.hora_inicio)) {
-    return { error: "Ya pasó la ventana de inscripción" };
+
+  if (
+    !inscripcionAbierta({
+      fecha: partida.fecha,
+      hora_inicio: partida.hora_inicio,
+      duracion_min: partida.duracion_min,
+      estado: partida.estado,
+    })
+  ) {
+    return { error: "La inscripción ya está cerrada" };
   }
 
   const { data: profile } = await supabase

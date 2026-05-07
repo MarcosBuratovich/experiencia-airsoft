@@ -1,27 +1,55 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
+import { estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
 import { GenerarSemanaButton } from "./generar-semana-button";
+
+type Row = {
+  id: string;
+  fecha: string;
+  hora_inicio: string;
+  duracion_min: number;
+  modalidad: string;
+  cupo_max: number;
+  visibilidad: string;
+  estado: string;
+  inscriptos: number;
+  estadoFx: EstadoEfectivo;
+};
 
 export default async function AdminPartidas() {
   const supabase = await createClient();
   const { data: partidas } = await supabase
     .from("partidas")
-    .select("id, fecha, hora_inicio, modalidad, cupo_max, visibilidad, estado, inscripciones(count)")
+    .select(
+      "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, visibilidad, estado, inscripciones(count)",
+    )
     .order("fecha", { ascending: false })
     .order("hora_inicio", { ascending: false })
-    .limit(50);
+    .limit(60);
 
-  const rows = (partidas ?? []).map((p) => ({
+  const rows: Row[] = (partidas ?? []).map((p) => ({
     id: p.id,
     fecha: p.fecha,
     hora_inicio: p.hora_inicio,
+    duracion_min: p.duracion_min,
     modalidad: p.modalidad,
     cupo_max: p.cupo_max,
     visibilidad: p.visibilidad,
     estado: p.estado,
     inscriptos: Array.isArray(p.inscripciones) ? (p.inscripciones[0]?.count ?? 0) : 0,
+    estadoFx: estadoEfectivo({
+      fecha: p.fecha,
+      hora_inicio: p.hora_inicio,
+      duracion_min: p.duracion_min,
+      estado: p.estado,
+    }),
   }));
+
+  const futuras = rows.filter((r) => r.estadoFx === "futura");
+  const enCurso = rows.filter((r) => r.estadoFx === "en_curso");
+  const pasadas = rows.filter((r) => r.estadoFx === "pasada");
+  const canceladas = rows.filter((r) => r.estadoFx === "cancelada");
 
   return (
     <div>
@@ -49,117 +77,151 @@ export default async function AdminPartidas() {
         </div>
       ) : (
         <>
-          {/* Mobile — card list */}
-          <ul className="md:hidden space-y-3">
-            {rows.map((p) => (
-              <li
-                key={p.id}
-                className="border border-rail/60 bg-carbon clip-notch p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0">
-                    <p className="font-display fluid-lg text-bone uppercase tracking-wider truncate">
-                      {modalidadLabel(p.modalidad)}
-                    </p>
-                    <p className="font-mono fluid-xs text-ash mt-0.5">
-                      {formatFechaLarga(p.fecha)} · {formatHora(p.hora_inicio)}
-                    </p>
-                  </div>
-                  <EstadoPill estado={p.estado} />
-                </div>
-                <div className="flex items-center gap-2 flex-wrap font-mono fluid-xs uppercase tracking-[.18em] text-smoke">
-                  <span className="text-bone">
-                    {p.inscriptos}/{p.cupo_max}
-                  </span>
-                  <span>·</span>
-                  <span>{p.visibilidad}</span>
-                </div>
-                <div className="mt-3 pt-3 border-t border-rail/40 flex items-center gap-4 font-mono fluid-xs uppercase tracking-[.2em]">
-                  <Link
-                    href={`/admin/partidas/${p.id}/bandos`}
-                    className="text-ash hover:text-orange transition"
-                  >
-                    Bandos
-                  </Link>
-                  <Link
-                    href={`/admin/partidas/${p.id}/checkin`}
-                    className="ml-auto text-orange hover:underline"
-                  >
-                    Check-in →
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {/* Desktop — tabla */}
-          <div className="hidden md:block border border-rail/60 clip-notch overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-carbon">
-                <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
-                  <th className="text-left px-4 py-3">Fecha</th>
-                  <th className="text-left px-4 py-3">Modalidad</th>
-                  <th className="text-left px-4 py-3">Estado</th>
-                  <th className="text-left px-4 py-3">Anotados</th>
-                  <th className="text-left px-4 py-3">Visibilidad</th>
-                  <th className="text-left px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((p) => (
-                  <tr key={p.id} className="border-t border-rail/40 hover:bg-carbon/60">
-                    <td className="px-4 py-3 font-mono fluid-xs text-ash">
-                      {formatFechaLarga(p.fecha)} · {formatHora(p.hora_inicio)}
-                    </td>
-                    <td className="px-4 py-3 text-bone">{modalidadLabel(p.modalidad)}</td>
-                    <td className="px-4 py-3">
-                      <EstadoPill estado={p.estado} />
-                    </td>
-                    <td className="px-4 py-3 font-mono text-bone">
-                      {p.inscriptos}/{p.cupo_max}
-                    </td>
-                    <td className="px-4 py-3 font-mono fluid-xs text-smoke uppercase">
-                      {p.visibilidad}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex gap-3 justify-end font-mono fluid-xs uppercase tracking-[.2em]">
-                        <Link
-                          href={`/admin/partidas/${p.id}/bandos`}
-                          className="text-ash hover:text-orange transition"
-                        >
-                          Bandos
-                        </Link>
-                        <Link
-                          href={`/admin/partidas/${p.id}/checkin`}
-                          className="text-orange hover:underline"
-                        >
-                          Check-in →
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Section title="Futuras" count={futuras.length} rows={futuras} />
+          <Section title="En curso" count={enCurso.length} rows={enCurso} accent />
+          <Section title="Pasadas" count={pasadas.length} rows={pasadas} muted />
+          {canceladas.length > 0 && (
+            <Section
+              title="Canceladas"
+              count={canceladas.length}
+              rows={canceladas}
+              muted
+            />
+          )}
         </>
       )}
     </div>
   );
 }
 
-function EstadoPill({ estado }: { estado: string }) {
-  const tone =
-    estado === "cancelada"
-      ? "bg-orange-300/10 text-orange-300 border-orange-300/40"
-      : estado === "cerrada"
-        ? "bg-smoke/10 text-smoke border-smoke/40"
-        : "bg-orange/10 text-orange border-orange/40";
+function Section({
+  title,
+  count,
+  rows,
+  accent,
+  muted,
+}: {
+  title: string;
+  count: number;
+  rows: Row[];
+  accent?: boolean;
+  muted?: boolean;
+}) {
+  if (count === 0) return null;
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-3">
+        <h2
+          className={`sect-title fluid-xl ${
+            accent ? "text-orange" : muted ? "text-smoke" : "text-bone"
+          }`}
+        >
+          {title}
+        </h2>
+        <span className="font-mono fluid-xs uppercase tracking-[.25em] text-smoke">
+          {count}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => (
+          <PartidaAdminRow key={r.id} r={r} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function PartidaAdminRow({ r }: { r: Row }) {
+  const isFutura = r.estadoFx === "futura";
+  const isEnCurso = r.estadoFx === "en_curso";
+  const isPasada = r.estadoFx === "pasada";
+  const isCancelada = r.estadoFx === "cancelada";
+  const inscripcionesCerradas = r.estado === "cerrada";
+
+  const primaryHref = isPasada
+    ? `/admin/partidas/${r.id}/checkin?vista=resumen`
+    : `/admin/partidas/${r.id}/checkin`;
+  const primaryLabel = isFutura
+    ? "Ver inscriptos →"
+    : isEnCurso
+      ? "Check-in →"
+      : isPasada
+        ? "Resumen →"
+        : "Ver →";
+
+  return (
+    <li className="border border-rail/60 bg-carbon clip-notch p-4 flex items-center gap-4">
+      <div className="shrink-0 min-w-[80px] sm:min-w-[110px]">
+        <p
+          className={`font-display fluid-lg uppercase leading-none ${
+            isPasada || isCancelada ? "text-smoke" : "text-bone"
+          }`}
+        >
+          {formatFechaLarga(r.fecha)}
+        </p>
+        <p className="mt-1 font-mono fluid-xs uppercase tracking-[.2em] text-ash">
+          {formatHora(r.hora_inicio)}
+        </p>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="mil-tag">{modalidadLabel(r.modalidad)}</span>
+          {isCancelada ? (
+            <Pill tone="warn">Cancelada</Pill>
+          ) : isEnCurso ? (
+            <Pill tone="live">En curso</Pill>
+          ) : isPasada ? (
+            <Pill tone="muted">Pasada</Pill>
+          ) : inscripcionesCerradas ? (
+            <Pill tone="warn">Inscripción cerrada</Pill>
+          ) : (
+            <Pill tone="ok">Abierta</Pill>
+          )}
+          {r.visibilidad === "privada" && (
+            <Pill tone="muted">Privada</Pill>
+          )}
+        </div>
+        <p className="mt-1 font-mono fluid-xs uppercase tracking-[.18em] text-smoke hidden sm:block">
+          {r.inscriptos}/{r.cupo_max} anotados
+        </p>
+      </div>
+
+      <div className="shrink-0 flex items-center gap-3 flex-wrap justify-end">
+        <span className="sm:hidden font-mono fluid-xs uppercase tracking-[.18em] text-smoke">
+          {r.inscriptos}/{r.cupo_max}
+        </span>
+        <Link
+          href={primaryHref}
+          className="font-mono fluid-xs uppercase tracking-[.2em] text-orange hover:underline"
+        >
+          {primaryLabel}
+        </Link>
+      </div>
+    </li>
+  );
+}
+
+function Pill({
+  tone,
+  children,
+}: {
+  tone: "ok" | "warn" | "muted" | "live";
+  children: React.ReactNode;
+}) {
+  const styles =
+    tone === "live"
+      ? "bg-orange text-ink"
+      : tone === "ok"
+        ? "bg-orange/10 border border-orange/40 text-orange"
+        : tone === "warn"
+          ? "bg-orange-300/10 border border-orange-300/40 text-orange-300"
+          : "border border-rail/60 text-smoke";
   return (
     <span
-      className={`inline-block px-2 py-0.5 border font-mono fluid-xs uppercase tracking-[.18em] ${tone}`}
+      className={`inline-block px-1.5 py-0.5 font-mono fluid-xs uppercase tracking-[.18em] ${styles}`}
     >
-      {estado}
+      {children}
     </span>
   );
 }

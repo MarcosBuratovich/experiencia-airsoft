@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { getPreciosConfig } from "@/lib/precios";
-import { dentroDeVentana } from "@/lib/partidas";
+import { inscripcionAbierta } from "@/lib/partidas";
 import { AnotarmeButton } from "./anotarme-button";
 
 export default async function PartidaDetail({
@@ -42,7 +42,12 @@ export default async function PartidaDetail({
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
   const lleno = confirmados.length >= partida.cupo_max;
-  const fueraDeVentana = !dentroDeVentana(partida.fecha, partida.hora_inicio);
+  const fueraDeVentana = !inscripcionAbierta({
+    fecha: partida.fecha,
+    hora_inicio: partida.hora_inicio,
+    duracion_min: partida.duracion_min,
+    estado: partida.estado,
+  });
   const socio = !!profile?.socio;
 
   return (
