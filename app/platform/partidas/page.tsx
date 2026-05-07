@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
-import { computarEstadoCuota, labelPeriodoCorto } from "@/lib/socios";
+import { computarEstadoCuota, labelPeriodoCorto, nombreMes } from "@/lib/socios";
 
 type PartidaCard = {
   id: string;
@@ -101,6 +101,14 @@ export default async function PartidasPage() {
         />
       )}
 
+      {cuota.esSocio && cuota.alDia && cuota.enPlazo && (
+        <PlazoBanner
+          mes={nombreMes(cuota.periodoActual)}
+          monto={cuota.cuotaMensual}
+          dias={cuota.diasParaVencer}
+        />
+      )}
+
       <Section
         title="Abiertas"
         count={abiertas.length}
@@ -151,6 +159,30 @@ function DeudaBanner({
         {ultimoPeriodo ? ` (último: ${labelPeriodoCorto(ultimoPeriodo)})` : ""}.
         Mientras tengas deuda no se aplica el beneficio de socio: pagás la
         entrada al anotarte. Hablá con un admin para ponerte al día.
+      </p>
+    </div>
+  );
+}
+
+function PlazoBanner({
+  mes,
+  monto,
+  dias,
+}: {
+  mes: string;
+  monto: number;
+  dias: number;
+}) {
+  const diasTxt =
+    dias === 0 ? "hoy es el último día" : dias === 1 ? "queda 1 día" : `quedan ${dias} días`;
+  return (
+    <div className="mb-6 border-l-2 border-bone/40 bg-bone/5 clip-notch p-4 sm:p-5">
+      <p className="sect-label mb-1">// Cuota de {mes} pendiente</p>
+      <p className="font-sans fluid-sm text-ash">
+        Tenés hasta el <span className="text-bone">8 de {mes}</span> para pagar
+        tu cuota (${monto.toLocaleString("es-AR")}) — {diasTxt}. Mientras estés
+        en plazo seguís con el beneficio de entrada gratis. Si no pagás antes,
+        el mes pasa a deuda y empezás a pagar la entrada cuando te anotes.
       </p>
     </div>
   );

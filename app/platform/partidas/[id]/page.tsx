@@ -112,6 +112,15 @@ export default async function PartidaDetail({
             meses: cuota.periodosAdeudados.length,
             monto: cuota.montoAdeudado,
           }}
+          plazoCuota={
+            cuota.enPlazo
+              ? {
+                  mesPeriodo: cuota.periodoActual,
+                  diasParaVencer: cuota.diasParaVencer,
+                  monto: cuota.cuotaMensual,
+                }
+              : null
+          }
           precios={{
             entrada_alquiler: precios.entrada_alquiler,
             entrada_byop: precios.entrada_byop,

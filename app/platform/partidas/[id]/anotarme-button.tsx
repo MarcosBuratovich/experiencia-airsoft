@@ -17,6 +17,7 @@ type PreciosMin = {
 };
 
 type DeudaCuota = { meses: number; monto: number };
+type PlazoCuota = { mesPeriodo: string; diasParaVencer: number; monto: number };
 
 type Props = {
   partidaId: string;
@@ -27,8 +28,29 @@ type Props = {
   esSocio: boolean;
   socioAlDia: boolean;
   deudaCuota: DeudaCuota;
+  plazoCuota: PlazoCuota | null;
   precios: PreciosMin;
 };
+
+const NOMBRES_MES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+function nombreMesDe(periodo: string): string {
+  const m = Number(periodo.split("-")[1]) - 1;
+  return NOMBRES_MES[m] ?? "";
+}
 
 function ars(n: number) {
   return `$${n.toLocaleString("es-AR")}`;
@@ -43,6 +65,7 @@ export function AnotarmeButton({
   esSocio,
   socioAlDia,
   deudaCuota,
+  plazoCuota,
   precios,
 }: Props) {
   const [pending, startTransition] = useTransition();
@@ -149,9 +172,22 @@ export function AnotarmeButton({
           <span className="mt-0.5 px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.18em]">
             Socio
           </span>
-          <p className="font-mono fluid-xs uppercase tracking-[.22em] text-orange flex-1">
-            La entrada está incluida en tu cuota mensual.
-          </p>
+          <div className="flex-1 space-y-1">
+            <p className="font-mono fluid-xs uppercase tracking-[.22em] text-orange">
+              La entrada está incluida en tu cuota mensual.
+            </p>
+            {plazoCuota && (
+              <p className="font-sans fluid-xs text-ash">
+                Cuota de {nombreMesDe(plazoCuota.mesPeriodo)} pendiente —{" "}
+                {plazoCuota.diasParaVencer === 0
+                  ? "hoy es el último día"
+                  : plazoCuota.diasParaVencer === 1
+                    ? "queda 1 día"
+                    : `quedan ${plazoCuota.diasParaVencer} días`}{" "}
+                para pagarla y mantener el beneficio.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
