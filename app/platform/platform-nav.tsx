@@ -73,8 +73,14 @@ export function PlatformNav({
     const supabase = createClient();
     await supabase.auth.signOut();
     setMobileOpen(false);
-    router.refresh();
-    router.push("/login");
+    // Hard navigation: garantiza que el proxy se ejecute con cookies
+    // limpias y que ningun Server Component cacheado del area autenticada
+    // siga visible. router.push no fuerza esa request HTTP fresca.
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
+    } else {
+      router.replace("/login");
+    }
   };
 
   const pending = solicitudesPendientes ?? 0;

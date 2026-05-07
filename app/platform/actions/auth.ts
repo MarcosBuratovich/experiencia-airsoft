@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -83,5 +84,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { message: "Email o contraseña incorrectos." };
   }
 
+  // Invalida el cache del layout para que el nav re-rendee con la sesion nueva
+  revalidatePath("/", "layout");
   redirect("/partidas");
 }

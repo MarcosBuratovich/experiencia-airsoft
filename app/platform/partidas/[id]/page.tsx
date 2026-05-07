@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { getPreciosConfig } from "@/lib/precios";
@@ -14,7 +14,7 @@ export default async function PartidaDetail({
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) notFound();
+  if (!user) redirect("/login");
 
   const [{ data: partida }, { data: profile }, precios] = await Promise.all([
     supabase
