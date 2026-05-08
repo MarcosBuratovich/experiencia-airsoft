@@ -100,10 +100,13 @@ export type AlquilerItems = {
   premium: boolean;
   /** Chaleco táctico extra. */
   chaleco: boolean;
-  /** Recargas de munición (cantidad de unidades de cada tipo). */
-  recargaTracer100: number;
-  recargaConv200: number;
-  recargaConv400: number;
+};
+
+/** Cantidades de recargas pedidas (las marca el admin durante el check-in). */
+export type RecargasCount = {
+  tracer100: number;
+  conv200: number;
+  conv400: number;
 };
 
 export type DesglosePrecio = {
@@ -113,16 +116,16 @@ export type DesglosePrecio = {
 };
 
 /**
- * Calcula el precio de una inscripción según tipo de jugador, condición de
- * socio y los items elegidos.
+ * Calcula el precio de una inscripción al momento de anotarse.
  *
  * Modelo:
  *   - Entrada: 0 si socio al día, sino entrada_byop ($20k).
  *   - Alquiler de marcadora: solo si tipo=alquiler. Simple O avanzada
  *     (excluyentes — la UI lo restringe; acá si llegan ambos suma ambos).
  *   - Chaleco: opcional, suma al alquiler.
- *   - Recargas: opcionales para CUALQUIER tipo de jugador (incluso BYOP que
- *     se compra munición extra). Suma como alquiler.
+ *
+ * Las recargas NO se incluyen acá — las asigna el admin durante el check-in
+ * con los precios vigentes en ese momento (ver `calcularPrecioRecargas`).
  */
 export function calcularPrecioInscripcion(opts: {
   tipo_jugador: TipoJugador;
@@ -141,10 +144,21 @@ export function calcularPrecioInscripcion(opts: {
     if (alquila.chaleco) alquiler += precios.alquiler_chaleco;
   }
 
-  // Recargas: válidas tanto para alquiler como BYOP.
-  alquiler += alquila.recargaTracer100 * precios.recarga_tracer_100;
-  alquiler += alquila.recargaConv200 * precios.recarga_conv_200;
-  alquiler += alquila.recargaConv400 * precios.recarga_conv_400;
-
   return { entrada, alquiler, total: entrada + alquiler };
+}
+
+/**
+ * Calcula el precio total de las recargas asignadas a una inscripción.
+ * Usa los precios `precios` actuales (no snapshot) — el admin las cobra al
+ * precio del día.
+ */
+export function calcularPrecioRecargas(
+  recargas: RecargasCount,
+  precios: PreciosConfig,
+): number {
+  return (
+    recargas.tracer100 * precios.recarga_tracer_100 +
+    recargas.conv200 * precios.recarga_conv_200 +
+    recargas.conv400 * precios.recarga_conv_400
+  );
 }

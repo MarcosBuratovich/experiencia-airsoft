@@ -13,9 +13,6 @@ type PreciosMin = {
   alquiler_marcadora: number; // simple
   alquiler_premium: number; // avanzada
   alquiler_chaleco: number;
-  recarga_tracer_100: number;
-  recarga_conv_200: number;
-  recarga_conv_400: number;
 };
 
 type DeudaCuota = { meses: number; monto: number };
@@ -74,9 +71,6 @@ export function AnotarmeButton({
   const [tipo, setTipo] = useState<TipoJugador>("byop");
   const [marcadora, setMarcadora] = useState<"simple" | "avanzada">("simple");
   const [chaleco, setChaleco] = useState(false);
-  const [recargaTracer100, setRecargaTracer100] = useState(0);
-  const [recargaConv200, setRecargaConv200] = useState(0);
-  const [recargaConv400, setRecargaConv400] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -86,19 +80,14 @@ export function AnotarmeButton({
   const entrada = aplicaBeneficio ? precios.entrada_socio : precios.entrada_byop;
 
   const alquilerMonto = useMemo(() => {
-    let t = 0;
-    if (tipo === "alquiler") {
-      t +=
-        marcadora === "simple"
-          ? precios.alquiler_marcadora
-          : precios.alquiler_premium;
-      if (chaleco) t += precios.alquiler_chaleco;
-    }
-    t += recargaTracer100 * precios.recarga_tracer_100;
-    t += recargaConv200 * precios.recarga_conv_200;
-    t += recargaConv400 * precios.recarga_conv_400;
+    if (tipo !== "alquiler") return 0;
+    let t =
+      marcadora === "simple"
+        ? precios.alquiler_marcadora
+        : precios.alquiler_premium;
+    if (chaleco) t += precios.alquiler_chaleco;
     return t;
-  }, [tipo, marcadora, chaleco, recargaTracer100, recargaConv200, recargaConv400, precios]);
+  }, [tipo, marcadora, chaleco, precios]);
 
   const total = entrada + alquilerMonto;
 
@@ -150,9 +139,6 @@ export function AnotarmeButton({
         alquila_marcadora: tipo === "alquiler" && marcadora === "simple",
         alquila_premium: tipo === "alquiler" && marcadora === "avanzada",
         alquila_chaleco: tipo === "alquiler" && chaleco,
-        recarga_tracer_100: recargaTracer100,
-        recarga_conv_200: recargaConv200,
-        recarga_conv_400: recargaConv400,
       });
       if ("error" in res && res.error) {
         setError(res.error);
@@ -275,40 +261,13 @@ export function AnotarmeButton({
               </p>
             </div>
           </label>
+
+          <p className="font-mono fluid-xs text-smoke px-1">
+            // Las recargas de munición se piden el día de la partida y las
+            carga el admin al monto a cobrar.
+          </p>
         </fieldset>
       )}
-
-      {/* Recargas: visibles para alquiler y BYOP */}
-      <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
-        <legend className="sect-label px-2">Recargas (opcional)</legend>
-        <p className="font-mono fluid-xs text-smoke px-1">
-          Munición adicional por sobre la incluida en el alquiler.
-        </p>
-
-        <div className="space-y-2">
-          <RecargaCounter
-            value={recargaTracer100}
-            setValue={setRecargaTracer100}
-            title="100 bbs tracer"
-            subtitle="Munición fluorescente"
-            precio={precios.recarga_tracer_100}
-          />
-          <RecargaCounter
-            value={recargaConv200}
-            setValue={setRecargaConv200}
-            title="200 bbs convencional"
-            subtitle="Munición estándar"
-            precio={precios.recarga_conv_200}
-          />
-          <RecargaCounter
-            value={recargaConv400}
-            setValue={setRecargaConv400}
-            title="400 bbs convencional"
-            subtitle="Pack grande"
-            precio={precios.recarga_conv_400}
-          />
-        </div>
-      </fieldset>
 
       {!(aplicaBeneficio && tipo === "byop" && total === 0) && (
         <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
@@ -319,7 +278,7 @@ export function AnotarmeButton({
                 value={ars(entrada)}
               />
             )}
-            {alquilerMonto > 0 && <Row label="Alquiler + extras" value={ars(alquilerMonto)} />}
+            {alquilerMonto > 0 && <Row label="Alquiler" value={ars(alquilerMonto)} />}
             <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
               <span className="sect-label">Total</span>
               <span className="font-display fluid-xl text-bone">{ars(total)}</span>
@@ -435,56 +394,5 @@ function MarcadoraOpt({
         </div>
       </div>
     </button>
-  );
-}
-
-function RecargaCounter({
-  value,
-  setValue,
-  title,
-  subtitle,
-  precio,
-}: {
-  value: number;
-  setValue: (n: number) => void;
-  title: string;
-  subtitle: string;
-  precio: number;
-}) {
-  return (
-    <div className="px-2 py-2 flex items-center gap-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-bone font-sans">{title}</span>
-          <span className="font-mono fluid-xs text-ash shrink-0">
-            ${precio.toLocaleString("es-AR")} c/u
-          </span>
-        </div>
-        <p className="font-mono fluid-xs text-smoke mt-0.5">{subtitle}</p>
-      </div>
-      <div className="flex items-stretch border border-rail/60 bg-ink shrink-0">
-        <button
-          type="button"
-          onClick={() => setValue(Math.max(0, value - 1))}
-          disabled={value <= 0}
-          className="w-7 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-          aria-label="Restar"
-        >
-          −
-        </button>
-        <span className="w-8 text-center font-display fluid-base text-bone py-1.5 select-none tabular-nums">
-          {value}
-        </span>
-        <button
-          type="button"
-          onClick={() => setValue(Math.min(20, value + 1))}
-          disabled={value >= 20}
-          className="w-7 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-          aria-label="Sumar"
-        >
-          +
-        </button>
-      </div>
-    </div>
   );
 }

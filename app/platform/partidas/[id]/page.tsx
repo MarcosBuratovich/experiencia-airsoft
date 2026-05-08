@@ -144,9 +144,6 @@ export default async function PartidaDetail({
             alquiler_marcadora: precios.alquiler_marcadora,
             alquiler_premium: precios.alquiler_premium,
             alquiler_chaleco: precios.alquiler_chaleco,
-            recarga_tracer_100: precios.recarga_tracer_100,
-            recarga_conv_200: precios.recarga_conv_200,
-            recarga_conv_400: precios.recarga_conv_400,
           }}
         />
       </div>

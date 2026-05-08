@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { estadoEfectivo } from "@/lib/partidas";
+import { getPreciosConfig } from "@/lib/precios";
 import { CheckinList } from "./checkin-list";
 import { InscriptosPreview } from "./inscriptos-preview";
 import { ResumenPartida } from "./resumen-partida";
@@ -19,14 +20,17 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!partida) notFound();
 
-  const { data: inscripciones } = await supabase
-    .from("inscripciones")
-    .select(
-      "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
-    )
-    .eq("partida_id", id)
-    .in("estado", ["confirmado", "waitlist"])
-    .order("created_at");
+  const [{ data: inscripciones }, precios] = await Promise.all([
+    supabase
+      .from("inscripciones")
+      .select(
+        "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_entrada, precio_alquiler, precio_recargas, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
+      )
+      .eq("partida_id", id)
+      .in("estado", ["confirmado", "waitlist"])
+      .order("created_at"),
+    getPreciosConfig(supabase),
+  ]);
 
   const filas = (inscripciones ?? []).map((i) => {
     const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
@@ -47,7 +51,10 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       recarga_conv_400: i.recarga_conv_400 ?? 0,
       precio_entrada: i.precio_entrada ?? 0,
       precio_alquiler: i.precio_alquiler ?? 0,
-      precio_total: i.precio_total ?? (i.precio_entrada ?? 0) + (i.precio_alquiler ?? 0),
+      precio_recargas: i.precio_recargas ?? 0,
+      precio_total:
+        i.precio_total ??
+        (i.precio_entrada ?? 0) + (i.precio_alquiler ?? 0) + (i.precio_recargas ?? 0),
       checkin: c
         ? {
             presente: c.presente,
@@ -114,7 +121,15 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
 
       {estadoFx === "futura" && <InscriptosPreview filas={filas} />}
       {estadoFx === "en_curso" && (
-        <CheckinList partidaId={partida.id} inscripciones={filas} />
+        <CheckinList
+          partidaId={partida.id}
+          inscripciones={filas}
+          preciosRecargas={{
+            tracer100: precios.recarga_tracer_100,
+            conv200: precios.recarga_conv_200,
+            conv400: precios.recarga_conv_400,
+          }}
+        />
       )}
       {estadoFx === "pasada" && (
         <ResumenPartida partidaId={partida.id} filas={filas} />

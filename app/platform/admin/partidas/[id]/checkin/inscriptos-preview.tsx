@@ -18,6 +18,7 @@ type Fila = {
   recarga_conv_400: number;
   precio_entrada: number;
   precio_alquiler: number;
+  precio_recargas: number;
   precio_total: number;
 };
 

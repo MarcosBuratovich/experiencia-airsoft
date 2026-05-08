@@ -2,7 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { upsertCheckinAction } from "./actions";
+import { upsertCheckinAction, actualizarRecargasInscripcionAction } from "./actions";
+
+type PreciosRecargas = {
+  tracer100: number;
+  conv200: number;
+  conv400: number;
+};
 
 type Checkin = {
   presente: boolean;
@@ -27,6 +33,7 @@ type Inscripcion = {
   recarga_conv_400: number;
   precio_entrada: number;
   precio_alquiler: number;
+  precio_recargas: number;
   precio_total: number;
   checkin: Checkin | null;
 };
@@ -60,14 +67,48 @@ function equipoLabel(i: Inscripcion): string | null {
 export function CheckinList({
   partidaId: _partidaId,
   inscripciones,
+  preciosRecargas,
 }: {
   partidaId: string;
   inscripciones: Inscripcion[];
+  preciosRecargas: PreciosRecargas;
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
+
+  const updateRecargas = (
+    id: string,
+    recargas: { tracer100: number; conv200: number; conv400: number },
+  ) => {
+    setPendingId(id);
+    const nuevoPrecioRecargas =
+      recargas.tracer100 * preciosRecargas.tracer100 +
+      recargas.conv200 * preciosRecargas.conv200 +
+      recargas.conv400 * preciosRecargas.conv400;
+
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              recarga_tracer_100: recargas.tracer100,
+              recarga_conv_200: recargas.conv200,
+              recarga_conv_400: recargas.conv400,
+              precio_recargas: nuevoPrecioRecargas,
+              precio_total: r.precio_entrada + r.precio_alquiler + nuevoPrecioRecargas,
+            }
+          : r,
+      ),
+    );
+
+    startTransition(async () => {
+      await actualizarRecargasInscripcionAction(id, recargas);
+      setPendingId(null);
+      router.refresh();
+    });
+  };
 
   const totals = useMemo(() => {
     let efectivo = 0,
@@ -163,6 +204,8 @@ export function CheckinList({
             pending={pendingId === r.id}
             onToggle={togglePresente}
             onPatch={update}
+            onUpdateRecargas={updateRecargas}
+            preciosRecargas={preciosRecargas}
           />
         ))}
       </ul>
@@ -197,10 +240,19 @@ export function CheckinList({
                       )}
                       <div
                         className="font-mono fluid-xs text-smoke mt-1"
-                        title={`Entrada ${ars(r.precio_entrada)} · Alquiler ${ars(r.precio_alquiler)}`}
+                        title={`Entrada ${ars(r.precio_entrada)} · Alquiler ${ars(r.precio_alquiler)} · Recargas ${ars(r.precio_recargas)}`}
                       >
-                        Snapshot: {ars(r.precio_total)}
+                        Total: {ars(r.precio_total)}
                       </div>
+                      {r.tipo_jugador === "alquiler" && (
+                        <div className="mt-2">
+                          <RecargasControls
+                            r={r}
+                            precios={preciosRecargas}
+                            onUpdate={updateRecargas}
+                          />
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-3 align-top text-center">
                       <input
@@ -251,11 +303,18 @@ function MobileCheckinCard({
   pending,
   onToggle,
   onPatch,
+  onUpdateRecargas,
+  preciosRecargas,
 }: {
   r: Inscripcion;
   pending: boolean;
   onToggle: (r: Inscripcion, checked: boolean) => void;
   onPatch: (id: string, patch: Partial<Checkin>) => void;
+  onUpdateRecargas: (
+    id: string,
+    recargas: { tracer100: number; conv200: number; conv400: number },
+  ) => void;
+  preciosRecargas: PreciosRecargas;
 }) {
   const equipo = equipoLabel(r);
   return (
@@ -272,7 +331,7 @@ function MobileCheckinCard({
             <div className="font-mono fluid-xs text-ash mt-0.5">Equipo: {equipo}</div>
           )}
           <div className="font-mono fluid-xs text-smoke mt-0.5">
-            Snapshot: {ars(r.precio_total)}
+            Total: {ars(r.precio_total)}
           </div>
         </div>
         <label className="flex flex-col items-center gap-1 pt-1 cursor-pointer select-none">
@@ -285,6 +344,16 @@ function MobileCheckinCard({
           <span className="sect-label mb-0">Pres.</span>
         </label>
       </div>
+
+      {r.tipo_jugador === "alquiler" && (
+        <div className="mb-3">
+          <RecargasControls
+            r={r}
+            precios={preciosRecargas}
+            onUpdate={onUpdateRecargas}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
@@ -319,6 +388,114 @@ function MobileCheckinCard({
         />
       </div>
     </li>
+  );
+}
+
+function RecargasControls({
+  r,
+  precios,
+  onUpdate,
+}: {
+  r: Inscripcion;
+  precios: PreciosRecargas;
+  onUpdate: (
+    id: string,
+    recargas: { tracer100: number; conv200: number; conv400: number },
+  ) => void;
+}) {
+  const adjust = (
+    key: "tracer100" | "conv200" | "conv400",
+    delta: number,
+  ) => {
+    const next = {
+      tracer100: r.recarga_tracer_100,
+      conv200: r.recarga_conv_200,
+      conv400: r.recarga_conv_400,
+    };
+    next[key] = Math.max(0, Math.min(20, next[key] + delta));
+    onUpdate(r.id, next);
+  };
+
+  return (
+    <div className="border border-rail/40 bg-ink/40 clip-notch p-2.5">
+      <p className="sect-label mb-2">// Recargas</p>
+      <div className="grid grid-cols-3 gap-1.5">
+        <RecargaCounter
+          label="Tracer 100"
+          value={r.recarga_tracer_100}
+          precio={precios.tracer100}
+          onMinus={() => adjust("tracer100", -1)}
+          onPlus={() => adjust("tracer100", 1)}
+        />
+        <RecargaCounter
+          label="Conv 200"
+          value={r.recarga_conv_200}
+          precio={precios.conv200}
+          onMinus={() => adjust("conv200", -1)}
+          onPlus={() => adjust("conv200", 1)}
+        />
+        <RecargaCounter
+          label="Conv 400"
+          value={r.recarga_conv_400}
+          precio={precios.conv400}
+          onMinus={() => adjust("conv400", -1)}
+          onPlus={() => adjust("conv400", 1)}
+        />
+      </div>
+      {r.precio_recargas > 0 && (
+        <p className="mt-2 font-mono fluid-xs text-orange">
+          + {ars(r.precio_recargas)} en recargas
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RecargaCounter({
+  label,
+  value,
+  precio,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  value: number;
+  precio: number;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span
+        className="font-mono text-[10px] text-smoke uppercase tracking-[.15em]"
+        title={`${ars(precio)} c/u`}
+      >
+        {label}
+      </span>
+      <div className="flex items-stretch border border-rail/60 bg-ink">
+        <button
+          type="button"
+          onClick={onMinus}
+          disabled={value <= 0}
+          className="flex-1 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Restar"
+        >
+          −
+        </button>
+        <span className="px-2 text-center font-display text-bone select-none tabular-nums leading-7 min-w-[1.75rem]">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={onPlus}
+          disabled={value >= 20}
+          className="flex-1 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Sumar"
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }
 
