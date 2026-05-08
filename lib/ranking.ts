@@ -68,6 +68,46 @@ export async function getLeaderboardGlobal(
   return sorted.slice(0, opts.limit ?? 50);
 }
 
+/**
+ * Versión mensual del leaderboard global. Lee la vista
+ * `match_stats_mensual` filtrada por periodo 'YYYY-MM'.
+ */
+export async function getLeaderboardMensual(
+  supabase: ServerSupabase,
+  periodo: string,
+  opts: { sort?: SortKey; limit?: number } = {},
+): Promise<LeaderRow[]> {
+  const { data } = await supabase
+    .from("match_stats_mensual")
+    .select(
+      "user_id, player_number, nombre, apellido, clan_id, muertes, capturas, reanimaciones, plantos, partidas_jugadas, score",
+    )
+    .eq("periodo", periodo);
+  if (!data) return [];
+  const rows = data as LeaderRow[];
+  const sorted = applySort(rows, opts.sort ?? "score");
+  return sorted.slice(0, opts.limit ?? 50);
+}
+
+/**
+ * Devuelve los últimos N periodos 'YYYY-MM' (incluyendo el actual)
+ * para poblar el selector de meses.
+ */
+export function periodosUltimos(n: number, now: Date = new Date()): string[] {
+  const periodos: string[] = [];
+  let y = now.getFullYear();
+  let m = now.getMonth() + 1; // 1..12
+  for (let i = 0; i < n; i++) {
+    periodos.push(`${y}-${String(m).padStart(2, "0")}`);
+    m--;
+    if (m < 1) {
+      m = 12;
+      y--;
+    }
+  }
+  return periodos;
+}
+
 export type ClanLeaderRow = {
   clan_id: string;
   slug: string;
@@ -81,6 +121,20 @@ export type ClanLeaderRow = {
   partidas_jugadas: number;
   score: number;
 };
+
+export async function getClanStats(
+  supabase: ServerSupabase,
+  clanId: string,
+): Promise<ClanLeaderRow | null> {
+  const { data } = await supabase
+    .from("match_stats_clan")
+    .select(
+      "clan_id, slug, clan_nombre, color_hex, muertes, capturas, reanimaciones, plantos, miembros_activos, partidas_jugadas, score",
+    )
+    .eq("clan_id", clanId)
+    .maybeSingle();
+  return (data as ClanLeaderRow | null) ?? null;
+}
 
 export async function getLeaderboardClanes(
   supabase: ServerSupabase,

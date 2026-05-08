@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { getPreciosConfig } from "@/lib/precios";
-import { inscripcionAbierta } from "@/lib/partidas";
+import { estadoEfectivo, inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { AnotarmeButton } from "./anotarme-button";
 
@@ -55,6 +55,13 @@ export default async function PartidaDetail({
     duracion_min: partida.duracion_min,
     estado: partida.estado,
   });
+  const estadoFx = estadoEfectivo({
+    fecha: partida.fecha,
+    hora_inicio: partida.hora_inicio,
+    duracion_min: partida.duracion_min,
+    estado: partida.estado,
+  });
+  const mostrarScoreboard = estadoFx === "en_curso" || estadoFx === "pasada";
 
   const cuota = computarEstadoCuota(
     {
@@ -74,13 +81,23 @@ export default async function PartidaDetail({
         ← Volver
       </Link>
 
-      <div className="mt-4 mb-6">
-        <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
-        <h1 className="sect-title fluid-3xl mt-3">{modalidadLabel(partida.modalidad)}</h1>
-        <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
-          {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)} ·{" "}
-          {partida.duracion_min} min
-        </p>
+      <div className="mt-4 mb-6 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <span className="mil-tag">{modalidadLabel(partida.modalidad)}</span>
+          <h1 className="sect-title fluid-3xl mt-3">{modalidadLabel(partida.modalidad)}</h1>
+          <p className="mt-2 font-mono fluid-sm text-ash uppercase tracking-[.2em]">
+            {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)} ·{" "}
+            {partida.duracion_min} min
+          </p>
+        </div>
+        {mostrarScoreboard && (
+          <Link
+            href={`/partidas/${partida.id}/scoreboard`}
+            className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold"
+          >
+            Scoreboard →
+          </Link>
+        )}
       </div>
 
       <div className="border border-rail/60 bg-carbon clip-notch p-5 mb-6">

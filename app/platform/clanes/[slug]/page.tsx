@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getClanStats } from "@/lib/ranking";
 import { SolicitarUnirseButton } from "./solicitar-unirse-button";
 
 export default async function ClanDetail({
@@ -46,6 +47,7 @@ export default async function ClanDetail({
   const tengoSolicitudOtroClan = !!miSolicitud && miSolicitud.clan_id !== clan.id;
 
   const capitan = miembros?.find((m) => m.id === clan.capitan_id) ?? null;
+  const stats = await getClanStats(supabase, clan.id);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -101,6 +103,42 @@ export default async function ClanDetail({
         )}
       </div>
 
+      {stats && stats.score !== 0 && (
+        <section className="mb-8">
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="sect-label">Estadísticas del clan</h2>
+            <Link
+              href="/clanes/ranking"
+              className="font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.2em]"
+            >
+              Ver ranking →
+            </Link>
+          </div>
+          <div className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
+            <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <p className="sect-label mb-1">Score</p>
+                <p className="font-display fluid-3xl text-orange leading-none">
+                  {stats.score}
+                </p>
+              </div>
+              <p className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
+                {stats.partidas_jugadas}{" "}
+                {stats.partidas_jugadas === 1 ? "partida" : "partidas"} ·{" "}
+                {stats.miembros_activos}{" "}
+                {stats.miembros_activos === 1 ? "miembro activo" : "miembros activos"}
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-rail/40 text-center">
+              <ClanStat label="Capt." value={stats.capturas} />
+              <ClanStat label="Reanim." value={stats.reanimaciones} />
+              <ClanStat label="Plant." value={stats.plantos} />
+              <ClanStat label="Muertes" value={stats.muertes} muted />
+            </div>
+          </div>
+        </section>
+      )}
+
       <div>
         <h2 className="sect-label mb-3">
           Miembros ({miembros?.length ?? 0})
@@ -130,6 +168,25 @@ export default async function ClanDetail({
           Capitán: {capitan.nombre} {capitan.apellido}
         </p>
       )}
+    </div>
+  );
+}
+
+function ClanStat({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: number;
+  muted?: boolean;
+}) {
+  return (
+    <div>
+      <p className="sect-label mb-0.5">{label}</p>
+      <p className={`font-display fluid-lg ${muted ? "text-smoke" : "text-bone"}`}>
+        {value}
+      </p>
     </div>
   );
 }

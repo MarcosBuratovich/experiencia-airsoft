@@ -37,21 +37,29 @@ export default async function ClanesDirectorio() {
           <p className="sect-label mb-2">Comunidad</p>
           <h1 className="sect-title fluid-3xl">Clanes</h1>
         </div>
-        {miProfile?.clan_id ? (
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href="/mi-clan"
-            className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
+            href="/clanes/ranking"
+            className="font-mono fluid-xs uppercase tracking-[.22em] text-orange hover:underline"
           >
-            Mi clan →
+            Ranking →
           </Link>
-        ) : (
-          <Link
-            href="/clanes/nuevo"
-            className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
-          >
-            + Crear clan
-          </Link>
-        )}
+          {miProfile?.clan_id ? (
+            <Link
+              href="/mi-clan"
+              className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
+            >
+              Mi clan →
+            </Link>
+          ) : (
+            <Link
+              href="/clanes/nuevo"
+              className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
+            >
+              + Crear clan
+            </Link>
+          )}
+        </div>
       </div>
 
       {!clanes?.length ? (

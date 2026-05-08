@@ -3,19 +3,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLeaderboardGlobal,
+  getLeaderboardMensual,
+  periodosUltimos,
   SORT_OPTIONS,
   type LeaderRow,
   type SortKey,
 } from "@/lib/ranking";
+import { labelPeriodoCorto } from "@/lib/socios";
 
 const VALID_SORTS = SORT_OPTIONS.map((o) => o.key);
 
 export default async function RankingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; periodo?: string }>;
 }) {
-  const { sort: sortParam } = await searchParams;
+  const { sort: sortParam, periodo: periodoParam } = await searchParams;
   const sort: SortKey = (VALID_SORTS as string[]).includes(sortParam ?? "")
     ? (sortParam as SortKey)
     : "score";
@@ -24,13 +27,70 @@ export default async function RankingPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const rows = await getLeaderboardGlobal(supabase, { sort, limit: 50 });
+  // Periodo: 'all' (default) o 'YYYY-MM'. Validamos el formato.
+  const periodos = periodosUltimos(12);
+  const periodo =
+    periodoParam && /^\d{4}-\d{2}$/.test(periodoParam)
+      ? periodoParam
+      : "all";
+
+  const rows =
+    periodo === "all"
+      ? await getLeaderboardGlobal(supabase, { sort, limit: 50 })
+      : await getLeaderboardMensual(supabase, periodo, { sort, limit: 50 });
+
+  // Helper para preservar params al cambiar uno
+  const buildHref = (params: { sort?: SortKey; periodo?: string }) => {
+    const sp = new URLSearchParams();
+    if ((params.sort ?? sort) !== "score") sp.set("sort", params.sort ?? sort);
+    const p = params.periodo ?? periodo;
+    if (p !== "all") sp.set("periodo", p);
+    const qs = sp.toString();
+    return qs ? `/ranking?${qs}` : "/ranking";
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-6">
-        <p className="sect-label mb-2">Comunidad · all-time</p>
-        <h1 className="sect-title fluid-3xl">Ranking</h1>
+      <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <p className="sect-label mb-2">
+            Comunidad · {periodo === "all" ? "all-time" : labelPeriodoCorto(periodo)}
+          </p>
+          <h1 className="sect-title fluid-3xl">Ranking</h1>
+        </div>
+        <Link
+          href="/clanes/ranking"
+          className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs"
+        >
+          Ranking de clanes →
+        </Link>
+      </div>
+
+      {/* Selector de periodo */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        <Link
+          href={buildHref({ periodo: "all" })}
+          className={`px-3 py-1.5 font-mono fluid-xs uppercase tracking-[.18em] border transition cursor-pointer ${
+            periodo === "all"
+              ? "bg-bone text-ink border-bone"
+              : "border-rail/60 text-ash hover:border-bone"
+          }`}
+        >
+          Histórico
+        </Link>
+        {periodos.map((p) => (
+          <Link
+            key={p}
+            href={buildHref({ periodo: p })}
+            className={`px-3 py-1.5 font-mono fluid-xs uppercase tracking-[.18em] border transition cursor-pointer ${
+              periodo === p
+                ? "bg-bone text-ink border-bone"
+                : "border-rail/60 text-ash hover:border-bone"
+            }`}
+          >
+            {labelPeriodoCorto(p)}
+          </Link>
+        ))}
       </div>
 
       {/* Tabs de sort */}
@@ -38,7 +98,7 @@ export default async function RankingPage({
         {SORT_OPTIONS.map((opt) => (
           <Link
             key={opt.key}
-            href={`/ranking?sort=${opt.key}`}
+            href={buildHref({ sort: opt.key })}
             className={`px-3 py-1.5 font-mono fluid-xs uppercase tracking-[.18em] border transition cursor-pointer ${
               sort === opt.key
                 ? "bg-orange text-ink border-orange"
@@ -53,8 +113,9 @@ export default async function RankingPage({
       {!rows.length ? (
         <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
           <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
-            Todavía no hay stats. Las primeras partidas con eventos del local
-            van a aparecer acá.
+            {periodo === "all"
+              ? "Todavía no hay stats. Las primeras partidas con eventos del local van a aparecer acá."
+              : `Sin stats en ${labelPeriodoCorto(periodo)}.`}
           </p>
         </div>
       ) : (

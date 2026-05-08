@@ -92,11 +92,21 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             {filas.length} anotados
           </p>
         </div>
-        <PartidaActionsButtons
-          partidaId={partida.id}
-          estado={partida.estado}
-          estadoFx={estadoFx}
-        />
+        <div className="flex flex-col items-end gap-2">
+          {(estadoFx === "en_curso" || estadoFx === "pasada") && (
+            <Link
+              href={`/partidas/${partida.id}/scoreboard`}
+              className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold"
+            >
+              Scoreboard →
+            </Link>
+          )}
+          <PartidaActionsButtons
+            partidaId={partida.id}
+            estado={partida.estado}
+            estadoFx={estadoFx}
+          />
+        </div>
       </div>
 
       {estadoFx === "futura" && <InscriptosPreview filas={filas} />}
