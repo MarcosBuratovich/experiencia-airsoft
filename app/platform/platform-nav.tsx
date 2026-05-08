@@ -95,6 +95,7 @@ export function PlatformNav({
       subtitle: "Partidas privadas",
       badge: pending,
     },
+    { href: "/admin/eventos", label: "Eventos", subtitle: "Diagnóstico y carga manual" },
   ];
   const superLinks: AdminLink[] = isSuperAdmin
     ? [
