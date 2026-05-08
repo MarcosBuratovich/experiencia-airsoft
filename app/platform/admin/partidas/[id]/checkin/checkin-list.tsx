@@ -22,6 +22,9 @@ type Inscripcion = {
   alquila_marcadora: boolean;
   alquila_premium: boolean;
   alquila_chaleco: boolean;
+  recarga_tracer_100: number;
+  recarga_conv_200: number;
+  recarga_conv_400: number;
   precio_entrada: number;
   precio_alquiler: number;
   precio_total: number;
@@ -40,12 +43,18 @@ function ars(n: number) {
 }
 
 function equipoLabel(i: Inscripcion): string | null {
-  if (i.tipo_jugador !== "alquiler") return null;
   const bits: string[] = [];
-  if (i.alquila_marcadora) bits.push("Marcadora");
-  if (i.alquila_premium) bits.push("Premium");
-  if (i.alquila_chaleco) bits.push("Chaleco");
-  return bits.length ? bits.join(" · ") : "—";
+  if (i.tipo_jugador === "alquiler") {
+    if (i.alquila_marcadora) bits.push("Marcadora simple");
+    if (i.alquila_premium) bits.push("Marcadora avanzada");
+    if (i.alquila_chaleco) bits.push("Chaleco");
+  }
+  if (i.recarga_tracer_100 > 0)
+    bits.push(`${i.recarga_tracer_100}× tracer 100`);
+  if (i.recarga_conv_200 > 0) bits.push(`${i.recarga_conv_200}× conv 200`);
+  if (i.recarga_conv_400 > 0) bits.push(`${i.recarga_conv_400}× conv 400`);
+  if (!bits.length) return null;
+  return bits.join(" · ");
 }
 
 export function CheckinList({

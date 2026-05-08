@@ -16,6 +16,9 @@ export type AnotarmeInput = {
   alquila_marcadora?: boolean;
   alquila_premium?: boolean;
   alquila_chaleco?: boolean;
+  recarga_tracer_100?: number;
+  recarga_conv_200?: number;
+  recarga_conv_400?: number;
 };
 
 export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
@@ -70,15 +73,26 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   );
   const aplicaBeneficioSocio = cuota.esSocio && cuota.alDia;
 
+  // Validar y normalizar recargas (counters 0..20)
+  const clampRecarga = (n: number | undefined) => {
+    const v = Math.floor(n ?? 0);
+    if (Number.isNaN(v) || v < 0) return 0;
+    if (v > 20) return 20;
+    return v;
+  };
+
   // Si es alquiler, validar que tenga al menos una marcadora y no ambas.
   const alquila: AlquilerItems = {
     marcadora: tipo_jugador === "alquiler" && !!input.alquila_marcadora,
     premium: tipo_jugador === "alquiler" && !!input.alquila_premium,
     chaleco: tipo_jugador === "alquiler" && !!input.alquila_chaleco,
+    recargaTracer100: clampRecarga(input.recarga_tracer_100),
+    recargaConv200: clampRecarga(input.recarga_conv_200),
+    recargaConv400: clampRecarga(input.recarga_conv_400),
   };
   if (tipo_jugador === "alquiler") {
     if (alquila.marcadora && alquila.premium) {
-      return { error: "Elegí marcadora común O premium, no ambas." };
+      return { error: "Elegí marcadora simple O avanzada, no ambas." };
     }
     if (!alquila.marcadora && !alquila.premium) {
       return { error: "Tenés que alquilar una marcadora." };
@@ -120,6 +134,9 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     alquila_marcadora: alquila.marcadora,
     alquila_premium: alquila.premium,
     alquila_chaleco: alquila.chaleco,
+    recarga_tracer_100: alquila.recargaTracer100,
+    recarga_conv_200: alquila.recargaConv200,
+    recarga_conv_400: alquila.recargaConv400,
     precio_entrada: entrada,
     precio_alquiler: alquiler,
   });

@@ -8,12 +8,14 @@ import type { TipoJugador } from "@/lib/precios";
 type Inscripcion = { id: string; estado: string };
 
 type PreciosMin = {
-  entrada_alquiler: number;
   entrada_byop: number;
   entrada_socio: number;
-  alquiler_marcadora: number;
-  alquiler_premium: number;
+  alquiler_marcadora: number; // simple
+  alquiler_premium: number; // avanzada
   alquiler_chaleco: number;
+  recarga_tracer_100: number;
+  recarga_conv_200: number;
+  recarga_conv_400: number;
 };
 
 type DeudaCuota = { meses: number; monto: number };
@@ -70,29 +72,33 @@ export function AnotarmeButton({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [tipo, setTipo] = useState<TipoJugador>("byop");
-  const [marcadora, setMarcadora] = useState<"comun" | "premium">("comun");
+  const [marcadora, setMarcadora] = useState<"simple" | "avanzada">("simple");
   const [chaleco, setChaleco] = useState(false);
+  const [recargaTracer100, setRecargaTracer100] = useState(0);
+  const [recargaConv200, setRecargaConv200] = useState(0);
+  const [recargaConv400, setRecargaConv400] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Solo aplica el beneficio si es socio Y está al día con la cuota
   const aplicaBeneficio = esSocio && socioAlDia;
   const socioConDeuda = esSocio && !socioAlDia;
 
-  const entrada = aplicaBeneficio
-    ? precios.entrada_socio
-    : tipo === "alquiler"
-      ? precios.entrada_alquiler
-      : precios.entrada_byop;
+  const entrada = aplicaBeneficio ? precios.entrada_socio : precios.entrada_byop;
 
   const alquilerMonto = useMemo(() => {
-    if (tipo !== "alquiler") return 0;
     let t = 0;
-    if (marcadora === "comun") t += precios.alquiler_marcadora;
-    else t += precios.alquiler_premium;
-    if (chaleco) t += precios.alquiler_chaleco;
+    if (tipo === "alquiler") {
+      t +=
+        marcadora === "simple"
+          ? precios.alquiler_marcadora
+          : precios.alquiler_premium;
+      if (chaleco) t += precios.alquiler_chaleco;
+    }
+    t += recargaTracer100 * precios.recarga_tracer_100;
+    t += recargaConv200 * precios.recarga_conv_200;
+    t += recargaConv400 * precios.recarga_conv_400;
     return t;
-  }, [tipo, marcadora, chaleco, precios]);
+  }, [tipo, marcadora, chaleco, recargaTracer100, recargaConv200, recargaConv400, precios]);
 
   const total = entrada + alquilerMonto;
 
@@ -141,9 +147,12 @@ export function AnotarmeButton({
     startTransition(async () => {
       const res = await anotarmeAction(partidaId, {
         tipo_jugador: tipo,
-        alquila_marcadora: tipo === "alquiler" && marcadora === "comun",
-        alquila_premium: tipo === "alquiler" && marcadora === "premium",
+        alquila_marcadora: tipo === "alquiler" && marcadora === "simple",
+        alquila_premium: tipo === "alquiler" && marcadora === "avanzada",
         alquila_chaleco: tipo === "alquiler" && chaleco,
+        recarga_tracer_100: recargaTracer100,
+        recarga_conv_200: recargaConv200,
+        recarga_conv_400: recargaConv400,
       });
       if ("error" in res && res.error) {
         setError(res.error);
@@ -153,7 +162,6 @@ export function AnotarmeButton({
     });
   };
 
-  // Texto del CTA: si beneficio activo y total === 0, simplificamos
   const btnLabel = pending
     ? "..."
     : lleno
@@ -194,9 +202,7 @@ export function AnotarmeButton({
       {/* Warning de cuota atrasada */}
       {socioConDeuda && (
         <div className="border border-orange-300/50 bg-orange-300/5 clip-notch p-4">
-          <p className="sect-label mb-1 text-orange-300">
-            // Cuota atrasada
-          </p>
+          <p className="sect-label mb-1 text-orange-300">// Cuota atrasada</p>
           <p className="font-sans fluid-sm text-bone">
             Te {deudaCuota.meses === 1 ? "falta" : "faltan"} {deudaCuota.meses}{" "}
             {deudaCuota.meses === 1 ? "mes" : "meses"} ({ars(deudaCuota.monto)}).
@@ -215,7 +221,7 @@ export function AnotarmeButton({
             current={tipo}
             onSelect={setTipo}
             title="Alquiler"
-            subtitle="Alquilo equipo"
+            subtitle="Alquilo equipo en el local"
           />
           <TipoOpt
             value="byop"
@@ -233,39 +239,78 @@ export function AnotarmeButton({
 
           <div className="space-y-2">
             <MarcadoraOpt
-              value="comun"
+              value="simple"
               current={marcadora}
               setValue={setMarcadora}
-              title="Marcadora común"
+              title="Marcadora simple"
+              subtitle="Marcadora estándar + protección básica (anteojos)"
               precio={precios.alquiler_marcadora}
             />
             <MarcadoraOpt
-              value="premium"
+              value="avanzada"
               current={marcadora}
               setValue={setMarcadora}
-              title="Marcadora premium (tracer)"
+              title="Marcadora avanzada"
+              subtitle="Con trazador + bbs tracer + protección"
               precio={precios.alquiler_premium}
             />
           </div>
 
-          <label className="flex items-center gap-3 px-2 py-2 cursor-pointer select-none">
+          <label className="flex items-start gap-3 px-2 py-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={chaleco}
               onChange={(e) => setChaleco(e.target.checked)}
-              className="w-4 h-4 accent-orange cursor-pointer"
+              className="w-4 h-4 mt-0.5 accent-orange cursor-pointer shrink-0"
             />
-            <span className="text-bone font-sans flex-1">Chaleco</span>
-            <span className="font-mono fluid-xs text-ash">
-              {ars(precios.alquiler_chaleco)}
-            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-bone font-sans">Chaleco táctico</span>
+                <span className="font-mono fluid-xs text-ash shrink-0">
+                  {ars(precios.alquiler_chaleco)}
+                </span>
+              </div>
+              <p className="font-mono fluid-xs text-smoke mt-0.5">
+                Protección extra para el torso.
+              </p>
+            </div>
           </label>
         </fieldset>
       )}
 
-      {/* Desglose: lo escondemos completamente cuando es socio al día y no
-          alquila nada — no hay nada que mostrar y reduce ruido visual. */}
-      {!(aplicaBeneficio && tipo === "byop") && (
+      {/* Recargas: visibles para alquiler y BYOP */}
+      <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
+        <legend className="sect-label px-2">Recargas (opcional)</legend>
+        <p className="font-mono fluid-xs text-smoke px-1">
+          Munición adicional por sobre la incluida en el alquiler.
+        </p>
+
+        <div className="space-y-2">
+          <RecargaCounter
+            value={recargaTracer100}
+            setValue={setRecargaTracer100}
+            title="100 bbs tracer"
+            subtitle="Munición fluorescente"
+            precio={precios.recarga_tracer_100}
+          />
+          <RecargaCounter
+            value={recargaConv200}
+            setValue={setRecargaConv200}
+            title="200 bbs convencional"
+            subtitle="Munición estándar"
+            precio={precios.recarga_conv_200}
+          />
+          <RecargaCounter
+            value={recargaConv400}
+            setValue={setRecargaConv400}
+            title="400 bbs convencional"
+            subtitle="Pack grande"
+            precio={precios.recarga_conv_400}
+          />
+        </div>
+      </fieldset>
+
+      {!(aplicaBeneficio && tipo === "byop" && total === 0) && (
         <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
           <dl className="space-y-1 font-mono fluid-xs">
             {!aplicaBeneficio && (
@@ -274,13 +319,19 @@ export function AnotarmeButton({
                 value={ars(entrada)}
               />
             )}
-            {tipo === "alquiler" && <Row label="Alquiler" value={ars(alquilerMonto)} />}
+            {alquilerMonto > 0 && <Row label="Alquiler + extras" value={ars(alquilerMonto)} />}
             <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
               <span className="sect-label">Total</span>
               <span className="font-display fluid-xl text-bone">{ars(total)}</span>
             </div>
           </dl>
         </div>
+      )}
+
+      {tipo === "alquiler" && (
+        <p className="font-mono fluid-xs text-smoke px-1">
+          Si alquilás equipo, en el local se pide una <span className="text-bone">seña de $5.000</span> el día de la partida — se descuenta del total.
+        </p>
       )}
 
       {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
@@ -347,12 +398,14 @@ function MarcadoraOpt({
   current,
   setValue,
   title,
+  subtitle,
   precio,
 }: {
-  value: "comun" | "premium";
-  current: "comun" | "premium";
-  setValue: (v: "comun" | "premium") => void;
+  value: "simple" | "avanzada";
+  current: "simple" | "avanzada";
+  setValue: (v: "simple" | "avanzada") => void;
   title: string;
+  subtitle: string;
   precio: number;
 }) {
   const active = current === value;
@@ -360,22 +413,78 @@ function MarcadoraOpt({
     <button
       type="button"
       onClick={() => setValue(value)}
-      className={`w-full text-left px-3 py-2 border transition clip-notch cursor-pointer ${
+      className={`w-full text-left px-3 py-3 border transition clip-notch cursor-pointer ${
         active ? "bg-ink/60 border-orange" : "bg-ink/30 border-rail/60 hover:border-rail"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <span
-          className={`inline-block w-3 h-3 rounded-full border-2 transition ${
+          className={`inline-block w-3 h-3 rounded-full border-2 transition mt-1 shrink-0 ${
             active ? "bg-orange border-orange" : "border-rail"
           }`}
           aria-hidden
         />
-        <span className="text-bone flex-1">{title}</span>
-        <span className="font-mono fluid-xs text-ash">
-          ${precio.toLocaleString("es-AR")}
-        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-bone">{title}</span>
+            <span className="font-mono fluid-xs text-ash shrink-0">
+              ${precio.toLocaleString("es-AR")}
+            </span>
+          </div>
+          <p className="font-mono fluid-xs text-smoke mt-0.5">{subtitle}</p>
+        </div>
       </div>
     </button>
+  );
+}
+
+function RecargaCounter({
+  value,
+  setValue,
+  title,
+  subtitle,
+  precio,
+}: {
+  value: number;
+  setValue: (n: number) => void;
+  title: string;
+  subtitle: string;
+  precio: number;
+}) {
+  return (
+    <div className="px-2 py-2 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-bone font-sans">{title}</span>
+          <span className="font-mono fluid-xs text-ash shrink-0">
+            ${precio.toLocaleString("es-AR")} c/u
+          </span>
+        </div>
+        <p className="font-mono fluid-xs text-smoke mt-0.5">{subtitle}</p>
+      </div>
+      <div className="flex items-stretch border border-rail/60 bg-ink shrink-0">
+        <button
+          type="button"
+          onClick={() => setValue(Math.max(0, value - 1))}
+          disabled={value <= 0}
+          className="w-7 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Restar"
+        >
+          −
+        </button>
+        <span className="w-8 text-center font-display fluid-base text-bone py-1.5 select-none tabular-nums">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={() => setValue(Math.min(20, value + 1))}
+          disabled={value >= 20}
+          className="w-7 text-bone hover:text-orange transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Sumar"
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }

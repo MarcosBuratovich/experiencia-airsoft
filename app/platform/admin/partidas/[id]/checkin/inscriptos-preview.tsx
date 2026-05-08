@@ -13,6 +13,9 @@ type Fila = {
   alquila_marcadora: boolean;
   alquila_premium: boolean;
   alquila_chaleco: boolean;
+  recarga_tracer_100: number;
+  recarga_conv_200: number;
+  recarga_conv_400: number;
   precio_entrada: number;
   precio_alquiler: number;
   precio_total: number;
@@ -23,12 +26,18 @@ function ars(n: number) {
 }
 
 function equipoLabel(f: Fila): string | null {
-  if (f.tipo_jugador !== "alquiler") return null;
   const bits: string[] = [];
-  if (f.alquila_marcadora) bits.push("Marcadora");
-  if (f.alquila_premium) bits.push("Premium");
-  if (f.alquila_chaleco) bits.push("Chaleco");
-  return bits.length ? bits.join(" · ") : "—";
+  if (f.tipo_jugador === "alquiler") {
+    if (f.alquila_marcadora) bits.push("Marcadora simple");
+    if (f.alquila_premium) bits.push("Marcadora avanzada");
+    if (f.alquila_chaleco) bits.push("Chaleco");
+  }
+  if (f.recarga_tracer_100 > 0)
+    bits.push(`${f.recarga_tracer_100}× tracer 100`);
+  if (f.recarga_conv_200 > 0) bits.push(`${f.recarga_conv_200}× conv 200`);
+  if (f.recarga_conv_400 > 0) bits.push(`${f.recarga_conv_400}× conv 400`);
+  if (!bits.length) return null;
+  return bits.join(" · ");
 }
 
 export function InscriptosPreview({ filas }: { filas: Fila[] }) {

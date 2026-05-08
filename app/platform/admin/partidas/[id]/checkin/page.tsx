@@ -22,7 +22,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   const { data: inscripciones } = await supabase
     .from("inscripciones")
     .select(
-      "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
+      "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -42,6 +42,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       alquila_marcadora: !!i.alquila_marcadora,
       alquila_premium: !!i.alquila_premium,
       alquila_chaleco: !!i.alquila_chaleco,
+      recarga_tracer_100: i.recarga_tracer_100 ?? 0,
+      recarga_conv_200: i.recarga_conv_200 ?? 0,
+      recarga_conv_400: i.recarga_conv_400 ?? 0,
       precio_entrada: i.precio_entrada ?? 0,
       precio_alquiler: i.precio_alquiler ?? 0,
       precio_total: i.precio_total ?? (i.precio_entrada ?? 0) + (i.precio_alquiler ?? 0),
