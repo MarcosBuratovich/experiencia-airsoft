@@ -123,6 +123,9 @@ export function PlatformNav({
         <NavLink href="/partidas" active={isSectionActive(pathname, "/partidas")} primary>
           Partidas
         </NavLink>
+        <NavLink href="/ranking" active={isSectionActive(pathname, "/ranking")} primary>
+          Ranking
+        </NavLink>
         <NavLink href="/clanes" active={isSectionActive(pathname, "/clanes") || pathname === "/mi-clan"} primary>
           Clanes
         </NavLink>
@@ -267,6 +270,7 @@ export function PlatformNav({
                 <p className="sect-label mb-2">Jugador</p>
                 <ul className="space-y-1">
                   <MobileLink href="/partidas" label="Partidas" active={isSectionActive(pathname, "/partidas")} />
+                  <MobileLink href="/ranking" label="Ranking" active={isSectionActive(pathname, "/ranking")} />
                   <MobileLink href="/clanes" label="Clanes" active={isSectionActive(pathname, "/clanes") || pathname === "/mi-clan"} />
                   <MobileLink
                     href="/mis-solicitudes"
