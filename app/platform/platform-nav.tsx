@@ -129,6 +129,9 @@ export function PlatformNav({
         <NavLink href="/mis-solicitudes" active={isSectionActive(pathname, "/mis-solicitudes") || isSectionActive(pathname, "/privada")} primary>
           Privadas
         </NavLink>
+        <NavLink href="/perfil" active={isSectionActive(pathname, "/perfil")} primary>
+          Perfil
+        </NavLink>
 
         {isAdmin && (
           <div className="relative">
@@ -269,6 +272,11 @@ export function PlatformNav({
                     href="/mis-solicitudes"
                     label="Privadas"
                     active={isSectionActive(pathname, "/mis-solicitudes") || isSectionActive(pathname, "/privada")}
+                  />
+                  <MobileLink
+                    href="/perfil"
+                    label="Perfil"
+                    active={isSectionActive(pathname, "/perfil")}
                   />
                 </ul>
               </div>

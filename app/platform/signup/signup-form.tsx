@@ -19,6 +19,27 @@ export function SignupForm() {
       <Field label="Email" name="email" type="email" error={state?.errors?.email} />
       <Field label="Contraseña" name="password" type="password" error={state?.errors?.password} />
 
+      <label className="block">
+        <span className="sect-label mb-1 block">Número de jugador</span>
+        <input
+          name="player_number"
+          inputMode="numeric"
+          maxLength={6}
+          pattern="\d{6}"
+          required
+          placeholder="6 dígitos"
+          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-mono tracking-[.2em] text-bone focus:border-orange outline-none transition"
+        />
+        <span className="mt-1 block font-mono fluid-xs text-smoke">
+          Es tu identificador en cancha. Único, no se puede repetir. Elegí algo memorable.
+        </span>
+        {state?.errors?.player_number?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.player_number[0]}
+          </span>
+        )}
+      </label>
+
       {state?.message && (
         <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
       )}

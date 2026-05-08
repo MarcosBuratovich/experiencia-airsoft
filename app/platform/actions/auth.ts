@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { numeroDisponible } from "@/lib/player-number";
 
 const signupSchema = z.object({
   nombre: z.string().trim().min(2, "Mínimo 2 caracteres"),
@@ -16,6 +17,10 @@ const signupSchema = z.object({
     .min(8, "Mínimo 8 caracteres")
     .regex(/[a-zA-Z]/, "Debe tener al menos una letra")
     .regex(/[0-9]/, "Debe tener al menos un número"),
+  player_number: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Tienen que ser exactamente 6 dígitos"),
 });
 
 export type SignupState = {
@@ -31,20 +36,32 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
     celular: formData.get("celular"),
     email: formData.get("email"),
     password: formData.get("password"),
+    player_number: formData.get("player_number"),
   });
 
   if (!parsed.success) {
     return { errors: z.flattenError(parsed.error).fieldErrors };
   }
 
-  const { nombre, apellido, dni, celular, email, password } = parsed.data;
+  const { nombre, apellido, dni, celular, email, password, player_number } =
+    parsed.data;
   const supabase = await createClient();
+
+  // Validar unicidad del player_number antes de crear el auth user.
+  // Hay un unique index en la DB que da última palabra, pero este check
+  // devuelve un error de campo prolijo en el form en vez de un 500.
+  const disponible = await numeroDisponible(supabase, player_number);
+  if (!disponible) {
+    return {
+      errors: { player_number: ["Ese número ya está en uso. Elegí otro"] },
+    };
+  }
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { nombre, apellido, dni, celular },
+      data: { nombre, apellido, dni, celular, player_number },
     },
   });
 

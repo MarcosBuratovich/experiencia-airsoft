@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setSocioAction, setRolAction, setCuotaAction } from "./actions";
+import {
+  setSocioAction,
+  setRolAction,
+  setCuotaAction,
+  setPlayerNumberAction,
+} from "./actions";
 import { Select } from "../../components/select";
 
 type Usuario = {
@@ -12,6 +17,7 @@ type Usuario = {
   email: string;
   dni: string;
   celular: string;
+  player_number: string | null;
   role: string;
   socio: boolean;
   socio_desde: string | null;
@@ -27,6 +33,9 @@ const ROLE_OPTS = [
 
 export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [errorByUser, setErrorByUser] = useState<Record<string, string | null>>(
+    {},
+  );
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -54,6 +63,22 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
       await setCuotaAction(id, monto);
       setPendingId(null);
       router.refresh();
+    });
+  };
+
+  const savePlayerNumber = (u: Usuario, valor: string) => {
+    const v = valor.trim();
+    if ((v || null) === (u.player_number || null)) return;
+    setPendingId(u.id);
+    setErrorByUser((p) => ({ ...p, [u.id]: null }));
+    startTransition(async () => {
+      const res = await setPlayerNumberAction(u.id, v || null);
+      if ("error" in res && res.error) {
+        setErrorByUser((p) => ({ ...p, [u.id]: res.error ?? null }));
+      } else {
+        router.refresh();
+      }
+      setPendingId(null);
     });
   };
 
@@ -99,6 +124,22 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
                 <p className="truncate">{u.email}</p>
                 <p className="text-smoke">{u.celular}</p>
               </div>
+              <div className="mb-3">
+                <span className="sect-label mb-1 block">N° de jugador</span>
+                <input
+                  inputMode="numeric"
+                  maxLength={6}
+                  defaultValue={u.player_number ?? ""}
+                  placeholder="—"
+                  onBlur={(e) => savePlayerNumber(u, e.target.value)}
+                  className="w-full bg-ink border border-rail/60 px-2 py-2 text-bone font-mono tracking-[.2em] fluid-xs focus:border-orange outline-none"
+                />
+                {errorByUser[u.id] && (
+                  <span className="mt-1 block font-mono fluid-xs text-orange-300">
+                    {errorByUser[u.id]}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <span className="sect-label mb-1 block">Cuota</span>
@@ -139,6 +180,7 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
           <thead className="bg-carbon">
             <tr className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
               <th className="text-left px-3 py-3">Jugador</th>
+              <th className="text-left px-3 py-3">N°</th>
               <th className="text-left px-3 py-3">Contacto</th>
               <th className="text-center px-3 py-3">Socio</th>
               <th className="text-left px-3 py-3">Cuota</th>
@@ -158,6 +200,21 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
                       {u.apellido}, {u.nombre}
                     </div>
                     <div className="font-mono fluid-xs text-smoke">DNI {u.dni}</div>
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    <input
+                      inputMode="numeric"
+                      maxLength={6}
+                      defaultValue={u.player_number ?? ""}
+                      placeholder="—"
+                      onBlur={(e) => savePlayerNumber(u, e.target.value)}
+                      className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono tracking-[.2em] fluid-xs focus:border-orange outline-none"
+                    />
+                    {errorByUser[u.id] && (
+                      <div className="mt-1 font-mono fluid-xs text-orange-300 max-w-[10rem]">
+                        {errorByUser[u.id]}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 align-top font-mono fluid-xs text-ash">
                     <div>{u.email}</div>
