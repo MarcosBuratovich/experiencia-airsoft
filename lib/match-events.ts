@@ -1,4 +1,5 @@
 import type { createServiceRoleClient } from "./supabase/admin";
+import { inicioPartida } from "./partidas";
 
 type AdminSupabase = ReturnType<typeof createServiceRoleClient>;
 
@@ -78,7 +79,7 @@ export async function findPartidaActivaParaUser(
   for (const row of rows as Row[]) {
     const p = Array.isArray(row.partidas) ? row.partidas[0] : row.partidas;
     if (!p) continue;
-    const inicio = new Date(`${p.fecha}T${p.hora_inicio}`);
+    const inicio = inicioPartida(p.fecha, p.hora_inicio);
     const fin = new Date(
       inicio.getTime() + (p.duracion_min + POST_FIN_MARGIN_MIN) * 60_000,
     );
@@ -98,10 +99,10 @@ export async function findPartidaActivaParaUser(
   // Múltiples → la más cercana al occurred_at por inicio
   candidatas.sort((a, b) => {
     const da = Math.abs(
-      new Date(`${a.fecha}T${a.hora_inicio}`).getTime() - occurredAt.getTime(),
+      inicioPartida(a.fecha, a.hora_inicio).getTime() - occurredAt.getTime(),
     );
     const db = Math.abs(
-      new Date(`${b.fecha}T${b.hora_inicio}`).getTime() - occurredAt.getTime(),
+      inicioPartida(b.fecha, b.hora_inicio).getTime() - occurredAt.getTime(),
     );
     return da - db;
   });

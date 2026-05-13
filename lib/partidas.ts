@@ -25,8 +25,21 @@ export type PartidaCore = {
   estado: string; // 'abierta' | 'cerrada' | 'cancelada'
 };
 
+/**
+ * Offset fijo de Argentina (UTC-3). Argentina no aplica DST desde 2009,
+ * así que es seguro hardcodearlo.
+ */
+const TZ_ARG_OFFSET = "-03:00";
+
+/**
+ * Combina `fecha` ('YYYY-MM-DD') y `hora_inicio` ('HH:MM' o 'HH:MM:SS') como
+ * un instante en hora argentina. Sin esto, `new Date('2026-05-13T19:00:00')`
+ * se interpreta como UTC en Vercel (server-side), corriendo todos los
+ * cálculos 3hs hacia adelante.
+ */
 export function inicioPartida(fecha: string, hora_inicio: string): Date {
-  return new Date(`${fecha}T${hora_inicio}`);
+  const h = hora_inicio.length === 5 ? `${hora_inicio}:00` : hora_inicio;
+  return new Date(`${fecha}T${h}${TZ_ARG_OFFSET}`);
 }
 
 export function finPartida(

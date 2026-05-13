@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { slotRecurrentePisado } from "@/lib/horarios";
 import { modalidadLabel } from "@/lib/format";
+import { inicioPartida } from "@/lib/partidas";
 
 const crearSchema = z.object({
   fecha_propuesta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
@@ -40,7 +41,7 @@ export async function solicitarPrivadaAction(
   const v = parsed.data;
 
   // La fecha no puede ser en el pasado
-  const inicio = new Date(`${v.fecha_propuesta}T${v.hora_inicio}`);
+  const inicio = inicioPartida(v.fecha_propuesta, v.hora_inicio);
   if (inicio.getTime() <= Date.now()) {
     return { errors: { fecha_propuesta: ["La fecha/hora tiene que ser futura"] } };
   }

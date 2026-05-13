@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { TIPOS_EVENTO } from "@/lib/match-events";
+import { inicioPartida } from "@/lib/partidas";
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -120,7 +121,7 @@ export async function cargarEventosManualesAction(input: CargaEventosInput) {
 
   // Generamos un evento por cada count > 0. local_event_id sintético con
   // prefijo `manual-` para distinguirlos del feed real.
-  const occurred_at = new Date(`${partida.fecha}T${partida.hora_inicio}`).toISOString();
+  const occurred_at = inicioPartida(partida.fecha, partida.hora_inicio).toISOString();
   const filas: Array<{
     partida_id: string;
     user_id: string;

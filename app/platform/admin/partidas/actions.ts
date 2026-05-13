@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { inicioPartida } from "@/lib/partidas";
 
 async function chequearAdminYPartida(partidaId: string) {
   const supabase = await createClient();
@@ -95,7 +96,7 @@ export async function eliminarPartidaAction(partidaId: string) {
   const { supabase, partida } = ctx;
 
   // Solo se permite eliminar si la partida todavía no empezó
-  const inicio = new Date(`${partida.fecha}T${partida.hora_inicio}`);
+  const inicio = inicioPartida(partida.fecha, partida.hora_inicio);
   if (Date.now() >= inicio.getTime()) {
     return { error: "No se puede eliminar una partida que ya empezó" };
   }
