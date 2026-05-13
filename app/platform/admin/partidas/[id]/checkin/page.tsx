@@ -20,21 +20,77 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!partida) notFound();
 
-  const [{ data: inscripciones }, precios] = await Promise.all([
+  // Columnas que dependen de migraciones nuevas. Si la migración 5b aún
+  // no se aplicó en este Supabase, el select extendido falla y todo el
+  // query devuelve null. Por eso intentamos el extendido y si falla
+  // caemos al base (las recargas quedan en 0 y se ven después de la
+  // migración).
+  const SELECT_BASE =
+    "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)";
+  const SELECT_EXTENDED =
+    SELECT_BASE.replace(
+      "precio_total",
+      "recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_recargas, precio_total",
+    );
+
+  const tryQuery = async (selectStr: string) =>
     supabase
       .from("inscripciones")
-      .select(
-        "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_entrada, precio_alquiler, precio_recargas, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)",
-      )
+      .select(selectStr)
       .eq("partida_id", id)
       .in("estado", ["confirmado", "waitlist"])
-      .order("created_at"),
-    getPreciosConfig(supabase),
-  ]);
+      .order("created_at");
 
-  const filas = (inscripciones ?? []).map((i) => {
+  let inscripcionesRes = await tryQuery(SELECT_EXTENDED);
+  let migracionRecargasPendiente = false;
+  if (inscripcionesRes.error) {
+    console.error(
+      "[checkin] query extendido falló, fallback al base:",
+      inscripcionesRes.error.message,
+    );
+    migracionRecargasPendiente = true;
+    inscripcionesRes = await tryQuery(SELECT_BASE);
+    if (inscripcionesRes.error) {
+      console.error(
+        "[checkin] query base también falló:",
+        inscripcionesRes.error.message,
+      );
+    }
+  }
+
+  const inscripciones = inscripcionesRes.data;
+  const precios = await getPreciosConfig(supabase);
+
+  type RowAny = Record<string, unknown> & {
+    id: string;
+    estado: string;
+    user_id: string;
+    tipo_jugador?: string | null;
+    alquila_marcadora?: boolean | null;
+    alquila_premium?: boolean | null;
+    alquila_chaleco?: boolean | null;
+    recarga_tracer_100?: number | null;
+    recarga_conv_200?: number | null;
+    recarga_conv_400?: number | null;
+    precio_entrada?: number | null;
+    precio_alquiler?: number | null;
+    precio_recargas?: number | null;
+    precio_total?: number | null;
+    profiles:
+      | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean }
+      | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean }[];
+    checkins:
+      | { presente: boolean; pago_estado: string | null; pago_monto: number | null; nota: string | null }
+      | { presente: boolean; pago_estado: string | null; pago_monto: number | null; nota: string | null }[]
+      | null;
+  };
+
+  const filas = ((inscripciones ?? []) as unknown as RowAny[]).map((i) => {
     const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
     const c = Array.isArray(i.checkins) ? i.checkins[0] : i.checkins;
+    const precio_entrada = i.precio_entrada ?? 0;
+    const precio_alquiler = i.precio_alquiler ?? 0;
+    const precio_recargas = i.precio_recargas ?? 0;
     return {
       id: i.id,
       nombre: `${p.nombre} ${p.apellido}`,
@@ -49,12 +105,10 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       recarga_tracer_100: i.recarga_tracer_100 ?? 0,
       recarga_conv_200: i.recarga_conv_200 ?? 0,
       recarga_conv_400: i.recarga_conv_400 ?? 0,
-      precio_entrada: i.precio_entrada ?? 0,
-      precio_alquiler: i.precio_alquiler ?? 0,
-      precio_recargas: i.precio_recargas ?? 0,
-      precio_total:
-        i.precio_total ??
-        (i.precio_entrada ?? 0) + (i.precio_alquiler ?? 0) + (i.precio_recargas ?? 0),
+      precio_entrada,
+      precio_alquiler,
+      precio_recargas,
+      precio_total: i.precio_total ?? precio_entrada + precio_alquiler + precio_recargas,
       checkin: c
         ? {
             presente: c.presente,
@@ -118,6 +172,17 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
           />
         </div>
       </div>
+
+      {migracionRecargasPendiente && (
+        <div className="mb-6 border border-orange-300/40 bg-orange-300/5 clip-notch p-4">
+          <p className="sect-label mb-1 text-orange-300">// Migración pendiente</p>
+          <p className="font-sans fluid-sm text-ash">
+            Falta correr <span className="text-orange">db/schema-phase-5b.sql</span>{" "}
+            en Supabase SQL Editor. Mientras tanto las recargas no se pueden
+            cargar, pero el check-in funciona normal.
+          </p>
+        </div>
+      )}
 
       {estadoFx === "futura" && <InscriptosPreview filas={filas} />}
       {estadoFx === "en_curso" && (
