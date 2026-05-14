@@ -42,6 +42,14 @@ export const metadata: Metadata = {
     template: "%s · Experiencia Airsoft",
   },
   description: DESCRIPTION,
+  // Señales adicionales de "site name" que Google considera para mostrar
+  // "Experiencia Airsoft" en vez del dominio en los resultados de búsqueda.
+  applicationName: "Experiencia Airsoft",
+  appleWebApp: {
+    title: "Experiencia Airsoft",
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
   keywords: [
     "airsoft",
     "airsoft Buenos Aires",
