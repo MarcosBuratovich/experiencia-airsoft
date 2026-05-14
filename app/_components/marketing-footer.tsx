@@ -52,6 +52,27 @@ export function MarketingFooter() {
                   Primera vez
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/eventos-corporativos"
+                  className="hover:text-bone transition"
+                >
+                  Eventos corporativos
+                </Link>
+              </li>
+              <li>
+                <Link href="/cumpleanos" className="hover:text-bone transition">
+                  Cumpleaños
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/airsoft-vs-paintball"
+                  className="hover:text-bone transition"
+                >
+                  Airsoft vs paintball
+                </Link>
+              </li>
             </ul>
           </div>
 

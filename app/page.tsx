@@ -1622,6 +1622,30 @@ export default function Home() {
                     Primera vez jugando
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href="/eventos-corporativos"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Eventos corporativos
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/cumpleanos"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Cumpleaños de airsoft
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/airsoft-vs-paintball"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Airsoft vs paintball
+                  </Link>
+                </li>
               </ul>
             </div>
 

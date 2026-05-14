@@ -75,20 +75,13 @@ export const metadata: Metadata = {
     siteName: "Experiencia Airsoft",
     title: TITLE,
     description: DESCRIPTION,
-    images: [
-      {
-        url: "/img/07_zona_fria_hero.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Experiencia Airsoft — centro de airsoft CQB indoor en Buenos Aires",
-      },
-    ],
+    // images las define el file convention app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/img/07_zona_fria_hero.jpg"],
+    // images las define el file convention app/twitter-image.tsx
   },
   // Next 16 detecta automáticamente app/icon.png y app/apple-icon.png
   // y genera los <link rel="icon"> con sizes correctos.
