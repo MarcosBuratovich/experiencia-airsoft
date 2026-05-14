@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { WHATSAPP_URL } from "./site-constants";
 
 const NAV_ITEMS: { href: string; label: string }[] = [
@@ -18,12 +19,12 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
           aria-label="Experiencia Airsoft — inicio"
           className="flex items-center gap-3 shrink-0"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/img/00_logo_cropped.png"
             alt="Logo Experiencia Airsoft"
             width={840}
             height={240}
+            priority
             className="h-9 w-auto"
           />
         </Link>

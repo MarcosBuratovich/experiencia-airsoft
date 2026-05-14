@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ReelCard } from "./reel-card";
 import { ScrollFx } from "./scroll-fx";
 
@@ -504,12 +505,12 @@ export default function Home() {
             className="flex items-center gap-3 shrink-0"
             aria-label="Experiencia Airsoft — inicio"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/img/00_logo_cropped.png"
               alt="Logo Experiencia Airsoft — airsoft CQB indoor en Buenos Aires"
               width={840}
               height={240}
+              priority
               className="h-[clamp(2rem,2vw+1.5rem,3rem)] w-auto"
             />
           </a>
@@ -558,14 +559,13 @@ export default function Home() {
         id="top"
         className="relative min-h-[100svh] flex flex-col overflow-hidden"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/img/07_zona_fria_hero.jpg"
           alt="Jugadores en plena partida de airsoft CQB indoor en Experiencia Airsoft, Buenos Aires"
-          fetchPriority="high"
-          width={2400}
-          height={1600}
-          className="absolute inset-0 w-full h-full object-cover"
+          priority
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div
           className="absolute inset-0"
@@ -746,12 +746,12 @@ export default function Home() {
                 className={`group relative bg-carbon clip-notch-lg glow-on-hover transition-shadow duration-300 reveal ${p.delayClass}`}
               >
                 <div className="relative imgcard aspect-[4/3]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={p.image}
                     alt={p.alt}
-                    loading="lazy"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent"></div>
                   <span className="absolute top-4 left-4 mil-tag">{p.tag}</span>
@@ -986,14 +986,12 @@ export default function Home() {
 
           <div className="grid lg:grid-cols-2 gap-5 md:gap-6 items-stretch">
             <div className="reveal relative clip-notch-lg overflow-hidden aspect-[3/4] lg:aspect-auto lg:min-h-[520px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/img/16_partida_nocturna.jpg"
                 alt="Partida nocturna de airsoft CQB con iluminación tenue y jugadores tácticos"
-                loading="lazy"
-                width={1600}
-                height={2133}
-                className="absolute inset-0 w-full h-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink/30"></div>
               <div className="absolute top-5 left-5 right-5 flex justify-between font-mono fluid-xs tracking-[.28em] uppercase text-bone/80">
@@ -1277,14 +1275,12 @@ export default function Home() {
               rel="noopener"
               className="group relative block clip-notch-lg overflow-hidden aspect-[16/10] imgcard bg-carbon reveal"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/img/08_manija_del_mes.jpg"
                 alt="Comunidad de jugadores de Experiencia Airsoft — Manija del mes en Instagram"
-                loading="lazy"
-                width={1600}
-                height={1000}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-ink/80 via-ink/40 to-ink/80"></div>
               <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-between">
@@ -1328,14 +1324,12 @@ export default function Home() {
               rel="noopener"
               className="group relative block clip-notch-lg overflow-hidden aspect-[16/10] imgcard bg-carbon reveal reveal-delay-1"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/img/09_banner_streams.jpg"
                 alt="Streams en vivo de partidas de airsoft CQB en YouTube de Experiencia Airsoft"
-                loading="lazy"
-                width={1600}
-                height={1000}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-ink/85 via-ink/50 to-ink/85"></div>
               <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-between">
@@ -1490,12 +1484,12 @@ export default function Home() {
         <div className="max-w-[1400px] mx-auto fluid-gutter-x py-[clamp(3rem,2rem+4vw,5rem)]">
           <div className="grid md:grid-cols-12 gap-10 md:gap-8">
             <div className="md:col-span-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/img/00_logo_cropped.png"
                 alt="Logo Experiencia Airsoft"
                 width={840}
                 height={240}
+                loading="lazy"
                 className="h-[clamp(2.75rem,3vw+2rem,3.75rem)] w-auto mb-5"
               />
               <p className="text-ash fluid-sm leading-relaxed max-w-[36ch]">

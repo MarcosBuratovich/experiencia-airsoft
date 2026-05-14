@@ -49,9 +49,56 @@ Validar en: https://search.google.com/test/rich-results
 
 - Todas las `<img>` con `alt` descriptivo y único (no genérico).
 - `width` y `height` para evitar CLS (Cumulative Layout Shift).
-- Hero con `fetchPriority="high"` para LCP.
-- Resto con `loading="lazy"`.
-- Cards de partidas, reels, secciones secundarias y footer todos con alts contextuales (modalidad + día + lugar).
+- Hero, logos, cards de partidas, banners IG/YT migrados a `next/image` →
+  Next sirve automáticamente WebP/AVIF al cliente moderno + srcset con
+  `sizes` correctos. Hero usa `priority`, resto carga lazy por default.
+- Background images decorativas (con `aria-hidden`) se dejan como `<img>`
+  para evitar markup extra.
+- Alts contextuales (modalidad + día + lugar) en todas las cards.
+
+### Cluster pages (content cluster, hub & spoke)
+
+- Hub: `/` (pillar page con todo el negocio).
+- Spokes:
+  - `/precios` — pricing detallado + Service JSON-LD con OfferCatalog +
+    FAQPage.
+  - `/buenos-aires` — local SEO + SportsActivityLocation con geo coords +
+    FAQPage local.
+  - `/primera-vez` — guía principiantes + HowTo JSON-LD + FAQPage.
+  - `/eventos-corporativos` — B2B / team building + Service +
+    OfferCatalog + FAQPage.
+  - `/cumpleanos` — festejos +18 + Service + FAQPage.
+  - `/airsoft-vs-paintball` — comparativa long-tail + Article JSON-LD +
+    FAQPage.
+- Componentes compartidos (`app/_components/`): `marketing-header`,
+  `marketing-footer`, `site-constants` para mantener consistencia y un
+  solo punto de edición de URLs / direcciones.
+
+### Blog
+
+- `/blog` — index listando posts con Blog JSON-LD.
+- 3 posts long-form iniciales:
+  - `/blog/que-es-airsoft` (fundamentos)
+  - `/blog/equipamiento-principiantes` (middle funnel, links a /precios)
+  - `/blog/reglas-y-seguridad` (top funnel, safety)
+- Cada post tiene `BlogPosting` + `BreadcrumbList` JSON-LD,
+  breadcrumbs visibles y bloque de "Seguí leyendo" con posts
+  relacionados. Layout compartido en `_article-layout.tsx`.
+- Metadata centralizada en `_posts.ts` (single source of truth para
+  título, fecha, slug, tag y reading time → re-usado en index, JSON-LD,
+  sitemap y OG images).
+
+### OG / Twitter images dinámicas
+
+- `app/_components/og-template.tsx` — helper que arma una `ImageResponse`
+  1200×630 con branding consistente (eyebrow, título, subtitle, marca,
+  brackets tácticos en esquinas).
+- `opengraph-image.tsx` + `twitter-image.tsx` en cada ruta (home + 6
+  cluster pages + blog index + 3 posts). Cuando alguien comparte por
+  WhatsApp/IG/FB/X, ve un preview específico de cada página.
+- Layout sigue declarando `openGraph` / `twitter` (title, description,
+  type, locale) pero ya no hardcodea `images` — Next usa la file
+  convention.
 
 ### `llms.txt` (`public/llms.txt`)
 
@@ -62,14 +109,20 @@ Validar en: https://search.google.com/test/rich-results
 
 ### `robots.ts` + `sitemap.ts`
 
-- `robots.ts` bloquea `/platform/`, `/login`, `/signup`, `/admin/`, `/partidas`, `/auth/`.
-- `sitemap.ts` con la home (`changeFrequency: weekly`, `priority: 1`).
+- `robots.ts` bloquea `/platform/`, `/login`, `/signup`, `/admin/`,
+  `/partidas`, `/auth/`. Cluster pages y blog quedan permitidos (allow `/`).
+- `sitemap.ts` con home + 6 cluster pages + blog index + posts.
+  Prioridades: home 1.0, precios 0.9, otros clusters 0.7-0.8, blog y
+  posts 0.6-0.7. `lastModified` real de cada post (no `new Date()`).
 - Apuntan al sitemap desde robots.
 
 ### Performance
 
 - Fonts cargadas vía `next/font/google` con `display: swap`.
-- Background images con `loading="lazy"` salvo el hero.
+- Imágenes principales servidas vía `next/image` (auto WebP/AVIF,
+  srcset, lazy load, preconnect implícito).
+- Hero del home con `<Image priority sizes="100vw">` para LCP rápido.
+- Background images decorativas con `loading="lazy"` (no priority).
 - CSS crítico inline gracias a Next 16 + Tailwind v4.
 
 ---

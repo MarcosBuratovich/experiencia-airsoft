@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ADDRESS_STREET,
   ADDRESS_CITY,
@@ -15,12 +16,12 @@ export function MarketingFooter() {
       <div className="max-w-[1400px] mx-auto fluid-gutter-x py-12">
         <div className="grid md:grid-cols-3 gap-8 md:gap-10">
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/img/00_logo_cropped.png"
               alt="Logo Experiencia Airsoft"
               width={840}
               height={240}
+              loading="lazy"
               className="h-10 w-auto mb-4"
             />
             <p className="text-ash fluid-sm leading-relaxed max-w-[36ch]">
