@@ -6,6 +6,7 @@ const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/precios", label: "Precios" },
   { href: "/buenos-aires", label: "Buenos Aires" },
   { href: "/primera-vez", label: "Primera vez" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export function MarketingHeader({ activeHref }: { activeHref?: string }) {

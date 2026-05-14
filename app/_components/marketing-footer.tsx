@@ -73,6 +73,11 @@ export function MarketingFooter() {
                   Airsoft vs paintball
                 </Link>
               </li>
+              <li>
+                <Link href="/blog" className="hover:text-bone transition">
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 
