@@ -35,21 +35,21 @@ export default function Post() {
 
       <h2>Qué es el airsoft</h2>
       <p>
-        El airsoft es un deporte táctico de equipo que consiste en simular
-        operaciones militares o de combate con réplicas de armas que disparan
-        balines plásticos (BBs) de 6 mm. El objetivo de cada partida varía:
-        eliminar al equipo contrario, capturar un punto, plantar una bomba,
-        rescatar a un rehén, etc. Lo importante es que <strong>cada jugador
-        confía en el honor de los otros</strong> para declararse fuera cuando
-        recibe un impacto — es lo que se llama <em>honor system</em>.
+        El airsoft es un deporte táctico de equipo en el que dos bandos se
+        enfrentan con marcadoras que propulsan balines plásticos (BBs) de 6
+        mm. El objetivo de cada partida varía: eliminar al equipo contrario,
+        capturar un punto, completar una misión, defender una zona, etc. Lo
+        importante es que <strong>cada jugador confía en el honor de los
+        otros</strong> para declararse fuera cuando recibe un impacto — es
+        lo que se llama <em>honor system</em>.
       </p>
       <p>
-        Las réplicas se llaman <em>marcadoras</em> y son funcionalmente
-        idénticas a armas reales (peso, dimensiones, manejo) pero disparan BBs
-        plásticos biodegradables, no munición letal. Las marcadoras serias
-        están reguladas para no superar los 330 FPS (~91 m/s) en interior:
-        suficiente para sentir el impacto, no suficiente para lesionar con la
-        protección reglamentaria.
+        Las <em>marcadoras</em> son réplicas muy realistas en peso,
+        dimensiones y manejo, pero propulsan BBs plásticos biodegradables
+        con aire comprimido — no propulsan munición real. Las marcadoras
+        serias están reguladas para no superar los 330 FPS (~91 m/s) en
+        interior: suficiente para sentir el impacto, no para lesionar con
+        la protección reglamentaria.
       </p>
 
       <h2>Cómo funciona una partida</h2>
@@ -76,27 +76,26 @@ export default function Post() {
         </li>
       </ol>
       <p>
-        Un día típico incluye 4-6 partidas distintas con dinámicas diferentes:
-        eliminación libre, captura de bandera, búsqueda y destrucción,
-        defensa de zona.
+        Un día típico incluye 2-3 partidas distintas con dinámicas
+        diferentes: eliminación libre, captura de la bandera, captura de
+        objetivos, defensa de zona.
       </p>
 
       <h2>Modalidades principales</h2>
       <p>
         Hay dos grandes familias de airsoft según el terreno:
       </p>
-      <h3>CQB · Combate cuarto cerrado</h3>
+      <h3>CQB · Cuarto cerrado</h3>
       <p>
-        Indoor o en estructuras edificadas. Distancias cortas (5-25 m),
-        pasillos, puertas, ventanas, niveles de altura. Mucha intensidad,
-        ritmo rápido, dinámica de equipo crítica. Es lo que hacemos en
-        Experiencia Airsoft.
+        Indoor o en estructuras edificadas. Distancias cortas, pasillos,
+        puertas y ventanas. Mucha intensidad, ritmo rápido, dinámica de
+        equipo crítica. Es lo que hacemos en Experiencia Airsoft.
       </p>
-      <h3>Field · Combate al aire libre</h3>
+      <h3>Field · Al aire libre</h3>
       <p>
         Outdoor, en bosques o terrenos grandes. Distancias largas (hasta 60
-        m), uso de cobertura natural, francotiradores, partidas más extensas.
-        Otra experiencia, otro ritmo.
+        m), uso de cobertura natural, tiradores de precisión, partidas más
+        extensas. Otra experiencia, otro ritmo.
       </p>
 
       <h2>Por qué creció en Argentina</h2>
@@ -105,10 +104,11 @@ export default function Post() {
       </p>
       <ul>
         <li>
-          <strong>Estética táctica realista.</strong> Las réplicas son
-          visualmente idénticas a armas reales. Atrae a quienes les gusta el
-          cine de acción, los videojuegos como Call of Duty o Counter-Strike,
-          o tienen vocación por la simulación.
+          <strong>Estética táctica realista.</strong> Las marcadoras tienen
+          peso, manejo y aspecto muy similares al de los modelos originales.
+          Atrae a quienes les gusta el cine de acción, los videojuegos como
+          Call of Duty o Counter-Strike, o tienen vocación por la
+          simulación.
         </li>
         <li>
           <strong>Comunidad organizada.</strong> Aparecieron clanes serios
@@ -141,9 +141,9 @@ export default function Post() {
       <h2>Quién puede jugar</h2>
       <p>
         En Argentina la edad mínima para airsoft es 18 años. Es una norma
-        importante: las marcadoras pueden confundirse con armas reales fuera
-        del campo, por eso se reserva el deporte a personas mayores que
-        pueden hacerse responsables del transporte y uso seguro.
+        importante: por su apariencia muy realista, las marcadoras requieren
+        un transporte y manejo responsable fuera del campo, por eso se
+        reserva el deporte a personas mayores de edad.
       </p>
       <p>
         Más allá de la edad, <strong>no necesitás estado físico especial</strong>.
@@ -157,7 +157,7 @@ export default function Post() {
       <p>
         Airsoft = deporte táctico, simulación real, comunidad activa, +18,
         intenso y estratégico. No es paintball arcade. No es videojuego. Es
-        actividad física moderada con dinámica de equipo y estética militar
+        actividad física moderada con dinámica de equipo y estética
         cinematográfica.
       </p>
       <p>

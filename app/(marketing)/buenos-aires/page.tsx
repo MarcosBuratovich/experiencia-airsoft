@@ -135,9 +135,9 @@ export default function BuenosAiresPage() {
             </h1>
             <p className="mt-6 text-ash fluid-md max-w-[60ch] leading-relaxed">
               Estamos en el corazón de la Ciudad Autónoma de Buenos Aires, en
-              un predio diseñado específicamente para combate cercano. Múltiples
-              niveles, zonas diferenciadas, escenarios variables y todas las
-              normas de seguridad bajo control.
+              un predio diseñado específicamente para CQB · cuarto cerrado.
+              Múltiples niveles, zonas diferenciadas, escenarios variables y
+              todas las normas de seguridad bajo control.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
@@ -266,9 +266,10 @@ export default function BuenosAiresPage() {
               Qué vas a encontrar
             </h2>
             <p className="text-ash fluid-base max-w-[65ch] leading-relaxed mb-8">
-              No es un galpón vacío con paredes pintadas. Es un predio diseñado
-              específicamente para escenarios de close-quarters-battle: niveles,
-              recovecos, líneas de visión cortas y objetivos variables.
+              No es un galpón vacío con paredes pintadas. Es un predio
+              diseñado específicamente para escenarios CQB · close quarters:
+              niveles, recovecos, líneas de visión cortas y objetivos
+              variables.
             </p>
 
             <ul className="grid md:grid-cols-2 gap-4 font-mono fluid-sm text-ash">

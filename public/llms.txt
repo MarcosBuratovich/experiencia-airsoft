@@ -6,7 +6,7 @@
 
 - **Nombre oficial**: Experiencia Airsoft
 - **Slogan**: "No es potencia. Es táctica."
-- **Tipo de negocio**: centro de airsoft CQB (close-quarters-battle) indoor
+- **Tipo de negocio**: centro de airsoft CQB (close quarters · cuarto cerrado) indoor
 - **Ubicación**: Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina
 - **Zona de servicio**: Ciudad de Buenos Aires y AMBA
 - **Reservas / contacto**: WhatsApp +54 9 11 3868-9783
@@ -20,7 +20,7 @@
 
 ## Sobre nosotros
 
-Experiencia Airsoft es un centro privado de airsoft CQB indoor ubicado en la Ciudad Autónoma de Buenos Aires. Ofrecemos la experiencia táctica más inmersiva de Argentina: escenarios de close-quarters-battle (combate en espacios cerrados), múltiples niveles y zonas dentro del predio, combate cercano con equipamiento de alquiler en el lugar y normas estrictas de seguridad.
+Experiencia Airsoft es un centro privado de airsoft CQB indoor ubicado en la Ciudad Autónoma de Buenos Aires. Ofrecemos la experiencia táctica más inmersiva de Argentina: escenarios de close quarters (partidas en espacios cerrados), múltiples niveles y zonas dentro del predio, distancias cortas, equipamiento de alquiler en el lugar y normas estrictas de seguridad.
 
 No se requiere experiencia previa. Recibimos a jugadores nuevos y experimentados.
 
@@ -63,14 +63,14 @@ Los socios pagan una cuota mensual y no abonan entrada por partida (sí pagan al
 
 ## Modalidades de juego dentro de cada partida
 
-- Team Deathmatch
-- Search and Destroy (con bomba)
-- Dominación
-- Baja Confirmada
-- Lanzamiento Inminente
+- Eliminación por equipos
+- Captura de objetivos
+- Dominación de zona
+- Eliminación confirmada
+- Lanzamiento inminente
 - Marcopolo
-- Captura la Bandera
-- Búsqueda y Extracción
+- Captura la bandera
+- Búsqueda y extracción
 
 ## Preguntas frecuentes
 
@@ -123,11 +123,11 @@ Reels sobre normas de seguridad, cómo reservar, qué llevar a una partida, mito
 
 ## Términos importantes (glosario)
 
-- **CQB** (Close-Quarters Battle): combate en espacios cerrados, distancias cortas, multinivel. Es nuestra especialidad.
+- **CQB** (Close Quarters): partidas en espacios cerrados, distancias cortas, multinivel. Es nuestra especialidad.
 - **FPS**: feet per second, unidad de velocidad de la BB. Cuanto más bajo, más seguro en interior. Nosotros estamos en 330 max.
 - **BYOP**: Bring Your Own Player gear — el jugador que trae su propio equipo.
-- **Marcadora**: nombre técnico de la réplica de arma usada en airsoft.
-- **BBs**: las balas de plástico biodegradable que dispara la marcadora.
+- **Marcadora**: nombre técnico del equipo usado en airsoft. Funciona con aire comprimido y propulsa BBs plásticos biodegradables — no propulsa munición real.
+- **BBs**: balines de plástico biodegradable que propulsa la marcadora.
 - **Tracer**: BBs fluorescentes que se iluminan con luz UV (modo nocturno).
 - **TacSim**: tactical simulation, modalidad con escenarios realistas y gear más completo.
 - **Speedsoft**: modalidad ágil y dinámica, escenarios más abiertos.

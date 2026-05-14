@@ -207,9 +207,9 @@ export default function CumpleanosPage() {
               />
               <FeatureCard
                 numero="05"
-                titulo="Pueden traer comida y bebida"
-                descripcion="Torta, picada, gaseosas, lo que quieran. Tenemos espacio para que armen todo y festejen al cierre de la partida."
-              />
+                titulo="Tenemos servicio de comidas y bebidas"
+                descripcion="Disfrutá de nuestras hamburguesas, empanadas, panchos y muchas opciones más. Además, contamos con una gran variedad de bebidas para acompañar cada momento. ¡Todo lo que necesitás en un solo lugar!"
+                />
               <FeatureCard
                 numero="06"
                 titulo="Sin sorpresas en el precio"

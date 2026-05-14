@@ -64,8 +64,9 @@ export default function Post() {
       <p>
         A diferencia del paintball (donde la pintura te marca visiblemente),
         en airsoft <strong>cada jugador es responsable de declarar sus
-        propios impactos</strong>. Cuando te dan, gritás "¡HIT!" o "¡MUERTO!",
-        levantás un brazo y caminás hacia la zona de respawn.
+        propios impactos</strong>. Cuando te dan, gritás "¡HIT!" o
+        "¡ELIMINADO!", levantás un brazo y caminás hacia la zona de
+        respawn.
       </p>
       <p>
         Esto requiere fair play. Si querés ganar a costa de no declararte —
@@ -86,32 +87,12 @@ export default function Post() {
           (regla de duda).
         </li>
         <li>
-          Te impacta tu propio compañero por error (fuego amigo) → seguís
-          estando fuera. No cuenta menos.
+          Te impacta un compañero de tu equipo por error → seguís estando
+          fuera igual. No cuenta menos.
         </li>
       </ul>
 
-      <h2>4. Distancia mínima de seguridad · MED</h2>
-      <p>
-        Las marcadoras de alta potencia (300+ FPS) impactando a menos de
-        3-5 metros pueden hacer daño real. Por eso existe la regla MED
-        (<em>Minimum Engagement Distance</em>): si tenés a un enemigo a
-        menos de la distancia mínima, no disparás —{" "}
-        <strong>le decís "DEAD" o le tocás el hombro</strong> y queda fuera
-        sin disparo.
-      </p>
-      <p>
-        En CQB indoor donde las distancias son cortas, esto se vuelve
-        crítico. Buenas prácticas:
-      </p>
-      <ul>
-        <li>Si abrís una puerta y hay alguien a 2 metros: "DEAD", no
-        dispares.</li>
-        <li>Si dudás de la distancia, usá la voz antes que el dedo del
-        gatillo.</li>
-      </ul>
-
-      <h2>5. Modo seguro fuera de zona</h2>
+      <h2>4. Modo seguro fuera de zona</h2>
       <p>
         En la <em>zona fría</em> (área social, vestuarios, salida del campo)
         las marcadoras van en{" "}
@@ -124,29 +105,22 @@ export default function Post() {
         Es para asegurar que respetás la zona.
       </p>
 
-      <h2>6. Edad mínima · 18 años</h2>
+      <h2>5. Edad mínima · 18 años</h2>
       <p>
-        En Argentina la edad mínima para jugar airsoft es 18 años. Es
-        norma legal — las marcadoras pueden confundirse con armas reales
-        fuera del campo, y se reserva el deporte a personas que pueden
-        responsabilizarse del transporte y manejo. <strong>En Experiencia
+        En Argentina la edad mínima para jugar airsoft es 18 años. Es norma
+        legal — por su apariencia muy realista, las marcadoras requieren un
+        transporte y manejo responsable fuera del campo, por eso el deporte
+        se reserva a personas mayores de edad. <strong>En Experiencia
         Airsoft pedimos DNI</strong> el día de la partida sin excepciones.
       </p>
 
-      <h2>7. Cero alcohol o sustancias</h2>
-      <p>
-        Manejar una marcadora bajo efectos de alcohol o drogas pone en
-        riesgo a todos. Si llegás visiblemente alterado, no entrás a la
-        cancha — sin reembolso. La regla protege al grupo entero.
-      </p>
-
-      <h2>8. Reglas específicas del campo</h2>
+      <h2>6. Reglas específicas del campo</h2>
       <p>
         Además de las universales, cada campo tiene reglas propias que se
         explican en el briefing inicial:
       </p>
       <ul>
-        <li>Códigos de comunicación (CONTACT, RELOADING, FRAG OUT)</li>
+        <li>Códigos de comunicación (CONTACT, RELOADING, REGROUP)</li>
         <li>
           Zonas donde no se puede disparar (puntos de respawn, vestuarios)
         </li>
@@ -187,10 +161,8 @@ export default function Post() {
         <li>Anteojos puestos en zona caliente. Siempre.</li>
         <li>Marcadora 330 FPS o menos.</li>
         <li>Si te dan, te declarás. Honor.</li>
-        <li>MED: si está muy cerca, "DEAD" en vez de disparar.</li>
         <li>Marcadora segura fuera del campo.</li>
         <li>+18 con DNI.</li>
-        <li>Cero alcohol antes de jugar.</li>
         <li>Escuchá el briefing y respetá al staff.</li>
       </ul>
       <p>

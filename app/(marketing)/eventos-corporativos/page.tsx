@@ -257,7 +257,7 @@ export default function EventosCorporativosPage() {
               <FeatureCard
                 numero="03"
                 titulo="Indoor — todo el año"
-                descripcion="Llueva o haga 38°, el campo es cubierto y climatizado. No dependés del clima para cerrar la fecha del evento."
+                descripcion="Llueva o haga 38°, el campo es cubierto. No dependés del clima para cerrar la fecha del evento."
               />
               <FeatureCard
                 numero="04"
@@ -406,10 +406,6 @@ export default function EventosCorporativosPage() {
                   <span className="text-orange shrink-0">●</span>
                   Agua y vestuarios
                 </li>
-                <li className="flex gap-3">
-                  <span className="text-orange shrink-0">●</span>
-                  Estacionamiento sobre Gral. Conesa
-                </li>
               </ul>
             </div>
 
@@ -438,10 +434,6 @@ export default function EventosCorporativosPage() {
                 <li className="flex gap-3">
                   <span className="text-bone/50 shrink-0">+</span>
                   Branding del evento (banner con tu logo)
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-bone/50 shrink-0">+</span>
-                  Premios para el equipo ganador
                 </li>
               </ul>
             </div>
@@ -494,16 +486,6 @@ export default function EventosCorporativosPage() {
                 <dd className="text-ash fluid-base leading-relaxed">
                   18 años. Pedimos DNI a todos los participantes el día del
                   evento.
-                </dd>
-              </div>
-              <div>
-                <dt className="font-display fluid-lg uppercase text-bone tracking-wide mb-2">
-                  ¿Pueden venir personas con alguna limitación física?
-                </dt>
-                <dd className="text-ash fluid-base leading-relaxed">
-                  Sí, en general. El campo es accesible y las dinámicas se
-                  pueden adaptar. Avisanos antes así diseñamos las misiones
-                  pensando en todos.
                 </dd>
               </div>
             </dl>

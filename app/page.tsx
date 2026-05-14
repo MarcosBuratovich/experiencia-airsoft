@@ -450,7 +450,7 @@ const faqJsonLd = {
       name: "¿Cuál es la potencia máxima permitida?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Máximo 330 FPS. Es la categoría más baja permitida para CQB y la usamos porque jugamos en espacios cerrados y combate cercano — la experiencia táctica no se mide en potencia, sino en estrategia y trabajo en equipo.",
+        text: "Máximo 330 FPS. Es la categoría más baja permitida para CQB y la usamos porque jugamos en espacios cerrados con distancias cortas — la experiencia táctica no se mide en potencia, sino en estrategia y trabajo en equipo.",
       },
     },
     {
@@ -1070,8 +1070,8 @@ export default function Home() {
                 categoría más baja permitida para CQB: máximo 330 FPS
               </span>
               . Lo hacemos porque nuestro espacio es un entorno cerrado,
-              con superficies reducidas, múltiples niveles y combate cercano
-              — y porque queremos cambiar la falsa creencia de que
+              con superficies reducidas, múltiples niveles y distancias
+              cortas — y porque queremos cambiar la falsa creencia de que
               &ldquo;más potencia es mejor&rdquo;.
             </p>
 

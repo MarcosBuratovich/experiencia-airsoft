@@ -69,7 +69,7 @@ export default function Post() {
 
       <h2>Qué ropa llevar</h2>
       <p>
-        No hace falta uniforme militar. Lo importante es{" "}
+        No hace falta uniforme táctico. Lo importante es{" "}
         <strong>cubrir piel</strong> y estar cómodo. Recomendación práctica:
       </p>
       <ul>
@@ -115,7 +115,10 @@ export default function Post() {
           podés perder la visión. Los reglamentarios los proveemos nosotros.
         </li>
         <li>
-          <strong>NO traigas armas reales</strong> de ningún tipo. Obvio.
+          <strong>NO traigas marcadora propia si alquilás.</strong> Si
+          venís como BYOP (Bring Your Own Player) avisanos antes. Las
+          marcadoras particulares pasan chequeo de cronógrafo y deben
+          estar bajo el límite del campo.
         </li>
         <li>
           <strong>NO traigas bbs propias si alquilás.</strong> Las BBs del
@@ -148,7 +151,7 @@ export default function Post() {
       </p>
       <h3>Recargas durante la partida</h3>
       <p>
-        Si te quedás sin balas en plena partida, pedís recarga al staff. Las
+        Si te quedás sin bbs en plena partida, pedís recarga al staff. Las
         opciones:
       </p>
       <ul>
@@ -169,9 +172,9 @@ export default function Post() {
       </p>
       <ol>
         <li>
-          Vas a entender qué tipo de marcadora se adapta a tu estilo (rifle,
-          DMR, pistola, escopeta) — todo el mundo cree saber al principio,
-          casi nadie acierta.
+          Vas a entender qué tipo de marcadora se adapta a tu estilo (de
+          asalto, DMR, secundaria, escopeta) — todo el mundo cree saber al
+          principio, casi nadie acierta.
         </li>
         <li>
           Una marcadora decente de entrada cuesta más de lo que pensás. La

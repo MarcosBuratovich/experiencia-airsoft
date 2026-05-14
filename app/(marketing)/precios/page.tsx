@@ -245,7 +245,7 @@ export default function PreciosPage() {
             <div>
               <h2 className="sect-title fluid-2xl mb-2 text-bone">Recargas</h2>
               <p className="text-ash fluid-sm mb-6 leading-relaxed max-w-[40ch]">
-                Munición adicional para cuando te quedes sin balas en plena
+                Bbs adicionales para cuando te quedes sin munición en plena
                 partida. Las marca el staff cuando las pedís y se cobran al
                 final.
               </p>

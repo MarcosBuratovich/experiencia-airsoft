@@ -203,21 +203,20 @@ export default function PrimeraVezPage() {
               ¿Qué es el airsoft (en serio)?
             </h2>
             <p className="text-ash fluid-md leading-relaxed mb-4">
-              Es un deporte recreativo donde dos equipos juegan misiones en un
-              predio cerrado, marcadores que disparan bolitas de plástico
-              biodegradable de 6mm (las famosas "bbs"). No usás balas reales,
-              no hay armas funcionales — son réplicas con sistema de aire
-              comprimido limitadas a baja potencia (330 FPS máximo en
-              nuestro caso, la categoría más baja).
+              Es un deporte recreativo donde dos equipos juegan misiones en
+              un predio cerrado con marcadoras que propulsan bbs plásticas
+              biodegradables de 6mm. No es munición real — son réplicas con
+              sistema de aire comprimido limitadas a baja potencia (330 FPS
+              máximo en nuestro caso, la categoría más baja).
             </p>
             <p className="text-ash fluid-md leading-relaxed mb-4">
               La gracia es la <strong className="text-bone">táctica</strong>:
-              moverse en grupo, cubrirse, coordinarse, lograr objetivos. No es
-              "matar a todos lo más rápido posible". Es planificar, comunicar y
-              ejecutar.
+              moverse en grupo, cubrirse, coordinarse, lograr objetivos. No
+              es "eliminar a todos lo más rápido posible" — es planificar,
+              comunicar y ejecutar.
             </p>
             <p className="text-ash fluid-md leading-relaxed">
-              CQB (close-quarters-battle) es nuestra especialidad: combate en
+              CQB (close quarters) es nuestra especialidad: partidas en
               espacios cerrados, distancias cortas, múltiples niveles. Es la
               modalidad más cinematográfica del airsoft.
             </p>
@@ -247,7 +246,7 @@ export default function PrimeraVezPage() {
                   Agua o algo para hidratarte.
                 </CheckItem>
                 <CheckItem>
-                  Plata o medio de pago. Aceptamos efectivo y transferencia.
+                  Aceptamos efectivo y transferencia.
                 </CheckItem>
                 <CheckItem>Ganas de mancharte un poco. Es indoor pero
                   igual te transpirás.
@@ -309,7 +308,7 @@ export default function PrimeraVezPage() {
               <StepCard
                 num="04"
                 titulo="A jugar"
-                body="5-6 misiones a lo largo de 2-3 horas. Vas a probar distintos formatos: Team Deathmatch, Search & Destroy, Captura la bandera, Dominación. El staff arbitra todo."
+                body="5-6 misiones a lo largo de 2-3 horas. Vas a probar distintos formatos: eliminación por equipos, captura de objetivos, captura de la bandera y dominación de zona. El staff arbitra todo."
               />
               <StepCard
                 num="05"

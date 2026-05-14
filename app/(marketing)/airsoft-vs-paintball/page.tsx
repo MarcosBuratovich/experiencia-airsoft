@@ -74,7 +74,7 @@ const faqJsonLd = {
       name: "¿Cuál es más realista?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "El airsoft, por lejos. Las réplicas son visualmente idénticas a armas reales, el peso es similar, el sonido del disparo es parecido. El paintball tiene marcadoras que no se parecen a ninguna arma real — son tubos coloridos con tolva arriba. Si te atrae la estética táctica y el realismo militar, airsoft es la respuesta clara.",
+        text: "El airsoft, por lejos. Las marcadoras tienen peso, manejo y aspecto muy similares al de los modelos originales. El paintball usa marcadoras tipo arcade que no buscan ese realismo — son tubos coloridos con tolva arriba. Si te atrae la estética táctica realista, airsoft es la respuesta clara.",
       },
     },
     {
@@ -90,7 +90,7 @@ const faqJsonLd = {
       name: "¿Cuál tiene partidas más tácticas?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Airsoft, por la cadencia y precisión de las réplicas. Permite emboscadas reales, fuego de cobertura, comunicación de equipo y dinámicas inspiradas en operaciones militares. Paintball es más arcade — sirve para diversión rápida pero las partidas tácticas largas son difíciles.",
+        text: "Airsoft, por la cadencia y precisión de las marcadoras. Permite emboscadas, fuego de cobertura, comunicación de equipo y dinámicas tácticas profundas. Paintball es más arcade — sirve para diversión rápida pero las partidas tácticas largas son difíciles.",
       },
     },
     {
@@ -98,7 +98,7 @@ const faqJsonLd = {
       name: "¿Pueden jugar adolescentes los dos?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Paintball suele aceptar desde 12-14 años. Airsoft requiere mayoría de edad (18+) en Argentina porque las réplicas pueden confundirse con armas reales fuera del campo. Si tu grupo incluye menores, paintball es la única opción.",
+        text: "Paintball suele aceptar desde 12-14 años. Airsoft requiere mayoría de edad (18+) en Argentina porque por su apariencia muy realista las marcadoras requieren un manejo responsable fuera del campo. Si tu grupo incluye menores, paintball es la única opción.",
       },
     },
   ],
@@ -202,7 +202,7 @@ export default function AirsoftVsPaintballPage() {
                   Elegí airsoft si...
                 </p>
                 <ul className="space-y-2 text-bone fluid-sm leading-relaxed">
-                  <li>• Te atrae la estética táctica y militar real</li>
+                  <li>• Te atrae la estética táctica realista</li>
                   <li>• Querés partidas con dinámicas estratégicas</li>
                   <li>• No querés terminar lleno de pintura</li>
                   <li>• Buscás algo más económico por partida</li>
@@ -235,7 +235,7 @@ export default function AirsoftVsPaintballPage() {
             <div className="border border-bone/15 bg-carbon clip-notch px-6 py-2">
               <CompareRow
                 feature="Realismo visual"
-                airsoft="Réplicas idénticas a armas reales, peso y mecánica similar. Estética militar completa."
+                airsoft="Marcadoras con peso, manejo y aspecto muy realistas. Estética táctica completa."
                 paintball="Marcadoras tipo arcade, tubos coloridos con tolva. Cero realismo táctico."
                 winner="airsoft"
               />
@@ -259,26 +259,26 @@ export default function AirsoftVsPaintballPage() {
               />
               <CompareRow
                 feature="Edad mínima"
-                airsoft="18 años. Las réplicas requieren mayoría de edad por normativa."
+                airsoft="18 años. Las marcadoras requieren mayoría de edad por normativa."
                 paintball="12-14 años en la mayoría de los lugares. Más amigable con grupos jóvenes."
                 winner="paintball"
               />
               <CompareRow
-                feature="Indicador del disparo"
-                airsoft="Honor system: si te dieron, te declarás muerto. Requiere fair play del jugador."
+                feature="Indicador del impacto"
+                airsoft="Honor system: si te dieron, te declarás eliminado. Requiere fair play del jugador."
                 paintball="La pintura se rompe en tu ropa = prueba visual del impacto. Cero ambigüedad."
                 winner="paintball"
               />
               <CompareRow
                 feature="Profundidad estratégica"
-                airsoft="Partidas largas, objetivos múltiples, comunicación de equipo, dinámicas tipo operación militar."
+                airsoft="Partidas largas, objetivos múltiples, comunicación de equipo y dinámicas tácticas profundas."
                 paintball="Partidas cortas, dinámicas simples. Más arcade que táctico."
                 winner="airsoft"
               />
               <CompareRow
                 feature="Curva de aprendizaje"
                 airsoft="Mayor (apuntar, controlar retroceso, leer trayectoria). Más recompensante a largo plazo."
-                paintball="Menor (disparás y listo). Más accesible para principiantes ocasionales."
+                paintball="Menor (tirás y listo). Más accesible para principiantes ocasionales."
                 winner="paintball"
               />
             </div>
@@ -353,9 +353,9 @@ export default function AirsoftVsPaintballPage() {
                 .
               </p>
               <p>
-                En Experiencia Airsoft nos especializamos en indoor CQB
-                (combate cuarto cerrado), que es la modalidad más intensa y
-                cinematográfica. Si te late probar, el camino más fácil es
+                En Experiencia Airsoft nos especializamos en CQB indoor
+                (cuarto cerrado · close quarters), la modalidad más intensa
+                y cinematográfica. Si te late probar, el camino más fácil es
                 anotarte a una partida abierta o pedirnos una primera vez
                 guiada.
               </p>
