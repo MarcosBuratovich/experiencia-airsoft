@@ -82,11 +82,8 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: ["/img/07_zona_fria_hero.jpg"],
   },
-  icons: {
-    icon: "/img/00_logo_cropped.png",
-    shortcut: "/img/00_logo_cropped.png",
-    apple: "/img/00_logo_cropped.png",
-  },
+  // Next 16 detecta automáticamente app/icon.png y app/apple-icon.png
+  // y genera los <link rel="icon"> con sizes correctos.
   category: "sports",
   robots: {
     index: true,

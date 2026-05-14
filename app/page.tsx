@@ -113,7 +113,7 @@ const reels: Reel[] = [
     title: "Normas de seguridad",
     index: "01",
     image: "/img/10_como_me_uno.jpg",
-    alt: "Normas de seguridad",
+    alt: "Video: normas de seguridad en partidas de airsoft CQB indoor de Experiencia Airsoft",
     video: "/videos/normas-de-seguridad.mp4",
     delayClass: "",
   },
@@ -121,7 +121,7 @@ const reels: Reel[] = [
     title: "¿No tengo nada para jugar?",
     index: "02",
     image: "/img/11_no_tengo_nada_para_jugar.jpg",
-    alt: "No tengo nada para jugar",
+    alt: "Video: alquiler de equipo de airsoft incluido en Experiencia Airsoft",
     video: "/videos/no-tengo-nada-para-jugar.mp4",
     delayClass: "reveal-delay-1",
   },
@@ -129,7 +129,7 @@ const reels: Reel[] = [
     title: "¿No tengo con quién ir?",
     index: "03",
     image: "/img/12_no_tengo_con_quien_ir.jpg",
-    alt: "No tengo con quién ir",
+    alt: "Video: partidas públicas abiertas para anotarse solo en Experiencia Airsoft",
     video: "/videos/no-tengo-con-quien-ir.mp4",
     delayClass: "reveal-delay-2",
   },
@@ -137,7 +137,7 @@ const reels: Reel[] = [
     title: "Cómo reservar",
     index: "04",
     image: "/img/13_como_reservar.jpg",
-    alt: "Cómo reservar",
+    alt: "Video: cómo reservar tu lugar en una partida de airsoft CQB por WhatsApp",
     video: "/videos/como-reservar.mp4",
     delayClass: "reveal-delay-3",
   },
@@ -145,7 +145,7 @@ const reels: Reel[] = [
     title: "Mitos del airsoft",
     index: "05",
     image: "/img/14_mitos_del_airsoft.jpg",
-    alt: "Mitos del airsoft",
+    alt: "Video: mitos del airsoft desarmados — máximo 330 FPS, táctica antes que potencia",
     video: "/videos/mitos-del-airsoft.mp4",
     delayClass: "",
   },
@@ -153,7 +153,7 @@ const reels: Reel[] = [
     title: "¿Qué llevar a una partida?",
     index: "06",
     image: "/img/15_que_traer_primer_juego.jpg",
-    alt: "Qué llevar a una partida",
+    alt: "Video: qué traer a tu primera partida de airsoft en Buenos Aires",
     video: "/videos/que-llevar-a-una-partida.mp4",
     delayClass: "reveal-delay-1",
   },
@@ -161,7 +161,7 @@ const reels: Reel[] = [
     title: "Tips para tu primera partida",
     index: "07",
     image: "/img/17_tips_primer_partida.jpg",
-    alt: "Tips primera partida",
+    alt: "Video: tips para tu primera partida de airsoft CQB indoor",
     video: "/videos/tips-primera-partida.mp4",
     delayClass: "reveal-delay-2",
   },
@@ -169,7 +169,7 @@ const reels: Reel[] = [
     title: "Testimonios",
     index: "08",
     image: "/img/18_testimonios.jpg",
-    alt: "Testimonios",
+    alt: "Video: testimonios de jugadores de Experiencia Airsoft",
     video: "/videos/testimonios.mp4",
     delayClass: "reveal-delay-3",
   },
@@ -297,17 +297,28 @@ const SITE_URL = "https://experienciaairsoft.com";
 
 const businessJsonLd = {
   "@context": "https://schema.org",
-  "@type": "SportsActivityLocation",
+  "@type": ["SportsActivityLocation", "LocalBusiness"],
   "@id": `${SITE_URL}/#business`,
   name: "Experiencia Airsoft",
+  alternateName: "Experiencia Airsoft CQB",
   description:
-    "Centro de airsoft CQB indoor en Buenos Aires. Partidas públicas, grupos privados y eventos corporativos con equipo incluido. Máximo 330 FPS, +18.",
+    "Centro de airsoft CQB indoor en Buenos Aires. Partidas públicas abiertas, grupos privados y eventos corporativos con equipo incluido. Máximo 330 FPS, +18. Reservas por WhatsApp.",
+  slogan: "No es potencia. Es táctica.",
   url: SITE_URL,
   telephone: "+541138689783",
-  image: [`${SITE_URL}/img/07_zona_fria_hero.jpg`],
+  email: "hola@experienciaairsoft.com",
+  image: [
+    `${SITE_URL}/img/07_zona_fria_hero.jpg`,
+    `${SITE_URL}/img/16_partida_nocturna.jpg`,
+    `${SITE_URL}/img/01_partida_martes.jpg`,
+    `${SITE_URL}/img/05_partida_sabado.jpg`,
+  ],
   logo: `${SITE_URL}/img/00_logo_principal.png`,
   priceRange: "$$",
   sport: "Airsoft",
+  knowsLanguage: ["es", "es-AR"],
+  paymentAccepted: ["Cash", "Bank Transfer"],
+  currenciesAccepted: "ARS",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Gral. Conesa 1858",
@@ -316,6 +327,12 @@ const businessJsonLd = {
     addressRegion: "CABA",
     addressCountry: "AR",
   },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: -34.5594,
+    longitude: -58.4634,
+  },
+  hasMap: "https://maps.app.goo.gl/?q=Gral.+Conesa+1858,+CABA",
   openingHoursSpecification: [
     {
       "@type": "OpeningHoursSpecification",
@@ -330,16 +347,64 @@ const businessJsonLd = {
       closes: "13:00",
     },
   ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "Reservas",
+    telephone: "+541138689783",
+    availableLanguage: ["Spanish"],
+    contactOption: "WhatsApp",
+  },
   sameAs: [
     "https://www.instagram.com/experienciaairsoft/",
     "https://www.youtube.com/@experienciaairsoft8250",
   ],
-  areaServed: {
-    "@type": "City",
-    name: "Buenos Aires",
-  },
+  areaServed: [
+    { "@type": "City", name: "Buenos Aires" },
+    { "@type": "City", name: "Ciudad Autónoma de Buenos Aires" },
+    { "@type": "AdministrativeArea", name: "AMBA" },
+  ],
   isAccessibleForFree: false,
   audience: { "@type": "Audience", suggestedMinAge: 18 },
+  amenityFeature: [
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Equipo de airsoft incluido",
+      value: true,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Múltiples niveles y zonas CQB",
+      value: true,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Máximo 330 FPS",
+      value: true,
+    },
+  ],
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": `${SITE_URL}/#website`,
+  url: SITE_URL,
+  name: "Experiencia Airsoft",
+  inLanguage: "es-AR",
+  publisher: { "@id": `${SITE_URL}/#business` },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Inicio",
+      item: SITE_URL,
+    },
+  ],
 };
 
 const faqJsonLd = {
@@ -411,6 +476,16 @@ export default function Home() {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
@@ -431,7 +506,9 @@ export default function Home() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/img/00_logo_cropped.png"
-              alt="Experiencia Airsoft"
+              alt="Logo Experiencia Airsoft — airsoft CQB indoor en Buenos Aires"
+              width={840}
+              height={240}
               className="h-[clamp(2rem,2vw+1.5rem,3rem)] w-auto"
             />
           </a>
@@ -473,6 +550,8 @@ export default function Home() {
         <div className="h-px bg-gradient-to-r from-transparent via-bone/10 to-transparent"></div>
       </header>
 
+      <main>
+
       {/* HERO */}
       <section
         id="top"
@@ -481,8 +560,10 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/img/07_zona_fria_hero.jpg"
-          alt="Interior de Experiencia Airsoft, centro de airsoft CQB indoor en Buenos Aires"
+          alt="Jugadores en plena partida de airsoft CQB indoor en Experiencia Airsoft, Buenos Aires"
           fetchPriority="high"
+          width={2400}
+          height={1600}
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div
@@ -907,8 +988,10 @@ export default function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/16_partida_nocturna.jpg"
-                alt="Partida nocturna"
+                alt="Partida nocturna de airsoft CQB con iluminación tenue y jugadores tácticos"
                 loading="lazy"
+                width={1600}
+                height={2133}
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink/30"></div>
@@ -1196,8 +1279,10 @@ export default function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/08_manija_del_mes.jpg"
-                alt="Manija del mes"
+                alt="Comunidad de jugadores de Experiencia Airsoft — Manija del mes en Instagram"
                 loading="lazy"
+                width={1600}
+                height={1000}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-ink/80 via-ink/40 to-ink/80"></div>
@@ -1245,8 +1330,10 @@ export default function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/09_banner_streams.jpg"
-                alt="Streams en YouTube"
+                alt="Streams en vivo de partidas de airsoft CQB en YouTube de Experiencia Airsoft"
                 loading="lazy"
+                width={1600}
+                height={1000}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-ink/85 via-ink/50 to-ink/85"></div>
@@ -1395,6 +1482,8 @@ export default function Home() {
         </div>
       </section>
 
+      </main>
+
       {/* FOOTER */}
       <footer className="relative bg-ink border-t border-bone/10">
         <div className="max-w-[1400px] mx-auto fluid-gutter-x py-[clamp(3rem,2rem+4vw,5rem)]">
@@ -1403,7 +1492,9 @@ export default function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/00_logo_cropped.png"
-                alt="Experiencia Airsoft"
+                alt="Logo Experiencia Airsoft"
+                width={840}
+                height={240}
                 className="h-[clamp(2.75rem,3vw+2rem,3.75rem)] w-auto mb-5"
               />
               <p className="text-ash fluid-sm leading-relaxed max-w-[36ch]">
