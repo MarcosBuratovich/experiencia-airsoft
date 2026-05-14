@@ -14,7 +14,7 @@ create table if not exists public.match_events (
   user_id uuid references public.profiles(id) on delete set null,
   -- Datos crudos del evento
   player_number text not null,
-  tipo text not null check (tipo in ('muerte','captura','reanimacion','planto')),
+  tipo text not null check (tipo in ('eliminacion','captura','reanimacion','planto')),
   -- Idempotencia: el local manda un id unico por evento real
   local_event_id text not null unique,
   -- Cuando ocurrio en cancha (segun el local)
@@ -69,16 +69,16 @@ select
   p.nombre,
   p.apellido,
   p.clan_id,
-  count(*) filter (where e.tipo = 'muerte') as muertes,
+  count(*) filter (where e.tipo = 'eliminacion') as eliminaciones,
   count(*) filter (where e.tipo = 'captura') as capturas,
   count(*) filter (where e.tipo = 'reanimacion') as reanimaciones,
   count(*) filter (where e.tipo = 'planto') as plantos,
   count(distinct e.partida_id) filter (where e.partida_id is not null) as partidas_jugadas,
-  -- Score combinado (heuristica): premia objetivos, penaliza muertes
+  -- Score combinado (heuristica): premia objetivos, penaliza eliminaciones
   ((count(*) filter (where e.tipo = 'captura'))::int * 3
    + (count(*) filter (where e.tipo = 'reanimacion'))::int * 2
    + (count(*) filter (where e.tipo = 'planto'))::int * 5
-   - (count(*) filter (where e.tipo = 'muerte'))::int) as score
+   - (count(*) filter (where e.tipo = 'eliminacion'))::int) as score
 from public.match_events e
 join public.profiles p on p.id = e.user_id
 where e.status = 'aceptado' and e.user_id is not null
@@ -92,7 +92,7 @@ select
   e.player_number,
   p.nombre,
   p.apellido,
-  count(*) filter (where e.tipo = 'muerte') as muertes,
+  count(*) filter (where e.tipo = 'eliminacion') as eliminaciones,
   count(*) filter (where e.tipo = 'captura') as capturas,
   count(*) filter (where e.tipo = 'reanimacion') as reanimaciones,
   count(*) filter (where e.tipo = 'planto') as plantos
@@ -110,7 +110,7 @@ select
   p.nombre,
   p.apellido,
   p.clan_id,
-  count(*) filter (where e.tipo = 'muerte') as muertes,
+  count(*) filter (where e.tipo = 'eliminacion') as eliminaciones,
   count(*) filter (where e.tipo = 'captura') as capturas,
   count(*) filter (where e.tipo = 'reanimacion') as reanimaciones,
   count(*) filter (where e.tipo = 'planto') as plantos,
@@ -118,7 +118,7 @@ select
   ((count(*) filter (where e.tipo = 'captura'))::int * 3
    + (count(*) filter (where e.tipo = 'reanimacion'))::int * 2
    + (count(*) filter (where e.tipo = 'planto'))::int * 5
-   - (count(*) filter (where e.tipo = 'muerte'))::int) as score
+   - (count(*) filter (where e.tipo = 'eliminacion'))::int) as score
 from public.match_events e
 join public.profiles p on p.id = e.user_id
 join public.partidas pa on pa.id = e.partida_id
@@ -132,7 +132,7 @@ select
   c.slug,
   c.nombre as clan_nombre,
   c.color_hex,
-  count(*) filter (where e.tipo = 'muerte') as muertes,
+  count(*) filter (where e.tipo = 'eliminacion') as eliminaciones,
   count(*) filter (where e.tipo = 'captura') as capturas,
   count(*) filter (where e.tipo = 'reanimacion') as reanimaciones,
   count(*) filter (where e.tipo = 'planto') as plantos,
@@ -141,7 +141,7 @@ select
   ((count(*) filter (where e.tipo = 'captura'))::int * 3
    + (count(*) filter (where e.tipo = 'reanimacion'))::int * 2
    + (count(*) filter (where e.tipo = 'planto'))::int * 5
-   - (count(*) filter (where e.tipo = 'muerte'))::int) as score
+   - (count(*) filter (where e.tipo = 'eliminacion'))::int) as score
 from public.match_events e
 join public.profiles p on p.id = e.user_id
 join public.clanes c on c.id = p.clan_id
