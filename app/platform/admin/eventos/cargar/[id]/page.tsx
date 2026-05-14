@@ -61,7 +61,7 @@ export default async function CargarPartidaPage({
     if (!e.user_id) continue;
     const k = e.user_id;
     if (!counts.has(k))
-      counts.set(k, { muerte: 0, captura: 0, reanimacion: 0, planto: 0 });
+      counts.set(k, { eliminacion: 0, captura: 0, reanimacion: 0, planto: 0 });
     counts.get(k)![e.tipo] = (counts.get(k)![e.tipo] ?? 0) + 1;
   }
 

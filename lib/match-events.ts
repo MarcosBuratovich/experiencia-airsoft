@@ -3,7 +3,7 @@ import { inicioPartida } from "./partidas";
 
 type AdminSupabase = ReturnType<typeof createServiceRoleClient>;
 
-export const TIPOS_EVENTO = ["muerte", "captura", "reanimacion", "planto"] as const;
+export const TIPOS_EVENTO = ["eliminacion", "captura", "reanimacion", "planto"] as const;
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
 
 /** Margen pasado el fin de la partida en que aún aceptamos eventos. */

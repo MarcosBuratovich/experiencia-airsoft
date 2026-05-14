@@ -8,7 +8,7 @@ export type LeaderRow = {
   nombre: string;
   apellido: string;
   clan_id: string | null;
-  muertes: number;
+  eliminaciones: number;
   capturas: number;
   reanimaciones: number;
   plantos: number;
@@ -21,14 +21,14 @@ export type SortKey =
   | "capturas"
   | "reanimaciones"
   | "plantos"
-  | "muertes_asc";
+  | "eliminaciones_asc";
 
 export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "score", label: "Score" },
   { key: "capturas", label: "Capturas" },
   { key: "reanimaciones", label: "Reanimaciones" },
   { key: "plantos", label: "Plantos" },
-  { key: "muertes_asc", label: "Menos muertes" },
+  { key: "eliminaciones_asc", label: "Menos eliminaciones" },
 ];
 
 function applySort(rows: LeaderRow[], sort: SortKey): LeaderRow[] {
@@ -43,12 +43,12 @@ function applySort(rows: LeaderRow[], sort: SortKey): LeaderRow[] {
     case "plantos":
       sorted.sort((a, b) => b.plantos - a.plantos || b.score - a.score);
       break;
-    case "muertes_asc":
-      sorted.sort((a, b) => a.muertes - b.muertes || b.score - a.score);
+    case "eliminaciones_asc":
+      sorted.sort((a, b) => a.eliminaciones - b.eliminaciones || b.score - a.score);
       break;
     case "score":
     default:
-      sorted.sort((a, b) => b.score - a.score || a.muertes - b.muertes);
+      sorted.sort((a, b) => b.score - a.score || a.eliminaciones - b.eliminaciones);
   }
   return sorted;
 }
@@ -60,7 +60,7 @@ export async function getLeaderboardGlobal(
   const { data } = await supabase
     .from("match_stats_global")
     .select(
-      "user_id, player_number, nombre, apellido, clan_id, muertes, capturas, reanimaciones, plantos, partidas_jugadas, score",
+      "user_id, player_number, nombre, apellido, clan_id, eliminaciones, capturas, reanimaciones, plantos, partidas_jugadas, score",
     );
   if (!data) return [];
   const rows = data as LeaderRow[];
@@ -80,7 +80,7 @@ export async function getLeaderboardMensual(
   const { data } = await supabase
     .from("match_stats_mensual")
     .select(
-      "user_id, player_number, nombre, apellido, clan_id, muertes, capturas, reanimaciones, plantos, partidas_jugadas, score",
+      "user_id, player_number, nombre, apellido, clan_id, eliminaciones, capturas, reanimaciones, plantos, partidas_jugadas, score",
     )
     .eq("periodo", periodo);
   if (!data) return [];
@@ -113,7 +113,7 @@ export type ClanLeaderRow = {
   slug: string;
   clan_nombre: string;
   color_hex: string | null;
-  muertes: number;
+  eliminaciones: number;
   capturas: number;
   reanimaciones: number;
   plantos: number;
@@ -129,7 +129,7 @@ export async function getClanStats(
   const { data } = await supabase
     .from("match_stats_clan")
     .select(
-      "clan_id, slug, clan_nombre, color_hex, muertes, capturas, reanimaciones, plantos, miembros_activos, partidas_jugadas, score",
+      "clan_id, slug, clan_nombre, color_hex, eliminaciones, capturas, reanimaciones, plantos, miembros_activos, partidas_jugadas, score",
     )
     .eq("clan_id", clanId)
     .maybeSingle();
@@ -142,7 +142,7 @@ export async function getLeaderboardClanes(
   const { data } = await supabase
     .from("match_stats_clan")
     .select(
-      "clan_id, slug, clan_nombre, color_hex, muertes, capturas, reanimaciones, plantos, miembros_activos, partidas_jugadas, score",
+      "clan_id, slug, clan_nombre, color_hex, eliminaciones, capturas, reanimaciones, plantos, miembros_activos, partidas_jugadas, score",
     )
     .order("score", { ascending: false });
   return (data as ClanLeaderRow[]) ?? [];
@@ -154,7 +154,7 @@ export type PartidaScoreboardRow = {
   player_number: string;
   nombre: string;
   apellido: string;
-  muertes: number;
+  eliminaciones: number;
   capturas: number;
   reanimaciones: number;
   plantos: number;
@@ -167,7 +167,7 @@ export async function getScoreboardPartida(
   const { data } = await supabase
     .from("match_stats_by_partida")
     .select(
-      "partida_id, user_id, player_number, nombre, apellido, muertes, capturas, reanimaciones, plantos",
+      "partida_id, user_id, player_number, nombre, apellido, eliminaciones, capturas, reanimaciones, plantos",
     )
     .eq("partida_id", partidaId);
   return (data as PartidaScoreboardRow[]) ?? [];

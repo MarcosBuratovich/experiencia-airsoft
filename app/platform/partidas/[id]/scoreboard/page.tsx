@@ -11,15 +11,15 @@ type Fila = {
   nombre: string;
   apellido: string;
   socio: boolean;
-  muertes: number;
+  eliminaciones: number;
   capturas: number;
   reanimaciones: number;
   plantos: number;
   score: number;
 };
 
-function calcScore(s: { capturas: number; reanimaciones: number; plantos: number; muertes: number }) {
-  return s.capturas * 3 + s.reanimaciones * 2 + s.plantos * 5 - s.muertes;
+function calcScore(s: { capturas: number; reanimaciones: number; plantos: number; eliminaciones: number }) {
+  return s.capturas * 3 + s.reanimaciones * 2 + s.plantos * 5 - s.eliminaciones;
 }
 
 export default async function ScoreboardPage({
@@ -57,7 +57,7 @@ export default async function ScoreboardPage({
   const filas: Fila[] = (inscripciones ?? []).map((i) => {
     const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
     const s = statsByUser.get(i.user_id);
-    const muertes = s?.muertes ?? 0;
+    const eliminaciones = s?.eliminaciones ?? 0;
     const capturas = s?.capturas ?? 0;
     const reanimaciones = s?.reanimaciones ?? 0;
     const plantos = s?.plantos ?? 0;
@@ -67,25 +67,25 @@ export default async function ScoreboardPage({
       nombre: p?.nombre ?? "",
       apellido: p?.apellido ?? "",
       socio: !!p?.socio,
-      muertes,
+      eliminaciones,
       capturas,
       reanimaciones,
       plantos,
-      score: calcScore({ muertes, capturas, reanimaciones, plantos }),
+      score: calcScore({ eliminaciones, capturas, reanimaciones, plantos }),
     };
   });
 
-  // Sort: score descendente, muertes ascendente como tiebreaker
-  filas.sort((a, b) => b.score - a.score || a.muertes - b.muertes);
+  // Sort: score descendente, eliminaciones ascendente como tiebreaker
+  filas.sort((a, b) => b.score - a.score || a.eliminaciones - b.eliminaciones);
 
   const totales = filas.reduce(
     (acc, f) => ({
-      muertes: acc.muertes + f.muertes,
+      eliminaciones: acc.eliminaciones + f.eliminaciones,
       capturas: acc.capturas + f.capturas,
       reanimaciones: acc.reanimaciones + f.reanimaciones,
       plantos: acc.plantos + f.plantos,
     }),
-    { muertes: 0, capturas: 0, reanimaciones: 0, plantos: 0 },
+    { eliminaciones: 0, capturas: 0, reanimaciones: 0, plantos: 0 },
   );
 
   const estadoFx = estadoEfectivo({
@@ -95,7 +95,8 @@ export default async function ScoreboardPage({
     estado: partida.estado,
   });
 
-  const sinEventos = totales.muertes + totales.capturas + totales.reanimaciones + totales.plantos === 0;
+  const sinEventos =
+    totales.eliminaciones + totales.capturas + totales.reanimaciones + totales.plantos === 0;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -129,7 +130,7 @@ export default async function ScoreboardPage({
         <Stat label="Capturas" value={totales.capturas} />
         <Stat label="Reanim." value={totales.reanimaciones} />
         <Stat label="Plantos" value={totales.plantos} />
-        <Stat label="Muertes" value={totales.muertes} muted />
+        <Stat label="Elim." value={totales.eliminaciones} muted />
       </div>
 
       {sinEventos && (
@@ -163,7 +164,7 @@ export default async function ScoreboardPage({
                 <th className="text-right px-3 py-3">Capt.</th>
                 <th className="text-right px-3 py-3">Reanim.</th>
                 <th className="text-right px-3 py-3">Plant.</th>
-                <th className="text-right px-3 py-3">Muertes</th>
+                <th className="text-right px-3 py-3">Elim.</th>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +204,7 @@ export default async function ScoreboardPage({
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-ash">{f.plantos}</td>
                   <td className="px-3 py-3 text-right font-mono text-smoke">
-                    {f.muertes}
+                    {f.eliminaciones}
                   </td>
                 </tr>
               ))}
@@ -213,7 +214,7 @@ export default async function ScoreboardPage({
       )}
 
       <p className="mt-8 font-mono fluid-xs text-smoke uppercase tracking-[.22em]">
-        // Score = capturas×3 + reanimaciones×2 + plantos×5 − muertes
+        // Score = capturas×3 + reanimaciones×2 + plantos×5 − eliminaciones
       </p>
     </div>
   );
@@ -276,7 +277,7 @@ function FilaCard({ fila: f, pos }: { fila: Fila; pos: number }) {
         <Mini label="Capt." value={f.capturas} />
         <Mini label="Reanim." value={f.reanimaciones} />
         <Mini label="Plant." value={f.plantos} />
-        <Mini label="Muertes" value={f.muertes} muted />
+        <Mini label="Elim." value={f.eliminaciones} muted />
       </div>
     </li>
   );

@@ -16,7 +16,7 @@ type Jugador = {
 type Counts = Record<string, Record<string, number>>;
 
 const TIPOS_LABELS: Record<string, string> = {
-  muerte: "Muertes",
+  eliminacion: "Elim.",
   captura: "Capturas",
   reanimacion: "Reanim.",
   planto: "Plantos",
@@ -40,9 +40,9 @@ export function CargarForm({
   const router = useRouter();
 
   const totales = useMemo(() => {
-    const t = { muerte: 0, captura: 0, reanimacion: 0, planto: 0 };
+    const t = { eliminacion: 0, captura: 0, reanimacion: 0, planto: 0 };
     for (const ucounts of Object.values(delta)) {
-      t.muerte += ucounts.muerte ?? 0;
+      t.eliminacion += ucounts.eliminacion ?? 0;
       t.captura += ucounts.captura ?? 0;
       t.reanimacion += ucounts.reanimacion ?? 0;
       t.planto += ucounts.planto ?? 0;
@@ -51,7 +51,7 @@ export function CargarForm({
   }, [delta]);
 
   const totalEventos =
-    totales.muerte + totales.captura + totales.reanimacion + totales.planto;
+    totales.eliminacion + totales.captura + totales.reanimacion + totales.planto;
 
   const ajustar = (userId: string, tipo: string, n: number) => {
     setSuccess(null);
@@ -84,7 +84,7 @@ export function CargarForm({
     const eventos: Array<{
       user_id: string;
       player_number: string;
-      tipo: "muerte" | "captura" | "reanimacion" | "planto";
+      tipo: "eliminacion" | "captura" | "reanimacion" | "planto";
       count: number;
     }> = [];
     let sinNumero = 0;

@@ -258,49 +258,6 @@ export default function BuenosAiresPage() {
           </div>
         </section>
 
-        {/* ZONAS DEL LOCAL */}
-        <section className="border-b border-bone/10">
-          <div className="max-w-[1100px] mx-auto fluid-gutter-x py-14">
-            <p className="sect-label mb-3">[ Predio ]</p>
-            <h2 className="sect-title fluid-3xl mb-3 text-bone">
-              Qué vas a encontrar
-            </h2>
-            <p className="text-ash fluid-base max-w-[65ch] leading-relaxed mb-8">
-              No es un galpón vacío con paredes pintadas. Es un predio
-              diseñado específicamente para escenarios CQB · close quarters:
-              niveles, recovecos, líneas de visión cortas y objetivos
-              variables.
-            </p>
-
-            <ul className="grid md:grid-cols-2 gap-4 font-mono fluid-sm text-ash">
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Múltiples niveles y zonas diferenciadas
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Escenarios reconfigurables entre partidas
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Iluminación dramática para modo nocturno
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Vestuarios y área para guardar pertenencias
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Equipamiento completo en stock para alquiler
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="text-orange shrink-0">→</span>
-                Staff capacitado en seguridad y dinámica de juego
-              </li>
-            </ul>
-          </div>
-        </section>
-
         {/* FAQ */}
         <section className="border-b border-bone/10">
           <div className="max-w-[900px] mx-auto fluid-gutter-x py-14">

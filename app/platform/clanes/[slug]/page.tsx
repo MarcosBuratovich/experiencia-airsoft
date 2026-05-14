@@ -133,7 +133,7 @@ export default async function ClanDetail({
               <ClanStat label="Capt." value={stats.capturas} />
               <ClanStat label="Reanim." value={stats.reanimaciones} />
               <ClanStat label="Plant." value={stats.plantos} />
-              <ClanStat label="Muertes" value={stats.muertes} muted />
+              <ClanStat label="Elim." value={stats.eliminaciones} muted />
             </div>
           </div>
         </section>

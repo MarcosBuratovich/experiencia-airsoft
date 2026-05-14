@@ -84,7 +84,7 @@ export default async function ClanesRankingPage() {
                 <Mini label="Capt." value={c.capturas} />
                 <Mini label="Reanim." value={c.reanimaciones} />
                 <Mini label="Plant." value={c.plantos} />
-                <Mini label="Muertes" value={c.muertes} muted />
+                <Mini label="Elim." value={c.eliminaciones} muted />
               </div>
             </li>
           ))}
@@ -92,7 +92,7 @@ export default async function ClanesRankingPage() {
       )}
 
       <p className="mt-8 font-mono fluid-xs text-smoke uppercase tracking-[.22em]">
-        // Score = capturas×3 + reanimaciones×2 + plantos×5 − muertes
+        // Score = capturas×3 + reanimaciones×2 + plantos×5 − eliminaciones
       </p>
     </div>
   );

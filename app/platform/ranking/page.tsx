@@ -144,7 +144,7 @@ export default async function RankingPage({
                   <Th label="Capt." col="capturas" sort={sort} />
                   <Th label="Reanim." col="reanimaciones" sort={sort} />
                   <Th label="Plant." col="plantos" sort={sort} />
-                  <Th label="Muertes" col="muertes" sort={sort} />
+                  <Th label="Elim." col="eliminaciones" sort={sort} />
                   <th className="text-right px-3 py-3">Partidas</th>
                 </tr>
               </thead>
@@ -174,8 +174,8 @@ export default async function RankingPage({
                     <Td value={r.reanimaciones} highlight={sort === "reanimaciones"} />
                     <Td value={r.plantos} highlight={sort === "plantos"} />
                     <Td
-                      value={r.muertes}
-                      highlight={sort === "muertes_asc"}
+                      value={r.eliminaciones}
+                      highlight={sort === "eliminaciones_asc"}
                       muted
                     />
                     <td className="px-3 py-3 text-right font-mono fluid-xs text-ash">
@@ -190,7 +190,7 @@ export default async function RankingPage({
       )}
 
       <p className="mt-8 font-mono fluid-xs text-smoke uppercase tracking-[.22em]">
-        // Score = capturas×3 + reanimaciones×2 + plantos×5 − muertes
+        // Score = capturas×3 + reanimaciones×2 + plantos×5 − eliminaciones
       </p>
     </div>
   );
@@ -222,8 +222,8 @@ function Podio({ rows, sort }: { rows: LeaderRow[]; sort: SortKey }) {
               ? r.reanimaciones
               : sort === "plantos"
                 ? r.plantos
-                : sort === "muertes_asc"
-                  ? r.muertes
+                : sort === "eliminaciones_asc"
+                  ? r.eliminaciones
                   : r.score;
         return (
           <div
@@ -308,9 +308,9 @@ function PlayerCard({
           highlight={sort === "plantos"}
         />
         <Stat
-          label="Muertes"
-          value={r.muertes}
-          highlight={sort === "muertes_asc"}
+          label="Elim."
+          value={r.eliminaciones}
+          highlight={sort === "eliminaciones_asc"}
           muted
         />
       </div>
@@ -354,7 +354,7 @@ function Th({
 }) {
   const isActive =
     sort === col ||
-    (col === "muertes" && sort === "muertes_asc");
+    (col === "eliminaciones" && sort === "eliminaciones_asc");
   return (
     <th
       className={`text-right px-3 py-3 ${
