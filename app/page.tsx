@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ReelCard } from "./reel-card";
 import { ScrollFx } from "./scroll-fx";
 
@@ -1548,7 +1549,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <p className="sect-label mb-5">Navegación</p>
               <ul className="space-y-3 fluid-base">
                 <li>
@@ -1590,6 +1591,36 @@ export default function Home() {
                   >
                     Reservar
                   </a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-3">
+              <p className="sect-label mb-5">Información</p>
+              <ul className="space-y-3 fluid-base">
+                <li>
+                  <Link
+                    href="/precios"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Precios y costos
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/buenos-aires"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Airsoft en Buenos Aires
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/primera-vez"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Primera vez jugando
+                  </Link>
                 </li>
               </ul>
             </div>
