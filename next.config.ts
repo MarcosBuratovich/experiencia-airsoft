@@ -7,28 +7,31 @@ const nextConfig: NextConfig = {
   // pasa el link juice acumulado.
   async redirects() {
     return [
-      // Templates Wix abandonadas (sin contenido real).
+      // Templates Wix abandonadas (sin contenido real). Listadas explicito
+      // porque path-to-regexp no acepta `:n*` con prefix sin suffix.
+      { source: "/blank-1", destination: "/", permanent: true },
+      { source: "/blank-2", destination: "/", permanent: true },
+      { source: "/blank-3", destination: "/", permanent: true },
+      { source: "/blank-6", destination: "/", permanent: true },
+      // Booking events Wix — paginas de inscripcion por partida.
+      // Mandamos a /precios (pagina transaccional equivalente).
       {
-        source: "/blank-:rest*",
-        destination: "/",
-        permanent: true,
-      },
-      // Booking events Wix — eran paginas de inscripcion por partida.
-      // Mandamos a /precios que es la pagina transaccional equivalente.
-      {
-        source: "/detalles-y-registro/:slug*",
+        source: "/detalles-y-registro/:slug",
         destination: "/precios",
         permanent: true,
       },
       // Pagina de servicio generica de Wix.
       {
-        source: "/service-page/:slug*",
+        source: "/service-page/:slug",
         destination: "/precios",
         permanent: true,
       },
       // Productos placeholder del template Wix ("soy-un-producto-N").
+      // El slug base sin sufijo lo cubrimos aparte porque `:slug` requiere
+      // segmento presente.
+      { source: "/product-page", destination: "/", permanent: true },
       {
-        source: "/product-page/:slug*",
+        source: "/product-page/:slug",
         destination: "/",
         permanent: true,
       },
