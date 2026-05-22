@@ -27,7 +27,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Equipamiento básico de airsoft para tu primera partida",
     description:
       "Qué necesitás llevar (y qué NO) a tu primera partida de airsoft en Buenos Aires. Marcadora, protección, ropa y accesorios desde el punto de vista de quien nunca jugó.",
-    date: "2026-05-08",
+    date: "2026-05-19",
     readingTime: "7 min",
     tag: "Equipamiento",
   },

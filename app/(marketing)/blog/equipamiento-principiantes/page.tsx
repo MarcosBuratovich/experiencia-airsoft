@@ -36,9 +36,9 @@ export default function Post() {
 
       <h2>Lo que viene incluido si alquilás</h2>
       <p>
-        En Experiencia Airsoft, cuando alquilás{" "}
-        <Link href="/precios">marcadora simple ($40k) o avanzada ($50k)</Link>,
-        entra:
+        En Experiencia Airsoft, el{" "}
+        <Link href="/precios">alquiler ($60.000)</Link> incluye marcadora con
+        trazador, 100 bbs tracer y todo esto:
       </p>
       <ul>
         <li>
@@ -63,8 +63,13 @@ export default function Post() {
       </ul>
       <p>
         Si <strong>traés tu propio equipo (BYOP)</strong> la entrada baja a
-        $20.000 y solo pagás el acceso al campo + el briefing. Es la
+        $25.000 y solo pagás el acceso al campo + el briefing. Es la
         modalidad para jugadores que ya tienen marcadora propia.
+      </p>
+      <p>
+        <strong>Tip de pago:</strong> abonando en efectivo el día de la
+        partida hay un <strong>10% de descuento</strong> sobre el total
+        (alquiler + recargas + chaleco si corresponde).
       </p>
 
       <h2>Qué ropa llevar</h2>
@@ -143,16 +148,10 @@ export default function Post() {
         es indispensable, pero para una segunda partida la mayoría lo
         recomienda.
       </p>
-      <h3>Marcadora avanzada (+$10.000 sobre la simple)</h3>
-      <p>
-        Incluye trazador y bbs tracer (se iluminan con UV). Cambia mucho la
-        experiencia visual, sobre todo en partidas oscuras o nocturnas. Si
-        te late lo cinematográfico, vale el upgrade.
-      </p>
       <h3>Recargas durante la partida</h3>
       <p>
-        Si te quedás sin bbs en plena partida, pedís recarga al staff. Las
-        opciones:
+        El alquiler ya incluye 100 bbs tracer para arrancar. Si te quedás
+        sin munición en medio de la partida, pedís recarga al staff:
       </p>
       <ul>
         <li>100 bbs tracer · $3.000</li>
@@ -160,9 +159,9 @@ export default function Post() {
         <li>400 bbs convencional · $6.000</li>
       </ul>
       <p>
-        Para una primera partida con marcadora simple, el cargador inicial
-        suele alcanzar. Si comprás el upgrade a avanzada y querés sacar el
-        máximo del trazador, conviene sumar una recarga de tracer.
+        Para una primera partida el cargador inicial suele alcanzar. Si
+        querés sacar más jugo al trazador, sumar una recarga de tracer
+        extra vale la pena.
       </p>
 
       <h2>Si querés comprar tu propio equipo</h2>

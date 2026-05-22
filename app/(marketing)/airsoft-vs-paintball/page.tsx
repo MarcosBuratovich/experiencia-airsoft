@@ -304,11 +304,12 @@ export default function AirsoftVsPaintballPage() {
                   Airsoft típico
                 </p>
                 <p className="font-display fluid-2xl text-bone mb-3">
-                  $40k - $50k
+                  $60k
                 </p>
                 <p className="text-ash fluid-sm leading-relaxed">
-                  Incluye marcadora, protección, briefing y 2-3 horas de juego.
-                  Las recargas son baratas. Si traés tu equipo, baja a $20k.
+                  Incluye marcadora con trazador, protección, briefing y 2-3
+                  horas de juego. Las recargas son baratas. Si traés tu equipo,
+                  baja a $25k. 10% off pagando en efectivo.
                 </p>
               </div>
               <div className="border border-bone/15 bg-carbon clip-notch p-6">

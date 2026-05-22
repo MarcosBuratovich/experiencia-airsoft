@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/platform/", "/login", "/signup", "/admin/", "/partidas", "/auth/"],
       },
     ],
-    sitemap: "https://experienciaairsoft.com/sitemap.xml",
+    sitemap: "https://www.experienciaairsoft.com/sitemap.xml",
   };
 }

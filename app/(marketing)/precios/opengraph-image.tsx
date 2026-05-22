@@ -14,6 +14,6 @@ export default function Image() {
     eyebrow: "Precios · ARS",
     title: "Cuánto cuesta jugar airsoft",
     subtitle:
-      "Alquiler simple $40.000 · avanzada con tracer $50.000 · BYOP $20.000. Recargas y socios.",
+      "Alquiler $60.000 · BYOP $25.000 · 10% off pagando en efectivo. Recargas y socios.",
   });
 }

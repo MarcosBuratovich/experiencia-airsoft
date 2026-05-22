@@ -30,7 +30,7 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = "https://experienciaairsoft.com";
+const SITE_URL = "https://www.experienciaairsoft.com";
 const TITLE = "Experiencia Airsoft — Airsoft CQB indoor en Buenos Aires";
 const DESCRIPTION =
   "Centro de airsoft CQB indoor en Buenos Aires. Partidas abiertas, grupos privados y eventos corporativos. Máximo 330 FPS, equipo incluido, +18. Reservas por WhatsApp.";

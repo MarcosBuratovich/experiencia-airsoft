@@ -1,20 +1,20 @@
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "./(marketing)/blog/_posts";
 
-const SITE_URL = "https://experienciaairsoft.com";
+const SITE_URL = "https://www.experienciaairsoft.com";
 
 // Fechas reales de ultima edicion de contenido. Actualizar a mano cuando se
 // cambia copy/JSON-LD de una pagina. Google desconfia de sitemaps que mienten
 // poniendo `new Date()` y termina ignorando `lastmod` por completo.
 const LAST_UPDATED = {
-  home: "2026-05-19",
-  precios: "2026-05-14",
-  buenosAires: "2026-05-14",
-  primeraVez: "2026-05-14",
-  eventosCorporativos: "2026-05-14",
-  cumpleanos: "2026-05-14",
-  airsoftVsPaintball: "2026-05-14",
-  blogIndex: "2026-05-14",
+  home: "2026-05-22",
+  precios: "2026-05-22",
+  buenosAires: "2026-05-22",
+  primeraVez: "2026-05-22",
+  eventosCorporativos: "2026-05-22",
+  cumpleanos: "2026-05-22",
+  airsoftVsPaintball: "2026-05-22",
+  blogIndex: "2026-05-22",
 } as const;
 
 const toDate = (iso: string) => new Date(`${iso}T00:00:00-03:00`);

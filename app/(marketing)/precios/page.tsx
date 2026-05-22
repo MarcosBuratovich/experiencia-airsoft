@@ -11,7 +11,7 @@ import {
 const PAGE_URL = `${SITE_URL}/precios`;
 const TITLE = "Precios de partidas de airsoft en Buenos Aires";
 const DESCRIPTION =
-  "Cuánto cuesta jugar airsoft en Experiencia Airsoft (CABA). Alquiler simple $40.000, avanzada con tracer $50.000, BYOP $20.000, recargas, chaleco y socios. Reservas por WhatsApp.";
+  "Cuánto cuesta jugar airsoft en Experiencia Airsoft (CABA). Alquiler $60.000 (marcadora con tracer + bbs incluidas), BYOP $25.000 si traés tu equipo, recargas, chaleco y socios. 10% de descuento pagando en efectivo. Reservas por WhatsApp.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -39,25 +39,17 @@ const serviceJsonLd = {
     itemListElement: [
       {
         "@type": "Offer",
-        name: "Alquiler de marcadora simple",
+        name: "Alquiler de marcadora",
         description:
-          "Marcadora estándar + protección básica + entrada a la partida.",
-        price: "40000",
-        priceCurrency: "ARS",
-      },
-      {
-        "@type": "Offer",
-        name: "Alquiler de marcadora avanzada",
-        description:
-          "Marcadora con trazador + bbs tracer + protección + entrada a la partida.",
-        price: "50000",
+          "Marcadora con trazador + bbs tracer incluidas + protección básica + entrada a la partida.",
+        price: "60000",
         priceCurrency: "ARS",
       },
       {
         "@type": "Offer",
         name: "Entrada BYOP",
         description: "Jugador con equipo propio. Solo entrada a la partida.",
-        price: "20000",
+        price: "25000",
         priceCurrency: "ARS",
       },
       {
@@ -98,7 +90,7 @@ const faqJsonLd = {
       name: "¿Cuánto cuesta una partida de airsoft en Buenos Aires?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Si alquilás marcadora simple sale $40.000 e incluye entrada + protección básica. La marcadora avanzada con tracer sale $50.000. Si traés tu propio equipo (BYOP), la entrada es $20.000. Las recargas de munición y el chaleco son opcionales y se suman aparte.",
+        text: "Si alquilás marcadora, sale $60.000 e incluye trazador, bbs tracer, protección básica y entrada a la partida. Si traés tu propio equipo (BYOP), la entrada es $25.000. Las recargas de munición y el chaleco son opcionales y se suman aparte. Pagando en efectivo, 10% de descuento sobre el total.",
       },
     },
     {
@@ -106,7 +98,7 @@ const faqJsonLd = {
       name: "¿Qué incluye el precio del alquiler?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Incluye marcadora, protección facial básica, entrada a la partida (briefing + 2-3 horas de juego) y staff supervisando la seguridad. La marcadora avanzada suma trazador y bbs tracer. El chaleco es opcional aparte.",
+        text: "Incluye marcadora con trazador, bbs tracer, protección facial básica, entrada a la partida (briefing + 2-3 horas de juego) y staff supervisando la seguridad. El chaleco es opcional aparte.",
       },
     },
     {
@@ -119,10 +111,18 @@ const faqJsonLd = {
     },
     {
       "@type": "Question",
+      name: "¿Hay descuento pagando en efectivo?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Sí. Pagando en efectivo el día de la partida se aplica un 10% de descuento sobre el total (alquiler + recargas + chaleco si corresponde). Si pagás por transferencia, el precio queda como figura.",
+      },
+    },
+    {
+      "@type": "Question",
       name: "¿Aceptan transferencia o solo efectivo?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Aceptamos efectivo y transferencia bancaria.",
+        text: "Aceptamos efectivo y transferencia bancaria. Pagando en efectivo se aplica un 10% de descuento sobre el total.",
       },
     },
     {
@@ -212,27 +212,30 @@ export default function PreciosPage() {
         <section className="border-b border-bone/10">
           <div className="max-w-[1100px] mx-auto fluid-gutter-x py-14">
             <h2 className="sect-title fluid-2xl mb-8 text-bone">
-              Tres formas de entrar
+              Dos formas de entrar
             </h2>
-            <div className="grid md:grid-cols-3 gap-5">
+            <div className="grid md:grid-cols-2 gap-5 max-w-[760px]">
               <PrecioCard
-                titulo="Marcadora simple"
-                precio="40.000"
-                descripcion="Marcadora estándar + protección básica (anteojos) + entrada a la partida. Lo más pedido para quien nunca jugó."
-              />
-              <PrecioCard
-                titulo="Marcadora avanzada"
-                precio="50.000"
-                descripcion="Marcadora con trazador + 100 bbs tracer incluidas + protección + entrada. Pensado para partidas nocturnas y experiencia más inmersiva."
+                titulo="Alquiler"
+                precio="60.000"
+                descripcion="Marcadora con trazador + 100 bbs tracer incluidas + protección básica (anteojos) + entrada a la partida. Lo más pedido."
                 highlight
               />
               <PrecioCard
                 titulo="BYOP · equipo propio"
-                precio="20.000"
+                precio="25.000"
                 descripcion="Si traés tu propia marcadora, protección y munición. Solo pagás la entrada al campo."
               />
             </div>
-            <p className="mt-6 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
+            <div className="mt-6 inline-flex items-center gap-3 border border-orange/40 bg-orange/10 clip-notch px-4 py-3">
+              <span className="font-mono fluid-xs uppercase tracking-[.22em] text-orange">
+                Cash · 10% off
+              </span>
+              <span className="text-bone fluid-sm">
+                Pagando en efectivo, 10% de descuento sobre el total.
+              </span>
+            </div>
+            <p className="mt-4 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
               * Quien alquila deja $5.000 de seña el día de la partida — se
               descuenta del total.
             </p>
@@ -285,14 +288,24 @@ export default function PreciosPage() {
             <dl className="space-y-7">
               <div>
                 <dt className="font-display fluid-lg uppercase text-bone tracking-wide mb-2">
-                  ¿Por qué hay distintos precios de marcadora?
+                  ¿Qué incluye el alquiler de $60.000?
                 </dt>
                 <dd className="text-ash fluid-base leading-relaxed">
-                  La simple es ideal para quien recién empieza — pesa menos,
-                  responde rápido y es fácil de usar. La avanzada suma trazador
-                  (las bbs se iluminan con luz UV) y munición especial: ves los
-                  proyectiles en el aire, da otra dimensión al juego, sobre
-                  todo de noche.
+                  Marcadora con trazador, 100 bbs tracer (las bbs se iluminan
+                  con luz UV — ves los proyectiles en el aire, sobre todo de
+                  noche), protección facial básica y entrada completa a la
+                  partida (briefing + 2-3 horas de juego).
+                </dd>
+              </div>
+              <div>
+                <dt className="font-display fluid-lg uppercase text-bone tracking-wide mb-2">
+                  ¿Hay descuento pagando en efectivo?
+                </dt>
+                <dd className="text-ash fluid-base leading-relaxed">
+                  Sí. Pagando en efectivo el día de la partida se aplica un
+                  <strong className="text-bone"> 10% de descuento</strong>{" "}
+                  sobre el total (alquiler + recargas + chaleco si corresponde).
+                  Si pagás por transferencia, el precio queda como figura.
                 </dd>
               </div>
               <div>

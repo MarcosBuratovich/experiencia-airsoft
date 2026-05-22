@@ -295,7 +295,7 @@ const marqueeItems = [
   "Mayores de 18",
 ];
 
-const SITE_URL = "https://experienciaairsoft.com";
+const SITE_URL = "https://www.experienciaairsoft.com";
 
 const businessJsonLd = {
   "@context": "https://schema.org",

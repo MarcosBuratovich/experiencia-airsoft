@@ -1,4 +1,4 @@
-export const SITE_URL = "https://experienciaairsoft.com";
+export const SITE_URL = "https://www.experienciaairsoft.com";
 export const WHATSAPP_NUMBER = "+54 9 11 3868-9783";
 export const WHATSAPP_URL = "https://wa.me/5491138689783";
 export const INSTAGRAM_URL = "https://www.instagram.com/experienciaairsoft/";

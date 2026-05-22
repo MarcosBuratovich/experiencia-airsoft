@@ -75,7 +75,7 @@ const faqJsonLd = {
       name: "¿Cuánto sale festejar el cumpleaños?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Se calcula como una partida normal: $40.000 por persona con marcadora simple, $50.000 con avanzada o $20.000 si traen su equipo. Para grupos de más de 12 ofrecemos descuento al cumpleañero. Cotizamos por WhatsApp.",
+        text: "Se calcula como una partida normal: $60.000 por persona con alquiler (marcadora con tracer + bbs incluidas) o $25.000 si traen su propio equipo (BYOP). Pagando en efectivo, 10% de descuento sobre el total. Para grupos de más de 12 ofrecemos descuento al cumpleañero. Cotizamos por WhatsApp.",
       },
     },
     {

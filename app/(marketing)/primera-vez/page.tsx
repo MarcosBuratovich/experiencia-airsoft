@@ -261,7 +261,8 @@ export default function PrimeraVezPage() {
               </h2>
               <ul className="space-y-3">
                 <CheckItem>
-                  Marcadora — la alquilás acá ($40k simple, $50k avanzada).
+                  Marcadora — la alquilás acá por $60.000 (incluye trazador
+                  + bbs tracer).
                 </CheckItem>
                 <CheckItem>
                   Anteojos de protección — vienen incluidos en el alquiler.

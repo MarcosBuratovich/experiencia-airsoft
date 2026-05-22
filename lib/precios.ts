@@ -119,7 +119,7 @@ export type DesglosePrecio = {
  * Calcula el precio de una inscripción al momento de anotarse.
  *
  * Modelo:
- *   - Entrada: 0 si socio al día, sino entrada_byop ($20k).
+ *   - Entrada: 0 si socio al día, sino entrada_byop ($25k al día de hoy).
  *   - Alquiler de marcadora: solo si tipo=alquiler. Simple O avanzada
  *     (excluyentes — la UI lo restringe; acá si llegan ambos suma ambos).
  *   - Chaleco: opcional, suma al alquiler.
