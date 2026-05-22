@@ -6,13 +6,13 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ signup?: string }>;
+  searchParams: Promise<{ signup?: string; error?: string; reset?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/partidas");
 
-  const { signup } = await searchParams;
+  const { signup, error, reset } = await searchParams;
 
   return (
     <div className="max-w-md mx-auto">
@@ -29,14 +29,48 @@ export default async function LoginPage({
         </div>
       )}
 
+      {reset === "ok" && (
+        <div className="mb-6 border border-orange/50 bg-orange/10 px-4 py-3 clip-tag">
+          <p className="font-mono fluid-xs text-orange">
+            Contraseña actualizada. Ingresá con la nueva.
+          </p>
+        </div>
+      )}
+
+      {error === "expired" && (
+        <div className="mb-6 border border-orange-300/60 bg-orange/5 px-4 py-3 clip-tag">
+          <p className="font-mono fluid-xs text-orange-300">
+            El link expiró. Pedí uno nuevo abajo.
+          </p>
+        </div>
+      )}
+
+      {error === "verify_failed" && (
+        <div className="mb-6 border border-orange-300/60 bg-orange/5 px-4 py-3 clip-tag">
+          <p className="font-mono fluid-xs text-orange-300">
+            No pudimos validar el link. Pedí uno nuevo o iniciá sesión.
+          </p>
+        </div>
+      )}
+
+      {error === "invalid_link" && (
+        <div className="mb-6 border border-orange-300/60 bg-orange/5 px-4 py-3 clip-tag">
+          <p className="font-mono fluid-xs text-orange-300">
+            El link no es válido. Pedí uno nuevo.
+          </p>
+        </div>
+      )}
+
       <LoginForm />
 
-      <p className="mt-6 font-mono fluid-xs text-smoke">
-        ¿Sos nuevo?{" "}
-        <Link href="/signup" className="text-orange hover:underline">
-          Creá tu cuenta
+      <div className="mt-6 flex items-center justify-between font-mono fluid-xs text-smoke">
+        <Link href="/auth/forgot-password" className="text-orange hover:underline">
+          ¿Olvidaste tu contraseña?
         </Link>
-      </p>
+        <Link href="/signup" className="text-orange hover:underline">
+          Creá tu cuenta →
+        </Link>
+      </div>
     </div>
   );
 }
