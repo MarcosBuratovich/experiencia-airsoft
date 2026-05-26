@@ -32,12 +32,26 @@ export default async function ClanDetail({
   const { data: miembrosData } = memberIds.length
     ? await supabase
         .from("profiles_publicos")
-        .select("id, nombre, apellido")
+        .select("id, nombre, apellido, alias")
         .in("id", memberIds)
-    : { data: [] as { id: string; nombre: string; apellido: string }[] };
+    : {
+        data: [] as {
+          id: string;
+          nombre: string;
+          apellido: string;
+          alias: string | null;
+        }[],
+      };
+  // Mostramos alias si está seteado; sino "Nombre A." (con inicial del
+  // apellido) para no exponer apellido completo de gente sin alias.
   const miembros = (miembrosData ?? [])
-    .map((p) => ({ id: p.id, nombre: p.nombre, apellido: p.apellido }))
-    .sort((a, b) => a.apellido.localeCompare(b.apellido));
+    .map((p) => ({
+      id: p.id,
+      display:
+        p.alias?.trim() ||
+        `${p.nombre} ${p.apellido?.[0] ?? ""}.`.trim(),
+    }))
+    .sort((a, b) => a.display.localeCompare(b.display));
 
   const { data: misClanes } = await supabase
     .from("profile_clanes")
@@ -175,9 +189,7 @@ export default async function ClanDetail({
               key={m.id}
               className="border-b border-rail/40 py-1.5 flex items-center gap-2"
             >
-              <span>
-                {m.nombre} {m.apellido}
-              </span>
+              <span>{m.display}</span>
               {m.id === clan.capitan_id && (
                 <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
                   Capitán
@@ -191,7 +203,7 @@ export default async function ClanDetail({
 
       {capitan && !soyMiembro && (
         <p className="mt-6 font-mono fluid-xs text-smoke">
-          Capitán: {capitan.nombre} {capitan.apellido}
+          Capitán: {capitan.display}
         </p>
       )}
     </div>

@@ -91,12 +91,20 @@ export default async function MiClanPage() {
   const { data: pubProfiles } = allMemberIds.length
     ? await supabase
         .from("profiles_publicos")
-        .select("id, nombre, apellido")
+        .select("id, nombre, apellido, alias")
         .in("id", allMemberIds)
-    : { data: [] as { id: string; nombre: string; apellido: string }[] };
+    : {
+        data: [] as {
+          id: string;
+          nombre: string;
+          apellido: string;
+          alias: string | null;
+        }[],
+      };
   const profileById = new Map((pubProfiles ?? []).map((p) => [p.id, p]));
 
-  // Miembros agrupados por clan
+  // Miembros agrupados por clan. Display = alias si está, sino
+  // "Nombre A." (con inicial del apellido).
   const miembrosPorClan = new Map<
     string,
     { id: string; nombre: string }[]
@@ -104,8 +112,11 @@ export default async function MiClanPage() {
   for (const row of allMembership ?? []) {
     const p = profileById.get(row.profile_id);
     if (!p) continue;
+    const display =
+      p.alias?.trim() ||
+      `${p.nombre} ${p.apellido?.[0] ?? ""}.`.trim();
     const arr = miembrosPorClan.get(row.clan_id) ?? [];
-    arr.push({ id: p.id, nombre: `${p.nombre} ${p.apellido}` });
+    arr.push({ id: p.id, nombre: display });
     miembrosPorClan.set(row.clan_id, arr);
   }
 
