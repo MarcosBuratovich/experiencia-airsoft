@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -27,8 +28,13 @@ export function PlatformNav({
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const adminBtnRef = useRef<HTMLButtonElement>(null);
   const adminPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Cerrar dropdowns al navegar
   useEffect(() => {
@@ -231,8 +237,12 @@ export function PlatformNav({
         </svg>
       </button>
 
-      {/* Mobile drawer */}
-      {mobileOpen && (
+      {/* Mobile drawer — via portal a document.body para escapar al
+          backdrop-blur del header que crea un containing block y atrapa
+          el fixed positioning. */}
+      {mobileOpen &&
+        mounted &&
+        createPortal(
         <div
           className="fixed inset-0 z-[60] md:hidden"
           role="dialog"
@@ -330,8 +340,9 @@ export function PlatformNav({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }
