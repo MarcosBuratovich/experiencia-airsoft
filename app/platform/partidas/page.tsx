@@ -22,10 +22,9 @@ export default async function PartidasPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Traemos las partidas públicas no canceladas de los últimos 14 días + futuras
-  const desde = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  // Traemos las partidas públicas no canceladas a partir de hoy.
+  // Las "en curso" caen acá porque su fecha es hoy aunque ya hayan empezado.
+  const desde = new Date().toISOString().slice(0, 10);
 
   const [{ data: partidas }, { data: profile }, { data: pagosCuota }] =
     await Promise.all([
@@ -73,16 +72,12 @@ export default async function PartidasPage() {
     }),
   }));
 
-  const abiertas = cards
-    .filter((c) => c.estadoFx === "futura")
-    .sort((a, b) => cmpFechaHora(a, b));
   const enCurso = cards
     .filter((c) => c.estadoFx === "en_curso")
     .sort((a, b) => cmpFechaHora(a, b));
-  const pasadas = cards
-    .filter((c) => c.estadoFx === "pasada")
-    .sort((a, b) => cmpFechaHora(b, a)) // más recientes primero
-    .slice(0, 6);
+  const abiertas = cards
+    .filter((c) => c.estadoFx === "futura")
+    .sort((a, b) => cmpFechaHora(a, b));
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -109,6 +104,14 @@ export default async function PartidasPage() {
         />
       )}
 
+      {enCurso.length > 0 && (
+        <Section title="En curso" count={enCurso.length} accent>
+          {enCurso.map((p) => (
+            <PartidaRow key={p.id} p={p} variant="en_curso" />
+          ))}
+        </Section>
+      )}
+
       <Section
         title="Abiertas"
         count={abiertas.length}
@@ -118,22 +121,6 @@ export default async function PartidasPage() {
           <PartidaRow key={p.id} p={p} variant="abierta" />
         ))}
       </Section>
-
-      {enCurso.length > 0 && (
-        <Section title="En curso" count={enCurso.length} accent>
-          {enCurso.map((p) => (
-            <PartidaRow key={p.id} p={p} variant="en_curso" />
-          ))}
-        </Section>
-      )}
-
-      {pasadas.length > 0 && (
-        <Section title="Recientes" count={pasadas.length} muted>
-          {pasadas.map((p) => (
-            <PartidaRow key={p.id} p={p} variant="pasada" />
-          ))}
-        </Section>
-      )}
     </div>
   );
 }
@@ -198,23 +185,19 @@ function Section({
   count,
   empty,
   accent,
-  muted,
   children,
 }: {
   title: string;
   count: number;
   empty?: string;
   accent?: boolean;
-  muted?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-4">
         <h2
-          className={`sect-title fluid-xl ${
-            accent ? "text-orange" : muted ? "text-smoke" : "text-bone"
-          }`}
+          className={`sect-title fluid-xl ${accent ? "text-orange" : "text-bone"}`}
         >
           {title}
         </h2>
@@ -240,7 +223,7 @@ function PartidaRow({
   variant,
 }: {
   p: PartidaCard;
-  variant: "abierta" | "en_curso" | "pasada";
+  variant: "abierta" | "en_curso";
 }) {
   const lleno = p.inscriptos >= p.cupo_max;
   const inscripcionesCerradas = p.estado === "cerrada";
@@ -248,24 +231,16 @@ function PartidaRow({
   const borderColor =
     variant === "en_curso"
       ? "border-orange"
-      : variant === "pasada"
-        ? "border-rail/40"
-        : "border-rail/60 hover:border-orange";
-
-  const bg = variant === "pasada" ? "bg-carbon/60" : "bg-carbon";
+      : "border-rail/60 hover:border-orange";
 
   return (
     <Link
       href={`/partidas/${p.id}`}
-      className={`group border ${borderColor} ${bg} transition clip-notch p-4 sm:p-5 flex items-center gap-4`}
+      className={`group border ${borderColor} bg-carbon transition clip-notch p-4 sm:p-5 flex items-center gap-4`}
     >
       {/* Leftmost date block */}
       <div className="shrink-0 text-left min-w-[88px] sm:min-w-[120px]">
-        <p
-          className={`font-display fluid-xl uppercase leading-none ${
-            variant === "pasada" ? "text-smoke" : "text-bone"
-          } group-hover:text-orange transition`}
-        >
+        <p className="font-display fluid-xl uppercase leading-none text-bone group-hover:text-orange transition">
           {formatFechaCorta(p.fecha)}
         </p>
         <p className="mt-1 font-mono fluid-xs uppercase tracking-[.2em] text-ash">
@@ -283,11 +258,6 @@ function PartidaRow({
               En curso
             </span>
           )}
-          {variant === "pasada" && (
-            <span className="px-1.5 py-0.5 border border-rail/60 text-smoke font-mono fluid-xs uppercase tracking-[.18em]">
-              Finalizada
-            </span>
-          )}
           {variant === "abierta" && inscripcionesCerradas && (
             <span className="px-1.5 py-0.5 border border-orange-300/40 text-orange-300 font-mono fluid-xs uppercase tracking-[.18em]">
               Inscripción cerrada
@@ -301,27 +271,21 @@ function PartidaRow({
 
       {/* Right block */}
       <div className="shrink-0 text-right min-w-[80px]">
-        <p
-          className={`font-mono fluid-sm ${
-            variant === "pasada" ? "text-smoke" : "text-bone"
-          }`}
-        >
+        <p className="font-mono fluid-sm text-bone">
           {p.inscriptos}/{p.cupo_max}
         </p>
         <p className="font-mono fluid-xs uppercase tracking-[.22em] mt-1 text-orange group-hover:underline">
-          {variant === "pasada"
-            ? "Ver →"
-            : variant === "en_curso"
-              ? lleno
-                ? "Lleno"
-                : inscripcionesCerradas
-                  ? "Ver →"
-                  : "Anotarme →"
+          {variant === "en_curso"
+            ? lleno
+              ? "Lleno"
               : inscripcionesCerradas
                 ? "Ver →"
-                : lleno
-                  ? "Espera →"
-                  : "Anotarme →"}
+                : "Anotarme →"
+            : inscripcionesCerradas
+              ? "Ver →"
+              : lleno
+                ? "Espera →"
+                : "Anotarme →"}
         </p>
       </div>
     </Link>
