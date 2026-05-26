@@ -159,35 +159,60 @@ export function LogoUploader({ name = "logo_url", initialUrl, pathHint }: Props)
       <input type="hidden" name={name} value={url} />
 
       {!imageSrc && (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4 py-2">
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={url}
               alt="Logo del clan"
-              className="w-20 h-20 rounded-full object-cover border border-rail/60"
+              className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-2 border-orange/60 cursor-pointer hover:opacity-90 transition"
+              onClick={() => fileInputRef.current?.click()}
             />
           ) : (
-            <div className="w-20 h-20 rounded-full border border-dashed border-rail/60 flex items-center justify-center text-smoke font-mono fluid-xs uppercase tracking-[.2em]">
-              Sin
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
-          >
-            {url ? "Cambiar logo" : "Subir logo"}
-          </button>
-          {url && (
             <button
               type="button"
-              onClick={() => setUrl("")}
-              className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke hover:text-orange-300 cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Subir logo"
+              className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-2 border-dashed border-rail flex flex-col items-center justify-center gap-2 text-smoke hover:border-orange hover:text-orange transition cursor-pointer group"
             >
-              Quitar
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="w-10 h-10 transition-transform group-hover:scale-110"
+                aria-hidden
+              >
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
+              <span className="font-mono fluid-xs uppercase tracking-[.22em]">
+                Subir logo
+              </span>
             </button>
           )}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
+            >
+              {url ? "Cambiar logo" : "Elegir imagen"}
+            </button>
+            {url && (
+              <button
+                type="button"
+                onClick={() => setUrl("")}
+                className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke hover:text-orange-300 cursor-pointer"
+              >
+                Quitar
+              </button>
+            )}
+          </div>
+          <p className="font-mono fluid-xs text-smoke text-center max-w-[40ch]">
+            PNG o JPG cuadrado idealmente. Vas a poder reencuadrarlo al círculo
+            después de subirlo.
+          </p>
         </div>
       )}
 
@@ -201,7 +226,7 @@ export function LogoUploader({ name = "logo_url", initialUrl, pathHint }: Props)
 
       {imageSrc && (
         <div className="space-y-3 border border-rail/60 bg-carbon clip-notch p-4">
-          <div className="relative w-full h-64 bg-ink rounded-md overflow-hidden">
+          <div className="relative w-full h-80 sm:h-96 bg-ink rounded-md overflow-hidden">
             <Cropper
               image={imageSrc}
               crop={crop}

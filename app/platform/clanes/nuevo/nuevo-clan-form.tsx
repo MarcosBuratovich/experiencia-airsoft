@@ -39,38 +39,76 @@ export function NuevoClanForm() {
         error={state?.errors?.nombre}
       />
 
-      <label className="block">
-        <span className="sect-label mb-1 block">
-          Alias (máx {ALIAS_MAX} chars · emojis ok)
-        </span>
-        <div className="relative">
-          <input
-            name="alias"
-            value={alias}
-            onChange={(e) => setAlias(e.target.value)}
-            placeholder="WOLF · 🦊PRO · etc."
-            maxLength={ALIAS_MAX * 4}
-            className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
-          />
-          <span
-            className={`absolute right-3 top-1/2 -translate-y-1/2 font-mono fluid-xs ${
-              aliasN > ALIAS_MAX ? "text-orange-300" : "text-smoke"
-            }`}
-          >
-            {aliasN}/{ALIAS_MAX}
-          </span>
-        </div>
-        <p className="mt-1 font-mono fluid-xs text-smoke">
-          Es lo que aparece al lado del nombre del jugador en partidas. Ej:{" "}
-          <span style={{ color: colorRender }}>[{alias || "WOLF"}]</span> Juan
-          Perez
+      <div className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
+        <p className="sect-label mb-1">// Alias del clan</p>
+        <p className="font-sans fluid-sm text-ash leading-relaxed mb-3">
+          Una sigla corta que identifica al clan en cada partida. Se muestra{" "}
+          <span className="text-bone">delante del nombre del jugador</span>,
+          con el color del clan, en cada lista de inscriptos.
         </p>
-        {state?.errors?.alias?.[0] && (
-          <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.alias[0]}
+
+        <label className="block">
+          <span className="sect-label mb-1 block">
+            Tu alias (máx {ALIAS_MAX} chars · emojis ok)
           </span>
-        )}
-      </label>
+          <div className="relative">
+            <input
+              name="alias"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+              placeholder="WOLF · 🦊PRO · LBA · etc."
+              maxLength={ALIAS_MAX * 4}
+              className="w-full bg-ink border border-rail px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
+            />
+            <span
+              className={`absolute right-3 top-1/2 -translate-y-1/2 font-mono fluid-xs ${
+                aliasN > ALIAS_MAX ? "text-orange-300" : "text-smoke"
+              }`}
+            >
+              {aliasN}/{ALIAS_MAX}
+            </span>
+          </div>
+          {state?.errors?.alias?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.alias[0]}
+            </span>
+          )}
+        </label>
+
+        {/* Preview en vivo de cómo se va a ver */}
+        <div className="mt-4 pt-4 border-t border-rail/40">
+          <p className="sect-label mb-2">// Así va a aparecer en partidas</p>
+          <div className="border border-rail/60 bg-ink clip-notch p-3 space-y-2">
+            <div className="flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em]">
+              <span style={{ color: colorRender }}>
+                [{alias || "ALIAS"}]
+              </span>
+              <span className="text-bone normal-case tracking-normal font-sans">
+                Juan Perez
+              </span>
+            </div>
+            <div className="flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em]">
+              <span style={{ color: colorRender }}>
+                [{alias || "ALIAS"}]
+              </span>
+              <span className="text-bone normal-case tracking-normal font-sans">
+                Ana M.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em]">
+              <span style={{ color: colorRender }}>
+                [{alias || "ALIAS"}]
+              </span>
+              <span className="text-bone normal-case tracking-normal font-sans">
+                Pedro G.
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 font-mono fluid-xs text-smoke">
+            Cada miembro del clan llevará este tag adelante de su nombre.
+          </p>
+        </div>
+      </div>
 
       <label className="block">
         <span className="sect-label mb-1 block">Mostrar en partidas como</span>
