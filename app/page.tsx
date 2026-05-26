@@ -396,8 +396,19 @@ const websiteJsonLd = {
   "@id": `${SITE_URL}/#website`,
   url: SITE_URL,
   name: "Experiencia Airsoft",
+  alternateName: ["Experiencia Airsoft CABA", "Airsoft CQB Buenos Aires"],
   inLanguage: "es-AR",
   publisher: { "@id": `${SITE_URL}/#business` },
+  // SearchAction: cuando Google tiene confianza en el site, expone el
+  // searchbox debajo del resultado principal (relacionado con sitelinks).
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${SITE_URL}/blog?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
 };
 
 const breadcrumbJsonLd = {
