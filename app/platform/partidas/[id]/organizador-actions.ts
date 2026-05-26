@@ -4,6 +4,27 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getPreciosConfig } from "@/lib/precios";
+import {
+  countEmojis,
+  detectBadPattern,
+  hasExcessiveRepeat,
+  isCleanText,
+} from "@/lib/sanitize-text";
+
+const guestNombreSchema = z
+  .string()
+  .trim()
+  .min(2, "Mínimo 2 caracteres")
+  .max(60, "Máximo 60 caracteres")
+  .refine(
+    (s) => isCleanText(s),
+    "Contenido no permitido (HTML, URLs, markdown o caracteres de control)",
+  )
+  .refine((s) => countEmojis(s) <= 3, "Máximo 3 emojis")
+  .refine(
+    (s) => !hasExcessiveRepeat(s, 4),
+    "No repitas el mismo caracter más de 4 veces",
+  );
 
 async function assertOrganizadorOAdmin(partidaId: string) {
   const supabase = await createClient();
@@ -32,11 +53,7 @@ async function assertOrganizadorOAdmin(partidaId: string) {
 
 const addGuestSchema = z.object({
   partidaId: z.uuid(),
-  nombre: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres")
-    .max(60, "Máximo 60 caracteres"),
+  nombre: guestNombreSchema,
 });
 
 export async function addGuestAction(input: z.infer<typeof addGuestSchema>) {
@@ -150,11 +167,7 @@ export async function quitarInscripcionAction(input: z.infer<typeof removeSchema
 
 const alquilerSchema = z.object({
   partidaId: z.uuid(),
-  nombre: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres")
-    .max(60, "Máximo 60 caracteres"),
+  nombre: guestNombreSchema,
 });
 
 /** Cualquier usuario inscripto agrega un alquiler bajo su nombre. */

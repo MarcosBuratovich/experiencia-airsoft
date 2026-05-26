@@ -5,17 +5,15 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { pasaContrasteInk } from "@/lib/clanes";
+import {
+  countEmojis,
+  detectBadPattern,
+  graphemeLen,
+  hasExcessiveRepeat,
+  isCleanText,
+} from "@/lib/sanitize-text";
 
-/** Cuenta grafemas (emojis cuentan como 1, no como N code points). */
-function aliasLen(s: string): number {
-  if (typeof Intl !== "undefined" && Intl.Segmenter) {
-    const seg = new Intl.Segmenter("es", { granularity: "grapheme" });
-    let n = 0;
-    for (const _ of seg.segment(s)) n++;
-    return n;
-  }
-  return [...s].length;
-}
+const aliasLen = graphemeLen;
 
 const ALIAS_MAX = 10;
 
@@ -26,7 +24,55 @@ const aliasSchema = z
   .refine(
     (s) => aliasLen(s) <= ALIAS_MAX,
     `Máximo ${ALIAS_MAX} caracteres (emojis cuentan como 1)`,
+  )
+  .refine(
+    (s) => isCleanText(s),
+    "Contenido no permitido (HTML, URLs, markdown o caracteres de control)",
+  )
+  .refine(
+    (s) => countEmojis(s) <= 3,
+    "Máximo 3 emojis en el alias",
+  )
+  .refine(
+    (s) => !hasExcessiveRepeat(s, 4),
+    "No repitas el mismo caracter más de 4 veces",
   );
+
+const nombreSchema = z
+  .string()
+  .trim()
+  .min(2, "Mínimo 2 caracteres")
+  .max(40, "Máximo 40 caracteres")
+  .refine(
+    (s) => isCleanText(s),
+    "Contenido no permitido (HTML, URLs, markdown o caracteres de control)",
+  )
+  .refine(
+    (s) => countEmojis(s) <= 2,
+    "Máximo 2 emojis en el nombre",
+  )
+  .refine(
+    (s) => !hasExcessiveRepeat(s, 4),
+    "No repitas el mismo caracter más de 4 veces",
+  );
+
+const descripcionSchema = z
+  .string()
+  .trim()
+  .max(500, "Máximo 500 caracteres")
+  .refine(
+    (s) => !s || isCleanText(s),
+    "Contenido no permitido (HTML, URLs, markdown o caracteres de control)",
+  )
+  .refine(
+    (s) => !s || countEmojis(s) <= 15,
+    "Máximo 15 emojis en la descripción",
+  )
+  .refine(
+    (s) => !s || !hasExcessiveRepeat(s, 5),
+    "No repitas el mismo caracter más de 5 veces seguidas",
+  )
+  .optional();
 
 const colorSchema = z
   .string()
@@ -40,10 +86,10 @@ const displayModeSchema = z.enum(["alias", "logo"]).default("alias");
 
 const crearSchema = z
   .object({
-    nombre: z.string().trim().min(2, "Mínimo 2 caracteres").max(40, "Máximo 40 caracteres"),
+    nombre: nombreSchema,
     alias: aliasSchema,
     display_mode: displayModeSchema,
-    descripcion: z.string().trim().max(500, "Máximo 500 caracteres").optional(),
+    descripcion: descripcionSchema,
     color_hex: colorSchema,
     logo_url: z.url("URL inválida").optional().or(z.literal("")),
   })
@@ -530,10 +576,10 @@ export async function transferirCapitaniaAction(
 const editarSchema = z
   .object({
     id: z.uuid(),
-    nombre: z.string().trim().min(2, "Mínimo 2 caracteres").max(40, "Máximo 40 caracteres"),
+    nombre: nombreSchema,
     alias: aliasSchema,
     display_mode: displayModeSchema,
-    descripcion: z.string().trim().max(500, "Máximo 500 caracteres").optional(),
+    descripcion: descripcionSchema,
     color_hex: colorSchema,
     logo_url: z.url("URL inválida").optional().or(z.literal("")),
   })

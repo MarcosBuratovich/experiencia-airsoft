@@ -6,17 +6,15 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { numeroDisponible } from "@/lib/player-number";
+import {
+  countEmojis,
+  detectBadPattern,
+  graphemeLen,
+  hasExcessiveRepeat,
+  isCleanText,
+} from "@/lib/sanitize-text";
 
-/** Cuenta grafemas (emojis cuentan como 1). */
-function aliasLen(s: string): number {
-  if (typeof Intl !== "undefined" && Intl.Segmenter) {
-    const seg = new Intl.Segmenter("es", { granularity: "grapheme" });
-    let n = 0;
-    for (const _ of seg.segment(s)) n++;
-    return n;
-  }
-  return [...s].length;
-}
+const aliasLen = graphemeLen;
 
 const ALIAS_MAX = 30;
 
@@ -32,6 +30,18 @@ const updateSchema = z.object({
     .refine(
       (s) => s.length === 0 || aliasLen(s) <= ALIAS_MAX,
       `Máximo ${ALIAS_MAX} caracteres`,
+    )
+    .refine(
+      (s) => isCleanText(s),
+      "Contenido no permitido (HTML, URLs, markdown o caracteres de control)",
+    )
+    .refine(
+      (s) => countEmojis(s) <= 5,
+      "Máximo 5 emojis en el alias",
+    )
+    .refine(
+      (s) => !hasExcessiveRepeat(s, 4),
+      "No repitas el mismo caracter más de 4 veces",
     ),
 });
 
