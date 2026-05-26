@@ -1,6 +1,37 @@
 import type { NextConfig } from "next";
 
+// Headers de seguridad (defense-in-depth contra XSS, clickjacking, MIME
+// sniffing, etc.). React ya escapa todo, pero estos headers bloquean
+// vectores adicionales en caso de que algún día se cuele un bug.
+const SECURITY_HEADERS = [
+  // Bloquea el sitio dentro de iframes ajenos (evita clickjacking).
+  { key: "X-Frame-Options", value: "DENY" },
+  // Bloquea que el browser interprete contenido con un MIME distinto al
+  // declarado (evita ataques de polyglot files).
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  // No mandar URL completa como Referer a sites externos (privacy).
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Restringe APIs sensibles (cámara, mic, geo) que no usamos.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  },
+  // Forzar HTTPS por 1 año (Vercel ya lo manda, pero es explícito).
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains; preload",
+  },
+];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: SECURITY_HEADERS,
+      },
+    ];
+  },
   // 301s permanentes de URLs heredadas del sitio anterior en Wix.
   // Google las sigue teniendo en su indice (13 como 404, 13 como crawled).
   // Con permanent: true Google reemplaza la URL vieja por la nueva y nos
