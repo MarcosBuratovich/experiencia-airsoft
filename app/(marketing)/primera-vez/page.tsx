@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingHeader } from "../../_components/marketing-header";
 import { MarketingFooter } from "../../_components/marketing-footer";
 import {
+  APP_PARTIDAS_URL,
   SITE_URL,
   WHATSAPP_NUMBER,
   WHATSAPP_URL,
@@ -426,20 +427,25 @@ export default function PrimeraVezPage() {
               Ya sabés todo
             </h2>
             <p className="text-ash fluid-md mb-8 max-w-[50ch] mx-auto leading-relaxed">
-              No hay mucho más que prepararte. Reservás por WhatsApp y venís.
-              Te ocupás del resto cuando llegues.
+              Reservás online en segundos. Elegís un horario, te creás la
+              cuenta y ya estás anotado para tu primera partida.
             </p>
             <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener"
+              href={APP_PARTIDAS_URL}
               className="btn-wa inline-flex items-center gap-3 px-7 py-4 clip-tag uppercase tracking-wider font-semibold text-ink fluid-sm"
             >
               Reservar mi primera partida
               <span aria-hidden>→</span>
             </a>
-            <p className="mt-5 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
-              {WHATSAPP_NUMBER}
+            <p className="mt-5">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener"
+                className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke hover:text-orange transition"
+              >
+                ¿Dudas? WhatsApp {WHATSAPP_NUMBER}
+              </a>
             </p>
             <div className="mt-10 flex items-center justify-center gap-6 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
               <Link href="/precios" className="hover:text-bone transition">

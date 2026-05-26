@@ -7,6 +7,9 @@ const WHATSAPP_URL = "https://wa.me/5491138689783";
 const INSTAGRAM_URL = "https://www.instagram.com/experienciaairsoft/";
 const YOUTUBE_URL = "https://www.youtube.com/@experienciaairsoft8250";
 const TIENDA_URL = "https://tienda.experienciaairsoft.com";
+const APP_URL = "https://app.experienciaairsoft.com";
+const APP_PARTIDAS_URL = `${APP_URL}/partidas`;
+const APP_PRIVADA_URL = `${APP_URL}/privada/solicitar`;
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -529,7 +532,7 @@ export default function Home() {
             <a href="#aprende" className="hover:text-bone transition-colors">
               Aprendé
             </a>
-            <a href="#reservar" className="hover:text-bone transition-colors">
+            <a href={APP_PARTIDAS_URL} className="hover:text-bone transition-colors">
               Reservar
             </a>
           </nav>
@@ -545,13 +548,10 @@ export default function Home() {
               <span aria-hidden>↗</span>
             </a>
             <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener"
+              href={APP_PARTIDAS_URL}
               className="btn-wa clip-notch inline-flex items-center gap-2 px-[clamp(0.75rem,1.5vw,1.25rem)] py-[clamp(0.55rem,1vw,0.75rem)] fluid-xs tracking-[.2em] uppercase"
             >
-              <WhatsAppIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Reservar</span>
+              <span>Reservar</span>
             </a>
           </div>
         </div>
@@ -634,13 +634,10 @@ export default function Home() {
 
           <div className="mt-[clamp(1.5rem,3vw,2.5rem)] flex flex-wrap justify-center gap-3">
             <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener"
+              href={APP_PARTIDAS_URL}
               className="btn-wa clip-notch inline-flex items-center gap-3 px-7 py-4 fluid-xs tracking-[.22em] uppercase"
             >
-              <WhatsAppIcon className="w-5 h-5" />
-              Reservar por WhatsApp
+              Reservar online
             </a>
             <a
               href="#partidas"
@@ -776,13 +773,11 @@ export default function Home() {
                     {p.time}
                   </p>
                   <a
-                    href={`${WHATSAPP_URL}?text=${encodeURIComponent(p.waText)}`}
-                    target="_blank"
-                    rel="noopener"
+                    href={APP_PARTIDAS_URL}
                     className="inline-flex items-center gap-2 fluid-xs font-mono tracking-[.25em] uppercase text-bone hover:text-orange transition-colors group/btn"
                   >
                     <span className="w-8 h-px bg-bone group-hover/btn:bg-orange group-hover/btn:w-12 transition-all"></span>
-                    Reservar por WhatsApp
+                    Reservar online
                   </a>
                 </div>
               </article>
@@ -1401,22 +1396,30 @@ export default function Home() {
               <span className="text-orange">jugar?</span>
             </h2>
             <p className="mt-8 text-ash fluid-lg reveal reveal-delay-1">
-              Las reservas son{" "}
-              <span className="text-bone">100% por WhatsApp</span>. Escribinos
-              y coordinamos tu partida.
+              Creá tu cuenta y reservá tu lugar en una de las partidas de la
+              semana. Cupo limitado · pago en el local.
             </p>
 
-            <div className="mt-12 flex flex-col items-center gap-6 reveal reveal-delay-2">
+            <div className="mt-12 flex flex-col items-center gap-4 reveal reveal-delay-2">
+              <a
+                href={APP_PARTIDAS_URL}
+                className="btn-wa clip-notch-lg inline-flex items-center gap-4 px-[clamp(2rem,4vw,3rem)] py-[clamp(1.25rem,2vw,1.75rem)] fluid-md tracking-[.2em] uppercase"
+              >
+                Reservar online
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="square" />
+                </svg>
+              </a>
               <a
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener"
-                className="btn-wa clip-notch-lg inline-flex items-center gap-4 px-[clamp(2rem,4vw,3rem)] py-[clamp(1.25rem,2vw,1.75rem)] fluid-md tracking-[.2em] uppercase"
+                className="inline-flex items-center gap-2 fluid-xs font-mono tracking-[.25em] uppercase text-ash hover:text-orange transition-colors"
               >
-                <WhatsAppIcon className="w-7 h-7 md:w-8 md:h-8" />
-                +54 9 11 3868-9783
+                <WhatsAppIcon className="w-4 h-4" />
+                ¿Dudas? Hablamos por WhatsApp
               </a>
-              <p className="font-mono fluid-xs tracking-[.3em] uppercase text-ash">
+              <p className="font-mono fluid-xs tracking-[.3em] uppercase text-smoke mt-4">
                 Gral. Conesa 1858 · C1870 · Buenos Aires
               </p>
             </div>
@@ -1586,7 +1589,7 @@ export default function Home() {
                 </li>
                 <li>
                   <a
-                    href="#reservar"
+                    href={APP_PARTIDAS_URL}
                     className="text-bone hover:text-orange transition-colors"
                   >
                     Reservar

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { TIENDA_URL, WHATSAPP_URL } from "./site-constants";
+import { APP_PARTIDAS_URL, TIENDA_URL } from "./site-constants";
 
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/", label: "Inicio" },
@@ -54,9 +54,7 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
             <span aria-hidden>↗</span>
           </a>
           <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener"
+            href={APP_PARTIDAS_URL}
             className="btn-wa px-4 py-2 clip-tag uppercase tracking-wider font-semibold text-ink fluid-xs"
           >
             Reservar

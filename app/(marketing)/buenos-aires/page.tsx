@@ -7,6 +7,7 @@ import {
   ADDRESS_COUNTRY,
   ADDRESS_POSTAL,
   ADDRESS_STREET,
+  APP_PARTIDAS_URL,
   MAPS_URL,
   SITE_URL,
   WHATSAPP_NUMBER,
@@ -150,12 +151,10 @@ export default function BuenosAiresPage() {
                 <span aria-hidden>→</span>
               </a>
               <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener"
+                href={APP_PARTIDAS_URL}
                 className="btn-ghost inline-flex items-center gap-3 px-5 py-3 clip-tag uppercase tracking-wider fluid-xs"
               >
-                Reservar
+                Reservar online
               </a>
             </div>
           </div>
@@ -308,20 +307,25 @@ export default function BuenosAiresPage() {
               ¿Ya sabés cuándo venís?
             </h2>
             <p className="text-ash fluid-md mb-8 max-w-[50ch] mx-auto leading-relaxed">
-              Reservás por WhatsApp y te confirmamos el día y horario. Cero
-              vueltas, cero línea de espera.
+              Reservás online en segundos. Vas a ver las partidas de la
+              semana, elegís y te anotás. Pagás en el local.
             </p>
             <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener"
+              href={APP_PARTIDAS_URL}
               className="btn-wa inline-flex items-center gap-3 px-7 py-4 clip-tag uppercase tracking-wider font-semibold text-ink fluid-sm"
             >
-              Reservar por WhatsApp
+              Reservar online
               <span aria-hidden>→</span>
             </a>
-            <p className="mt-5 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
-              {WHATSAPP_NUMBER}
+            <p className="mt-5">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener"
+                className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke hover:text-orange transition"
+              >
+                ¿Dudas? WhatsApp {WHATSAPP_NUMBER}
+              </a>
             </p>
             <div className="mt-10 flex items-center justify-center gap-6 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
               <Link href="/precios" className="hover:text-bone transition">

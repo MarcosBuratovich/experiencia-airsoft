@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingHeader } from "../../_components/marketing-header";
 import { MarketingFooter } from "../../_components/marketing-footer";
 import {
+  APP_PRIVADA_URL,
   SITE_URL,
   WHATSAPP_NUMBER,
   WHATSAPP_URL,
@@ -162,17 +163,20 @@ export default function CumpleanosPage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener"
+                href={APP_PRIVADA_URL}
                 className="btn-wa inline-flex items-center gap-2 px-6 py-3 clip-tag uppercase tracking-wider font-semibold text-ink fluid-sm"
               >
                 Reservar cumpleaños
                 <span aria-hidden>→</span>
               </a>
-              <span className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
-                {WHATSAPP_NUMBER}
-              </span>
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener"
+                className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke hover:text-orange transition"
+              >
+                ¿Dudas? WhatsApp {WHATSAPP_NUMBER}
+              </a>
             </div>
           </div>
         </section>
@@ -339,20 +343,25 @@ export default function CumpleanosPage() {
               ¿Cumplís pronto?
             </h2>
             <p className="text-ash fluid-md mb-8 max-w-[55ch] mx-auto leading-relaxed">
-              Mandanos un WhatsApp con la fecha que tenés en mente y armamos el
-              festejo.
+              Elegí la fecha y el horario online — un admin te confirma y
+              armamos el festejo para tu grupo.
             </p>
             <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener"
+              href={APP_PRIVADA_URL}
               className="btn-wa inline-flex items-center gap-3 px-7 py-4 clip-tag uppercase tracking-wider font-semibold text-ink fluid-sm"
             >
               Reservar cumpleaños
               <span aria-hidden>→</span>
             </a>
-            <p className="mt-5 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
-              {WHATSAPP_NUMBER}
+            <p className="mt-5">
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener"
+                className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke hover:text-orange transition"
+              >
+                ¿Algo especial? WhatsApp {WHATSAPP_NUMBER}
+              </a>
             </p>
             <div className="mt-10 flex items-center justify-center flex-wrap gap-x-6 gap-y-3 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
               <Link href="/precios" className="hover:text-bone transition">
