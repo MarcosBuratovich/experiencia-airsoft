@@ -15,7 +15,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/buenos-aires`;
-const TITLE = "Airsoft en Buenos Aires — Experiencia Airsoft CABA";
+const TITLE = "Airsoft en Buenos Aires (CABA)";
 const DESCRIPTION =
   "Centro de airsoft CQB indoor en Buenos Aires. Gral. Conesa 1858, CABA. Partidas martes a domingo, equipo de alquiler incluido, máximo 330 FPS. Cómo llegar, horarios y reservas.";
 

@@ -49,7 +49,9 @@ export function BlogArticleLayout({
       url: SITE_URL,
       logo: {
         "@type": "ImageObject",
-        url: `${SITE_URL}/icon`,
+        url: `${SITE_URL}/icon.png`,
+        width: 512,
+        height: 512,
       },
     },
   };

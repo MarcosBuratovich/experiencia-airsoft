@@ -10,7 +10,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/cumpleanos`;
-const TITLE = "Cumpleaños de airsoft en Buenos Aires (mayores de 18)";
+const TITLE = "Cumpleaños de airsoft en Buenos Aires (+18)";
 const DESCRIPTION =
   "Festejá tu cumpleaños jugando airsoft indoor en CABA. Grupos de 8 a 25 personas, equipo incluido, partidas temáticas. Reservas por WhatsApp.";
 

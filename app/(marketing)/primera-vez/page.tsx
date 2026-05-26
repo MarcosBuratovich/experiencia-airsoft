@@ -10,7 +10,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/primera-vez`;
-const TITLE = "Primera vez jugando airsoft — Guía para principiantes";
+const TITLE = "Primera vez jugando airsoft (guía)";
 const DESCRIPTION =
   "Todo lo que tenés que saber antes de tu primera partida de airsoft en Buenos Aires. Qué llevar, qué esperar, normas de seguridad y cómo reservar. Pensado para quien nunca jugó.";
 

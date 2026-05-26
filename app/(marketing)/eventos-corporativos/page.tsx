@@ -9,7 +9,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/eventos-corporativos`;
-const TITLE = "Eventos corporativos y team building con airsoft en Buenos Aires";
+const TITLE = "Eventos corporativos · team building con airsoft";
 const DESCRIPTION =
   "Organizamos eventos corporativos y team building con airsoft indoor en CABA. Grupos de 10 a 40 personas, equipo incluido, facturación A/B, fotos profesionales opcionales. Reservas por WhatsApp.";
 

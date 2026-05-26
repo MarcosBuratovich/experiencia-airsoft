@@ -6,7 +6,7 @@ import { SITE_URL } from "../../_components/site-constants";
 import { BLOG_POSTS, formatBlogDate } from "./_posts";
 
 const PAGE_URL = `${SITE_URL}/blog`;
-const TITLE = "Blog · Experiencia Airsoft";
+const TITLE = "Blog de airsoft: guías y consejos";
 const DESCRIPTION =
   "Artículos sobre airsoft en Argentina: qué es, equipamiento, reglas, seguridad y guías para principiantes. Material práctico de quienes operan el campo todos los días.";
 

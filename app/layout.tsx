@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Anton, Oswald, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -86,6 +86,11 @@ export const metadata: Metadata = {
   // Next 16 detecta automáticamente app/icon.png y app/apple-icon.png
   // y genera los <link rel="icon"> con sizes correctos.
   category: "sports",
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
   robots: {
     index: true,
     follow: true,
@@ -97,6 +102,18 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Tema acorde a la app: usado por Chrome mobile en la barra de URL y por
+  // PWA en split screen / app icon background.
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#0a0a0a" },
+  ],
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
