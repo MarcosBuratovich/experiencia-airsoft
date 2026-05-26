@@ -12,15 +12,13 @@
   --color-orange-600: #e85a0f;
   --color-orange-300: #ffb085;
 
-  /* Fallback de emojis al final de cada stack: las fuentes web (Oswald,
-   * Inter, JetBrains, Anton) no incluyen glifos de emoji, así que el
-   * browser tiene que caer a la fuente de emoji del sistema. En la
-   * mayoría de casos lo hace automático, pero algunos combos (Linux
-   * sin Noto Color Emoji, Safari viejo, etc.) renderizan los emojis
-   * como texto monocromo. Listar las fuentes de emoji por OS garantiza
-   * color emoji en todas las plataformas. */
-  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-    "Noto Color Emoji", "EmojiOne Color", "Twemoji Mozilla", sans-serif;
+  /* Fallback ESTRICTO de fuentes de emoji — solo fuentes que tienen
+   * GLIFOS DE EMOJI y nada más. NO incluir "Segoe UI Symbol" ni
+   * "Twemoji Mozilla" ni `sans-serif` como fallback: esas tienen
+   * dígitos/letras y al estar antes en la cascada de un stack le
+   * roban el renderizado de los números a Inter/Oswald/JetBrains
+   * (los dígitos terminan saliendo con tracking raro). */
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
   --font-display: var(--font-oswald), system-ui, sans-serif, var(--font-emoji);
   --font-sans: var(--font-inter), system-ui, sans-serif, var(--font-emoji);
   --font-mono: var(--font-jetbrains), ui-monospace, monospace, var(--font-emoji);
