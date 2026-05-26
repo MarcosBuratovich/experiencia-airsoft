@@ -48,3 +48,14 @@ export function fechasSemanaProxima(now: Date = new Date()): string[] {
   const lunes = sumarDias(hoy, offset);
   return Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
 }
+
+/**
+ * Fechas de la SEMANA ACTUAL desde HOY hasta el domingo inclusive.
+ * Si hoy es lunes: 7 fechas (lun a dom). Si hoy es domingo: solo hoy.
+ */
+export function fechasSemanaActualDesdeHoy(now: Date = new Date()): string[] {
+  const hoy = hoyEnArgentina(now);
+  const dow = diaSemanaDe(hoy); // 0=dom,...,6=sab
+  const dias = dow === 0 ? 1 : 8 - dow;
+  return Array.from({ length: dias }, (_, i) => sumarDias(hoy, i));
+}
