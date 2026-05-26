@@ -8,13 +8,20 @@ import { createClient } from "@/lib/supabase/server";
 import { slotRecurrentePisado } from "@/lib/horarios";
 import { modalidadLabel } from "@/lib/format";
 import { inicioPartida } from "@/lib/partidas";
+import {
+  getSlotsEstado,
+  SLOTS_PRIVADA,
+  SLOT_DURACION_MIN,
+} from "@/lib/slots-privada";
+
+const SLOT_HORAS = SLOTS_PRIVADA.map((s) => s.hora) as readonly string[];
 
 const crearSchema = z.object({
   fecha_propuesta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
-  hora_inicio: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
-  duracion_min: z.coerce.number().int().min(60, "Mínimo 60").max(480, "Máximo 480"),
+  hora_inicio: z
+    .string()
+    .refine((v) => SLOT_HORAS.includes(v), "Horario inválido"),
   cupo_estimado: z.coerce.number().int().min(2, "Mínimo 2").max(60, "Máximo 60"),
-  modalidad: z.enum(["dinamica", "tacsim", "speedsoft"]),
   notas: z.string().trim().max(500).optional(),
 });
 
@@ -29,9 +36,7 @@ export async function solicitarPrivadaAction(
   const parsed = crearSchema.safeParse({
     fecha_propuesta: formData.get("fecha_propuesta"),
     hora_inicio: formData.get("hora_inicio"),
-    duracion_min: formData.get("duracion_min"),
     cupo_estimado: formData.get("cupo_estimado"),
-    modalidad: formData.get("modalidad"),
     notas: formData.get("notas") || undefined,
   });
   if (!parsed.success) {
@@ -41,16 +46,16 @@ export async function solicitarPrivadaAction(
   const v = parsed.data;
 
   // La fecha no puede ser en el pasado
-  const inicio = inicioPartida(v.fecha_propuesta, v.hora_inicio);
+  const inicio = inicioPartida(v.fecha_propuesta, v.hora_inicio.slice(0, 5));
   if (inicio.getTime() <= Date.now()) {
     return { errors: { fecha_propuesta: ["La fecha/hora tiene que ser futura"] } };
   }
 
-  // No puede caer en un horario recurrente (las partidas regulares ocupan esos slots)
-  const slot = slotRecurrentePisado(v.fecha_propuesta, v.hora_inicio);
+  // No puede caer en un horario recurrente (los slots reservados para públicas)
+  const slot = slotRecurrentePisado(v.fecha_propuesta, v.hora_inicio.slice(0, 5));
   if (slot) {
     return {
-      message: `Ese horario cae dentro de la agenda regular (${slot.label}). Elegí un horario fuera de los slots recurrentes.`,
+      message: `Ese slot está reservado para partidas públicas (${slot.label}). Pedile a un admin que lo habilite si lo necesitás.`,
     };
   }
 
@@ -58,29 +63,36 @@ export async function solicitarPrivadaAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { message: "No autenticado" };
 
-  const { data: pendiente } = await supabase
-    .from("solicitudes_privada")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("estado", "pendiente")
-    .maybeSingle();
-  if (pendiente) {
-    return { message: "Ya tenés una solicitud pendiente. Esperá la respuesta antes de mandar otra." };
+  // Verificar que el slot siga libre (no se haya pisado entre que vimos el calendario y mandamos).
+  const estados = await getSlotsEstado(supabase, [v.fecha_propuesta]);
+  const estado = estados.get(`${v.fecha_propuesta}|${v.hora_inicio}`);
+  if (estado && estado !== "disponible") {
+    return {
+      message:
+        estado === "pendiente"
+          ? "Alguien acaba de pedir ese slot. Elegí otro."
+          : estado === "publica"
+            ? "Ya hay una partida pública en ese rango."
+            : estado === "aprobada"
+              ? "Ese slot ya tiene una privada confirmada."
+              : "Ese slot no está disponible.",
+    };
   }
 
   const { error } = await supabase.from("solicitudes_privada").insert({
     user_id: user.id,
     fecha_propuesta: v.fecha_propuesta,
-    hora_inicio: `${v.hora_inicio}:00`,
-    duracion_min: v.duracion_min,
+    hora_inicio: v.hora_inicio,
+    duracion_min: SLOT_DURACION_MIN,
     cupo_estimado: v.cupo_estimado,
-    modalidad: v.modalidad,
+    modalidad: "dinamica",
     notas: v.notas || null,
   });
   if (error) return { message: error.message };
 
   revalidatePath("/mis-solicitudes");
   revalidatePath("/admin/solicitudes");
+  revalidatePath("/privada/solicitar");
   redirect("/mis-solicitudes?ok=1");
 }
 

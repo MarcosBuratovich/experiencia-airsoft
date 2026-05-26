@@ -1,23 +1,38 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getSlotsEstado,
+  rangoDeFechasAhora,
+  SLOTS_PRIVADA,
+} from "@/lib/slots-privada";
 import { HORARIOS_RECURRENTES } from "@/lib/horarios";
-import { SolicitarPrivadaForm } from "./solicitar-privada-form";
+import { CalendarioPrivada } from "./calendario-privada";
+
+export const dynamic = "force-dynamic";
+
+const VENTANA_DIAS = 28; // 4 semanas
 
 export default async function SolicitarPrivadaPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: pendiente } = await supabase
-    .from("solicitudes_privada")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("estado", "pendiente")
-    .maybeSingle();
+  const fechas = rangoDeFechasAhora(VENTANA_DIAS);
+  const estados = await getSlotsEstado(supabase, fechas);
+
+  // Plano de slots [{ fecha, hora, estado }] para pasar al cliente.
+  const slots = fechas.flatMap((fecha) =>
+    SLOTS_PRIVADA.map(({ hora, label }) => ({
+      fecha,
+      hora,
+      label,
+      estado: estados.get(`${fecha}|${hora}`) ?? "disponible",
+    })),
+  );
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-3xl mx-auto">
       <Link
         href="/mis-solicitudes"
         className="font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.25em]"
@@ -25,45 +40,45 @@ export default async function SolicitarPrivadaPage() {
         ← Mis solicitudes
       </Link>
       <div className="mt-4 mb-6">
-        <p className="sect-label mb-2">Privada · solicitud</p>
-        <h1 className="sect-title fluid-3xl">Pedir partida privada</h1>
+        <p className="sect-label mb-2">Privada · reservar</p>
+        <h1 className="sect-title fluid-3xl">Reservar partida privada</h1>
         <p className="mt-3 text-ash fluid-sm">
-          Si querés organizar una partida con tu grupo fuera de los horarios
-          regulares, pedilo acá. Un admin la aprueba y te pasamos el link para
-          que la compartas con tus amigos.
+          Cada partida dura 4 horas. Elegí un slot libre y un admin la
+          confirma. Mientras tu solicitud está pendiente, ese slot queda
+          bloqueado para los demás.
         </p>
       </div>
 
-      <div className="mb-6 border border-rail/60 bg-carbon clip-notch p-4">
-        <p className="sect-label mb-2">Horarios que NO se pueden pedir</p>
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">
+        <LegendItem cls="bg-carbon border-rail/60 text-bone" label="Libre" />
+        <LegendItem cls="bg-orange/15 border-orange/50 text-orange" label="Tu pedido" />
+        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Reservado" />
+        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Pendiente" />
+        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Tomado" />
+      </div>
+
+      <CalendarioPrivada slots={slots} />
+
+      <div className="mt-8 border border-rail/60 bg-carbon clip-notch p-4">
+        <p className="sect-label mb-2">Slots reservados para públicas</p>
         <ul className="font-mono fluid-xs text-ash space-y-1">
           {HORARIOS_RECURRENTES.map((s) => (
             <li key={s.label}>· {s.label}</li>
           ))}
         </ul>
         <p className="mt-3 font-mono fluid-xs text-smoke">
-          Estos slots están reservados para las partidas públicas regulares.
+          Aparecen como &ldquo;reservado&rdquo; en el calendario. Si necesitás
+          uno de estos, pedile a un admin que lo habilite.
         </p>
       </div>
+    </div>
+  );
+}
 
-      {pendiente ? (
-        <div className="border border-orange/40 bg-orange/5 clip-notch p-4">
-          <p className="font-mono fluid-xs uppercase tracking-[.25em] text-orange mb-2">
-            Ya tenés una solicitud pendiente
-          </p>
-          <p className="text-ash fluid-sm">
-            Esperá que un admin la resuelva antes de mandar otra.
-          </p>
-          <Link
-            href="/mis-solicitudes"
-            className="btn-ghost mt-4 inline-block px-4 py-2 clip-tag uppercase tracking-wider fluid-xs"
-          >
-            Ver mis solicitudes →
-          </Link>
-        </div>
-      ) : (
-        <SolicitarPrivadaForm />
-      )}
+function LegendItem({ cls, label }: { cls: string; label: string }) {
+  return (
+    <div className={`border px-2 py-1 clip-notch ${cls} text-center`}>
+      {label}
     </div>
   );
 }
