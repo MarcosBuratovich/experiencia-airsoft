@@ -8,13 +8,12 @@ export default async function NuevoClanPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { count } = await supabase
+    .from("profile_clanes")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", user.id);
 
-  if (profile?.clan_id) {
+  if ((count ?? 0) >= 3) {
     redirect("/mi-clan");
   }
 

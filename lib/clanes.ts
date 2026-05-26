@@ -16,9 +16,8 @@ export type ClanChip = {
 
 /**
  * Carga los clanes (hasta 3, ordenados por posicion) de cada profile.
- * Fallback silencioso: si la tabla profile_clanes no existe todavía
- * (migración 6 no aplicada), devuelve un Map vacío y la app sigue
- * funcionando con el modelo viejo de profiles.clan_id.
+ * Si la tabla profile_clanes no existe o falla la query, devuelve un
+ * Map vacío — la UI muestra los nombres sin chip de clan en vez de romper.
  */
 export async function getClanesPorProfileIds(
   supabase: ServerSupabase,

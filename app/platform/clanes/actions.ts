@@ -96,13 +96,13 @@ export async function crearClanAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { message: "No autenticado" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile?.clan_id) {
-    return { message: "Ya pertenecés a un clan. Salí antes de crear uno nuevo." };
+  // Validar que no esté ya en 3 clanes
+  const { count: cuantos } = await supabase
+    .from("profile_clanes")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", user.id);
+  if ((cuantos ?? 0) >= 3) {
+    return { message: "Ya estás en 3 clanes. Salí de uno antes de crear." };
   }
 
   const base = slugify(parsed.data.nombre);
@@ -117,15 +117,6 @@ export async function crearClanAction(
       .maybeSingle();
     if (!existing) break;
     slug = `${base}-${i}`;
-  }
-
-  // Validar que no esté ya en 3 clanes
-  const { count: cuantos } = await supabase
-    .from("profile_clanes")
-    .select("*", { count: "exact", head: true })
-    .eq("profile_id", user.id);
-  if ((cuantos ?? 0) >= 3) {
-    return { message: "Ya estás en 3 clanes. Salí de uno antes de crear." };
   }
 
   const { data: clan, error: insertError } = await supabase
@@ -156,16 +147,13 @@ export async function crearClanAction(
 const MAX_CLANES_POR_USER = 3;
 
 /**
- * Inserta (user, clan) en profile_clanes en la próxima posición libre y
- * mantiene profiles.clan_id en sync (apunta al primer clan del usuario)
- * para compat con código que todavía lee la columna vieja.
+ * Inserta (user, clan) en profile_clanes en la próxima posición libre.
  */
 async function addMemberToClan(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   clanId: string,
 ): Promise<{ error?: string }> {
-  // Buscar posiciones ocupadas
   const { data: actuales } = await supabase
     .from("profile_clanes")
     .select("clan_id, posicion")
@@ -189,8 +177,6 @@ async function addMemberToClan(
     posicion,
   });
   if (error) return { error: error.message };
-
-  await syncProfileClanIdLegacy(supabase, userId);
   return {};
 }
 
@@ -205,27 +191,7 @@ async function removeMemberFromClan(
     .eq("profile_id", userId)
     .eq("clan_id", clanId);
   if (error) return { error: error.message };
-
-  await syncProfileClanIdLegacy(supabase, userId);
   return {};
-}
-
-/** Mantiene profiles.clan_id apuntando al clan de menor posicion (o null). */
-async function syncProfileClanIdLegacy(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-) {
-  const { data } = await supabase
-    .from("profile_clanes")
-    .select("clan_id")
-    .eq("profile_id", userId)
-    .order("posicion")
-    .limit(1)
-    .maybeSingle();
-  await supabase
-    .from("profiles")
-    .update({ clan_id: data?.clan_id ?? null })
-    .eq("id", userId);
 }
 
 export async function solicitarUnirseAction(clanId: string, mensaje?: string) {
@@ -554,8 +520,7 @@ export async function eliminarClanAction(clanId: string) {
     return { error: "No sos capitán de ese clan" };
   }
 
-  // ON DELETE CASCADE en profile_clanes y SET NULL en profiles.clan_id
-  // limpian las membresías automaticamente.
+  // ON DELETE CASCADE en profile_clanes limpia las membresías automaticamente.
   const { error } = await supabase.from("clanes").delete().eq("id", clan.id);
   if (error) return { error: error.message };
 

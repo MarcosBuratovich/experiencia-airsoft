@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getClanesPorProfileIds } from "@/lib/clanes";
 import { PerfilForm } from "./perfil-form";
 
 export default async function PerfilPage() {
@@ -11,22 +12,15 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, nombre, apellido, dni, celular, email, role, socio, player_number, clan_id",
+      "id, nombre, apellido, dni, celular, email, role, socio, player_number",
     )
     .eq("id", user.id)
     .maybeSingle();
 
   if (!profile) redirect("/login");
 
-  let clanNombre: string | null = null;
-  if (profile.clan_id) {
-    const { data } = await supabase
-      .from("clanes")
-      .select("nombre, slug")
-      .eq("id", profile.clan_id)
-      .maybeSingle();
-    clanNombre = data?.nombre ?? null;
-  }
+  const clanesMap = await getClanesPorProfileIds(supabase, [user.id]);
+  const misClanes = clanesMap.get(user.id) ?? [];
 
   const sinNumero = !profile.player_number;
 
@@ -54,7 +48,12 @@ export default async function PerfilPage() {
         <SpecRow label="Email" value={profile.email} />
         <SpecRow label="Rol" value={profile.role} />
         {profile.socio && <SpecRow label="Socio" value="Sí" highlight />}
-        {clanNombre && <SpecRow label="Clan" value={clanNombre} />}
+        {misClanes.length > 0 && (
+          <SpecRow
+            label={misClanes.length === 1 ? "Clan" : `Clanes (${misClanes.length})`}
+            value={misClanes.map((c) => c.nombre).join(" · ")}
+          />
+        )}
       </div>
 
       <PerfilForm
@@ -68,10 +67,10 @@ export default async function PerfilPage() {
 
       <div className="mt-8 pt-6 border-t border-rail/40">
         <Link
-          href="/clanes"
+          href={misClanes.length ? "/mi-clan" : "/clanes"}
           className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke hover:text-orange transition"
         >
-          Ver mi clan →
+          {misClanes.length ? "Mis clanes →" : "Buscar clanes →"}
         </Link>
       </div>
     </div>
