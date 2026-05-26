@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -50,10 +51,11 @@ export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, soli
     >
       <summary className="list-none cursor-pointer p-4 sm:p-5 flex items-center gap-3 flex-wrap">
         {clan.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={clan.logo_url}
             alt={clan.nombre}
+            width={40}
+            height={40}
             className="w-10 h-10 rounded-full object-cover border border-rail/60 shrink-0"
           />
         ) : (

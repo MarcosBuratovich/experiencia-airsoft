@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -82,10 +83,11 @@ export default async function ClanesDirectorio() {
               >
                 <div className="flex items-center gap-3">
                   {c.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={c.logo_url}
                       alt={c.nombre}
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded-full object-cover border border-rail/60 shrink-0"
                     />
                   ) : (

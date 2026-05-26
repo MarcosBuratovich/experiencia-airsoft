@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -87,10 +88,12 @@ export default async function ClanDetail({
 
       <div className="mt-4 mb-6 flex items-center gap-4">
         {clan.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={clan.logo_url}
             alt={clan.nombre}
+            width={56}
+            height={56}
+            priority
             className="w-14 h-14 rounded-full object-cover border border-rail/60 shrink-0"
           />
         ) : (

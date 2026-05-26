@@ -24,6 +24,24 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Permitir que Next/Image optimice imágenes servidas por Supabase
+  // Storage. Sin esto, las imágenes de logos de clanes tenían que usar
+  // <img> crudo (sin lazy load eficiente, sin WebP/AVIF, sin CDN
+  // edge-caching). Con esto, pasan por el optimizador de Next → Vercel
+  // sirve la versión correcta para cada device.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+    // Cache 30 días en la edge (los logos cambian poco; si cambian
+    // sube un archivo nuevo con otro timestamp → URL nuevo).
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+    formats: ["image/avif", "image/webp"],
+  },
   async headers() {
     return [
       {

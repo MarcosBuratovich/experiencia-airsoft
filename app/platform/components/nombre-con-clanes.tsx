@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { colorLeibleSobreInk, type ClanChip } from "@/lib/clanes";
 
 type Size = "xs" | "sm";
@@ -41,14 +42,16 @@ function ClanBadge({ clan, size }: { clan: ClanChip; size: Size }) {
   // Logos un poco más prominentes que el texto del alias (el círculo
   // necesita aire para que se reconozca el escudo del clan).
   const logoPx = size === "xs" ? "w-7 h-7" : "w-8 h-8";
+  const logoSize = size === "xs" ? 28 : 32;
 
   if (showLogo) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={clan.logo_url as string}
         alt={clan.nombre}
         title={clan.nombre}
+        width={logoSize}
+        height={logoSize}
         className={`${logoPx} rounded-full object-cover border border-rail/40 shrink-0`}
       />
     );
@@ -59,11 +62,12 @@ function ClanBadge({ clan, size }: { clan: ClanChip; size: Size }) {
   if (!clan.alias) {
     if (clan.logo_url) {
       return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={clan.logo_url}
           alt={clan.nombre}
           title={clan.nombre}
+          width={logoSize}
+          height={logoSize}
           className={`${logoPx} rounded-full object-cover border border-rail/40 shrink-0`}
         />
       );
