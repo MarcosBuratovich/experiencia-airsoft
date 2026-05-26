@@ -5,6 +5,8 @@ import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { getPreciosConfig } from "@/lib/precios";
 import { estadoEfectivo, inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
+import { getClanesPorProfileIds } from "@/lib/clanes";
+import { NombreConClanes } from "../../components/nombre-con-clanes";
 import { AnotarmeButton } from "./anotarme-button";
 
 export default async function PartidaDetail({
@@ -48,6 +50,11 @@ export default async function PartidaDetail({
   const mine = inscriptos?.find((i) => i.user_id === user.id) ?? null;
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
+
+  const clanesPorUser = await getClanesPorProfileIds(
+    supabase,
+    (inscriptos ?? []).map((i) => i.user_id),
+  );
   const lleno = confirmados.length >= partida.cupo_max;
   const fueraDeVentana = !inscripcionAbierta({
     fecha: partida.fecha,
@@ -157,9 +164,12 @@ export default async function PartidaDetail({
                 key={i.id}
                 className="border-b border-rail/40 py-1.5 flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em] text-ash"
               >
-                <span>
-                  {perfil?.nombre} {perfil?.apellido}
-                </span>
+                <NombreConClanes
+                  nombre={`${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()}
+                  clanes={clanesPorUser.get(i.user_id) ?? []}
+                  size="xs"
+                  nameClassName="text-ash"
+                />
                 {perfil?.socio && (
                   <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
                     Socio
@@ -185,9 +195,12 @@ export default async function PartidaDetail({
                     key={i.id}
                     className="border-b border-rail/40 py-1.5 flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em] text-smoke"
                   >
-                    <span>
-                      {perfil?.nombre} {perfil?.apellido}
-                    </span>
+                    <NombreConClanes
+                      nombre={`${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()}
+                      clanes={clanesPorUser.get(i.user_id) ?? []}
+                      size="xs"
+                      nameClassName="text-smoke"
+                    />
                     {perfil?.socio && (
                       <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
                         Socio

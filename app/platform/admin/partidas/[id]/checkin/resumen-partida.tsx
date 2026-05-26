@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertCheckinAction } from "./actions";
+import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import type { ClanChip } from "@/lib/clanes";
 
 type Checkin = {
   presente: boolean;
@@ -14,6 +16,7 @@ type Checkin = {
 type Fila = {
   id: string;
   nombre: string;
+  clanes: ClanChip[];
   dni: string;
   celular: string;
   socio: boolean;
@@ -160,7 +163,7 @@ export function ResumenPartida({
                   <div className="flex items-start gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-bone">{d.nombre}</span>
+                        <NombreConClanes nombre={d.nombre} clanes={d.clanes} />
                         {d.socio && (
                           <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
                             Socio
@@ -219,7 +222,7 @@ export function ResumenPartida({
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-bone">{r.nombre}</span>
+                    <NombreConClanes nombre={r.nombre} clanes={r.clanes} />
                     {presente ? (
                       <span className="px-1.5 py-0.5 bg-orange/15 border border-orange/40 text-orange font-mono fluid-xs uppercase tracking-[.15em]">
                         Presente

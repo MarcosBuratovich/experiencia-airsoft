@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { estadoEfectivo } from "@/lib/partidas";
 import { getPreciosConfig } from "@/lib/precios";
+import { getClanesPorProfileIds } from "@/lib/clanes";
 import { CheckinList } from "./checkin-list";
 import { InscriptosPreview } from "./inscriptos-preview";
 import { ResumenPartida } from "./resumen-partida";
@@ -61,6 +62,11 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   const inscripciones = inscripcionesRes.data;
   const precios = await getPreciosConfig(supabase);
 
+  const userIds = ((inscripciones ?? []) as unknown as { user_id: string }[]).map(
+    (i) => i.user_id,
+  );
+  const clanesPorUser = await getClanesPorProfileIds(supabase, userIds);
+
   type RowAny = Record<string, unknown> & {
     id: string;
     estado: string;
@@ -94,6 +100,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     return {
       id: i.id,
       nombre: `${p.nombre} ${p.apellido}`,
+      clanes: clanesPorUser.get(i.user_id) ?? [],
       dni: p.dni,
       celular: p.celular,
       socio: p.socio,

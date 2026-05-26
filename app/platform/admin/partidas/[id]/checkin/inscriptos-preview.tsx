@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
+import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import type { ClanChip } from "@/lib/clanes";
 
 type Fila = {
   id: string;
   nombre: string;
+  clanes: ClanChip[];
   dni: string;
   celular: string;
   socio: boolean;
@@ -84,7 +87,7 @@ export function InscriptosPreview({ filas }: { filas: Fila[] }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-bone">{f.nombre}</span>
+                    <NombreConClanes nombre={f.nombre} clanes={f.clanes} />
                     {f.socio && (
                       <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
                         Socio
