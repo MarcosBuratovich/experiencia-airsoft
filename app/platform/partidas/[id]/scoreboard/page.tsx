@@ -43,7 +43,7 @@ export default async function ScoreboardPage({
   const { data: inscripciones } = await supabase
     .from("inscripciones")
     .select(
-      "user_id, profiles!inner(id, nombre, apellido, socio, player_number)",
+      "user_id, profiles!inscripciones_user_id_fkey!inner(id, nombre, apellido, socio, player_number)",
     )
     .eq("partida_id", id)
     .eq("estado", "confirmado");

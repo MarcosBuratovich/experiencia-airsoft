@@ -27,7 +27,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   // caemos al base (las recargas quedan en 0 y se ven después de la
   // migración).
   const SELECT_BASE =
-    "id, estado, user_id, guest_nombre, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)";
+    "id, estado, user_id, guest_nombre, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inscripciones_user_id_fkey(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)";
   const SELECT_EXTENDED =
     SELECT_BASE.replace(
       "precio_total",

@@ -48,7 +48,7 @@ export default async function PartidaDetail({
   const { data: inscriptos } = await supabase
     .from("inscripciones")
     .select(
-      "id, user_id, guest_nombre, estado, posicion_waitlist, profiles(nombre, apellido, alias)",
+      "id, user_id, guest_nombre, estado, posicion_waitlist, profiles!inscripciones_user_id_fkey(nombre, apellido, alias)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
