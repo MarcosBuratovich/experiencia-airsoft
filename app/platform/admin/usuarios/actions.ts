@@ -7,8 +7,35 @@ import {
   PLAYER_NUMBER_REGEX,
 } from "@/lib/player-number";
 
-export async function setSocioAction(userId: string, socio: boolean) {
+/**
+ * Verifica que el caller sea admin/super_admin antes de mutar.
+ * Sin esto, un usuario normal podía llamar estas server actions desde
+ * cualquier client (fetch, dev tools) — la RLS de profiles permite
+ * UPDATE on own row (id = auth.uid()), entonces un user normal podía
+ * updatearse a sí mismo el campo role a "admin" via
+ * setRolAction(miId, "admin"). PRIVILEGE ESCALATION.
+ */
+async function assertAdmin() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado" as const };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    return { error: "No autorizado" as const };
+  }
+  return { supabase };
+}
+
+export async function setSocioAction(userId: string, socio: boolean) {
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
   const patch: { socio: boolean; socio_desde: string | null } = {
     socio,
     socio_desde: socio ? new Date().toISOString().slice(0, 10) : null,
@@ -24,7 +51,10 @@ export async function setRolAction(userId: string, role: string) {
   if (!["jugador", "admin", "super_admin"].includes(role)) {
     return { error: "Rol inválido" };
   }
-  const supabase = await createClient();
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
   const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
   if (error) return { error: error.message };
   revalidatePath("/admin/usuarios");
@@ -33,7 +63,10 @@ export async function setRolAction(userId: string, role: string) {
 
 export async function setCuotaAction(userId: string, cuota_mensual: number) {
   if (cuota_mensual < 0) return { error: "Monto inválido" };
-  const supabase = await createClient();
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
   const { error } = await supabase.from("profiles").update({ cuota_mensual }).eq("id", userId);
   if (error) return { error: error.message };
   revalidatePath("/admin/usuarios");
@@ -45,7 +78,10 @@ export async function setPlayerNumberAction(
   userId: string,
   numero: string | null,
 ) {
-  const supabase = await createClient();
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
   const valor = numero?.trim() ?? "";
 
   // Permitir vaciar (null) — útil si admin necesita reasignar
