@@ -27,7 +27,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   // caemos al base (las recargas quedan en 0 y se ven después de la
   // migración).
   const SELECT_BASE =
-    "id, estado, user_id, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inner(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)";
+    "id, estado, user_id, guest_nombre, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles(nombre, apellido, dni, celular, socio), checkins(presente, pago_estado, pago_monto, nota)";
   const SELECT_EXTENDED =
     SELECT_BASE.replace(
       "precio_total",
@@ -82,9 +82,11 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     precio_alquiler?: number | null;
     precio_recargas?: number | null;
     precio_total?: number | null;
+    guest_nombre?: string | null;
     profiles:
       | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean }
-      | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean }[];
+      | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean }[]
+      | null;
     checkins:
       | { presente: boolean; pago_estado: string | null; pago_monto: number | null; nota: string | null }
       | { presente: boolean; pago_estado: string | null; pago_monto: number | null; nota: string | null }[]
@@ -97,13 +99,18 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     const precio_entrada = i.precio_entrada ?? 0;
     const precio_alquiler = i.precio_alquiler ?? 0;
     const precio_recargas = i.precio_recargas ?? 0;
+    const isGuest = !p;
+    const nombre = isGuest
+      ? `${i.guest_nombre ?? "Guest"}`
+      : `${p?.nombre ?? ""} ${p?.apellido ?? ""}`.trim();
     return {
       id: i.id,
-      nombre: `${p.nombre} ${p.apellido}`,
-      clanes: clanesPorUser.get(i.user_id) ?? [],
-      dni: p.dni,
-      celular: p.celular,
-      socio: p.socio,
+      nombre,
+      isGuest,
+      clanes: i.user_id ? (clanesPorUser.get(i.user_id) ?? []) : [],
+      dni: p?.dni ?? "—",
+      celular: p?.celular ?? "—",
+      socio: p?.socio ?? false,
       tipo_jugador: i.tipo_jugador ?? "byop",
       estado: i.estado,
       alquila_marcadora: !!i.alquila_marcadora,

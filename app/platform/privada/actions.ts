@@ -164,6 +164,7 @@ export async function aprobarPrivadaAction(
       precio: 0,
       notas: solicitud.notas,
       creado_por: userId,
+      organizador_id: solicitud.user_id,
     })
     .select("id, private_token")
     .single();

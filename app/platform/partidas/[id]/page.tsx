@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ import { computarEstadoCuota } from "@/lib/socios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
 import { NombreConClanes } from "../../components/nombre-con-clanes";
 import { AnotarmeButton } from "./anotarme-button";
+import { OrganizadorPanel } from "./organizador-panel";
 
 export default async function PartidaDetail({
   params,
@@ -24,13 +26,13 @@ export default async function PartidaDetail({
       supabase
         .from("partidas")
         .select(
-          "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, notas, visibilidad",
+          "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, notas, visibilidad, organizador_id, private_token",
         )
         .eq("id", id)
         .maybeSingle(),
       supabase
         .from("profiles")
-        .select("socio, socio_desde, cuota_mensual")
+        .select("role, socio, socio_desde, cuota_mensual")
         .eq("id", user.id)
         .maybeSingle(),
       supabase.from("socio_pagos").select("periodo").eq("user_id", user.id),
@@ -38,10 +40,15 @@ export default async function PartidaDetail({
     ]);
   if (!partida) notFound();
 
+  const isAdmin =
+    profile?.role === "admin" || profile?.role === "super_admin";
+  const soyOrganizador =
+    partida.visibilidad === "privada" && partida.organizador_id === user.id;
+
   const { data: inscriptos } = await supabase
     .from("inscripciones")
     .select(
-      "id, user_id, estado, posicion_waitlist, profiles!inner(nombre, apellido, alias)",
+      "id, user_id, guest_nombre, estado, posicion_waitlist, profiles(nombre, apellido, alias)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -53,7 +60,9 @@ export default async function PartidaDetail({
 
   const clanesPorUser = await getClanesPorProfileIds(
     supabase,
-    (inscriptos ?? []).map((i) => i.user_id),
+    (inscriptos ?? [])
+      .map((i) => i.user_id)
+      .filter((id): id is string => !!id),
   );
   const lleno = confirmados.length >= partida.cupo_max;
   const fueraDeVentana = !inscripcionAbierta({
@@ -154,6 +163,26 @@ export default async function PartidaDetail({
         />
       </div>
 
+      {(soyOrganizador || (isAdmin && partida.visibilidad === "privada")) && (
+        <OrganizadorPanel
+          partidaId={partida.id}
+          shareUrl={await buildShareUrl(partida.id, partida.private_token)}
+          inscripciones={(inscriptos ?? []).map((i) => {
+            const perfil = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+            return {
+              id: i.id,
+              nombre:
+                i.guest_nombre?.trim() ||
+                perfil?.alias?.trim() ||
+                `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim() ||
+                "Sin nombre",
+              esGuest: !i.user_id,
+              estado: i.estado,
+            };
+          })}
+        />
+      )}
+
       <div>
         <h2 className="sect-label mb-3">Confirmados ({confirmados.length})</h2>
         <ul className="space-y-1 mb-6">
@@ -166,6 +195,7 @@ export default async function PartidaDetail({
               >
                 <NombreConClanes
                   nombre={
+                    i.guest_nombre?.trim() ||
                     perfil?.alias?.trim() ||
                     `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()
                   }
@@ -195,6 +225,7 @@ export default async function PartidaDetail({
                   >
                     <NombreConClanes
                       nombre={
+                    i.guest_nombre?.trim() ||
                     perfil?.alias?.trim() ||
                     `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()
                   }
@@ -211,4 +242,23 @@ export default async function PartidaDetail({
       </div>
     </div>
   );
+}
+
+/**
+ * Arma la URL pública para compartir una privada. Construye el origen
+ * desde los headers (Vercel respeta host correctamente) y, si hay token,
+ * lo agrega como query param para que un futuro middleware pueda gatear
+ * acceso. Hoy /partidas/[id] no exige el token, pero ya lo dejamos en
+ * el link para no tener que cambiar URLs cuando lo agreguemos.
+ */
+async function buildShareUrl(
+  partidaId: string,
+  token: string | null,
+): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const base = `${proto}://${host}`;
+  const path = `/partidas/${partidaId}${token ? `?t=${token}` : ""}`;
+  return `${base}${path}`;
 }
