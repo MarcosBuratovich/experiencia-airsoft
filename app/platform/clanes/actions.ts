@@ -158,16 +158,22 @@ export async function crearClanAction(
   _prev: CrearClanState,
   formData: FormData,
 ): Promise<CrearClanState> {
-  const parsed = crearSchema.safeParse({
+  const inputRaw = {
     nombre: formData.get("nombre"),
     alias: formData.get("alias") ?? "",
     display_mode: formData.get("display_mode") ?? "alias",
     descripcion: formData.get("descripcion") || undefined,
     color_hex: formData.get("color_hex") || "",
     logo_url: formData.get("logo_url") || undefined,
-  });
+  };
+  const parsed = crearSchema.safeParse(inputRaw);
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    const fieldErrors = z.flattenError(parsed.error).fieldErrors;
+    console.warn("[crearClanAction] validación falló:", {
+      input: { nombre: inputRaw.nombre, alias: inputRaw.alias },
+      errors: fieldErrors,
+    });
+    return { errors: fieldErrors };
   }
 
   const supabase = await createClient();
@@ -230,7 +236,27 @@ export async function crearClanAction(
     .select("id, slug")
     .single();
   if (insertError || !clan) {
-    return { message: insertError?.message ?? "No se pudo crear el clan" };
+    console.error("[crearClanAction] insert falló:", {
+      userId: user.id,
+      nombre: parsed.data.nombre,
+      slug,
+      pgError: insertError,
+    });
+    // Mensajes específicos para los errores de unique index (race
+    // condition con el check de arriba o si la migración hizo crash).
+    if (insertError?.code === "23505") {
+      if (insertError.message.includes("nombre")) {
+        return { errors: { nombre: ["Ya existe un clan con ese nombre."] } };
+      }
+      if (insertError.message.includes("alias")) {
+        return { errors: { alias: ["Ese alias ya está en uso por otro clan."] } };
+      }
+    }
+    return {
+      message:
+        insertError?.message ??
+        "No se pudo crear el clan (error desconocido — escribime por WhatsApp si pasa de nuevo)",
+    };
   }
 
   // Si el logo se subió a pending/ (caso default al crear, porque al

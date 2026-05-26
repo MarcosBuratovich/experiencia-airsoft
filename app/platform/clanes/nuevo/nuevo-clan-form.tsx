@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { crearClanAction, type CrearClanState } from "../actions";
 import { colorLeibleSobreInk, contrasteSobreInk, CONTRAST_MIN } from "@/lib/clanes";
 import { LogoUploader } from "./logo-uploader";
@@ -30,8 +30,51 @@ export function NuevoClanForm() {
   const pasaContraste = contraste >= CONTRAST_MIN;
   const colorRender = colorLeibleSobreInk(color);
 
+  // Resumen de errores para banner. Cuando el server devuelve errores
+  // de campo, queremos que el usuario los vea SI o SI (no se pierda
+  // mientras scrollea).
+  const errorMessages = useMemo(() => {
+    const msgs: { field: string; msg: string }[] = [];
+    if (!state?.errors) return msgs;
+    for (const [field, errs] of Object.entries(state.errors)) {
+      if (errs && errs.length) msgs.push({ field, msg: errs[0] });
+    }
+    return msgs;
+  }, [state?.errors]);
+  const hasErrors = errorMessages.length > 0 || !!state?.message;
+
+  // Cuando aparecen errores nuevos, scrollear arriba para que el banner
+  // sea lo primero que se ve.
+  useEffect(() => {
+    if (hasErrors && typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [hasErrors, state]);
+
   return (
     <form action={action} className="space-y-4">
+      {hasErrors && (
+        <div className="border border-orange-300/60 bg-orange-300/10 clip-notch p-4">
+          <p className="sect-label text-orange-300 mb-2">// Revisá esto</p>
+          {state?.message && (
+            <p className="font-sans fluid-sm text-orange-300 mb-2">
+              {state.message}
+            </p>
+          )}
+          {errorMessages.length > 0 && (
+            <ul className="space-y-1 font-mono fluid-xs text-orange-300">
+              {errorMessages.map((e) => (
+                <li key={e.field}>
+                  <span className="uppercase tracking-[.2em] mr-2">
+                    {e.field}:
+                  </span>
+                  <span className="normal-case tracking-normal">{e.msg}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <Field
         label="Nombre del clan"
         name="nombre"
