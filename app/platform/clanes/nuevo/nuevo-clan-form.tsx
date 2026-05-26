@@ -1,13 +1,33 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { crearClanAction, type CrearClanState } from "../actions";
+import { colorLeibleSobreInk, contrasteSobreInk, CONTRAST_MIN } from "@/lib/clanes";
 
 const initial: CrearClanState = undefined;
+
+const ALIAS_MAX = 10;
+
+function aliasLen(s: string): number {
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    const seg = new Intl.Segmenter("es", { granularity: "grapheme" });
+    let n = 0;
+    for (const _ of seg.segment(s)) n++;
+    return n;
+  }
+  return [...s].length;
+}
 
 export function NuevoClanForm() {
   const [state, action, pending] = useActionState(crearClanAction, initial);
   const [color, setColor] = useState("#ff6b1a");
+  const [alias, setAlias] = useState("");
+  const [displayMode, setDisplayMode] = useState<"alias" | "logo">("alias");
+
+  const aliasN = aliasLen(alias);
+  const contraste = useMemo(() => contrasteSobreInk(color), [color]);
+  const pasaContraste = contraste >= CONTRAST_MIN;
+  const colorRender = colorLeibleSobreInk(color);
 
   return (
     <form action={action} className="space-y-4">
@@ -17,6 +37,60 @@ export function NuevoClanForm() {
         placeholder="Ej: Lobos de Acero"
         error={state?.errors?.nombre}
       />
+
+      <label className="block">
+        <span className="sect-label mb-1 block">
+          Alias (máx {ALIAS_MAX} chars · emojis ok)
+        </span>
+        <div className="relative">
+          <input
+            name="alias"
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            placeholder="WOLF · 🦊PRO · etc."
+            maxLength={ALIAS_MAX * 4}
+            className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
+          />
+          <span
+            className={`absolute right-3 top-1/2 -translate-y-1/2 font-mono fluid-xs ${
+              aliasN > ALIAS_MAX ? "text-orange-300" : "text-smoke"
+            }`}
+          >
+            {aliasN}/{ALIAS_MAX}
+          </span>
+        </div>
+        <p className="mt-1 font-mono fluid-xs text-smoke">
+          Es lo que aparece al lado del nombre del jugador en partidas. Ej:{" "}
+          <span style={{ color: colorRender }}>[{alias || "WOLF"}]</span> Juan
+          Perez
+        </p>
+        {state?.errors?.alias?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.alias[0]}
+          </span>
+        )}
+      </label>
+
+      <label className="block">
+        <span className="sect-label mb-1 block">Mostrar en partidas como</span>
+        <div className="flex gap-2 flex-wrap">
+          {(["alias", "logo"] as const).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setDisplayMode(opt)}
+              className={`px-3 py-1.5 clip-tag font-mono fluid-xs uppercase tracking-[.2em] cursor-pointer ${
+                displayMode === opt
+                  ? "bg-orange text-ink"
+                  : "border border-rail/60 text-ash hover:text-bone"
+              }`}
+            >
+              {opt === "alias" ? "Alias [TEXTO]" : "Logo circular"}
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="display_mode" value={displayMode} />
+      </label>
 
       <label className="block">
         <span className="sect-label mb-1 block">Descripción (opcional)</span>
@@ -36,7 +110,7 @@ export function NuevoClanForm() {
 
       <label className="block">
         <span className="sect-label mb-1 block">Color del clan</span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <input
             type="color"
             name="color_hex"
@@ -44,8 +118,32 @@ export function NuevoClanForm() {
             onChange={(e) => setColor(e.target.value)}
             className="w-12 h-10 cursor-pointer bg-transparent border border-rail/60"
           />
-          <span className="font-mono fluid-xs text-ash">{color.toUpperCase()}</span>
+          <span className="font-mono fluid-xs text-ash">
+            {color.toUpperCase()}
+          </span>
+          <span
+            className={`font-mono fluid-xs uppercase tracking-[.18em] ${
+              pasaContraste ? "text-green-400" : "text-orange-300"
+            }`}
+          >
+            {pasaContraste ? "✓ legible" : "✗ poco contraste"} ·{" "}
+            {contraste.toFixed(1)}:1
+          </span>
         </div>
+        <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 border border-rail/60 bg-ink clip-notch">
+          <span
+            style={{ color: pasaContraste ? color : colorRender }}
+            className="font-mono fluid-xs tracking-[.18em] uppercase"
+          >
+            [{alias || "WOLF"}]
+          </span>
+          <span className="text-bone font-sans">Juan Perez</span>
+        </div>
+        <p className="mt-1 font-mono fluid-xs text-smoke">
+          Mínimo {CONTRAST_MIN}:1 sobre el fondo oscuro (WCAG AA). Si es muy
+          oscuro, el chip va a caer a beige en producción y vas a perder el
+          color.
+        </p>
         {state?.errors?.color_hex?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {state.errors.color_hex[0]}
@@ -67,7 +165,7 @@ export function NuevoClanForm() {
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !pasaContraste || aliasN > ALIAS_MAX}
         className="btn-wa w-full py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
       >
         {pending ? "Creando..." : "Crear clan"}

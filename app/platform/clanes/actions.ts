@@ -4,17 +4,63 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { pasaContrasteInk } from "@/lib/clanes";
 
-const crearSchema = z.object({
-  nombre: z.string().trim().min(2, "Mínimo 2 caracteres").max(40, "Máximo 40 caracteres"),
-  descripcion: z.string().trim().max(500, "Máximo 500 caracteres").optional(),
-  color_hex: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, "Formato #RRGGBB")
-    .optional()
-    .or(z.literal("")),
-  logo_url: z.url("URL inválida").optional().or(z.literal("")),
-});
+/** Cuenta grafemas (emojis cuentan como 1, no como N code points). */
+function aliasLen(s: string): number {
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    const seg = new Intl.Segmenter("es", { granularity: "grapheme" });
+    let n = 0;
+    for (const _ of seg.segment(s)) n++;
+    return n;
+  }
+  return [...s].length;
+}
+
+const ALIAS_MAX = 10;
+
+const aliasSchema = z
+  .string()
+  .trim()
+  .refine((s) => s.length === 0 || aliasLen(s) >= 1, "Alias no puede estar vacío")
+  .refine(
+    (s) => aliasLen(s) <= ALIAS_MAX,
+    `Máximo ${ALIAS_MAX} caracteres (emojis cuentan como 1)`,
+  );
+
+const colorSchema = z
+  .string()
+  .regex(/^#[0-9A-Fa-f]{6}$/, "Formato #RRGGBB")
+  .refine(
+    (v) => pasaContrasteInk(v),
+    "Color muy oscuro: no se va a leer sobre el fondo de la app. Elegí un color más claro.",
+  );
+
+const displayModeSchema = z.enum(["alias", "logo"]).default("alias");
+
+const crearSchema = z
+  .object({
+    nombre: z.string().trim().min(2, "Mínimo 2 caracteres").max(40, "Máximo 40 caracteres"),
+    alias: aliasSchema,
+    display_mode: displayModeSchema,
+    descripcion: z.string().trim().max(500, "Máximo 500 caracteres").optional(),
+    color_hex: colorSchema,
+    logo_url: z.url("URL inválida").optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => data.display_mode !== "alias" || aliasLen(data.alias) >= 1,
+    {
+      message: "El alias es obligatorio si elegís mostrarlo como texto",
+      path: ["alias"],
+    },
+  )
+  .refine(
+    (data) => data.display_mode !== "logo" || !!(data.logo_url && data.logo_url.length > 0),
+    {
+      message: "Subí o cargá una URL de logo si elegís mostrar imagen",
+      path: ["logo_url"],
+    },
+  );
 
 export type CrearClanState =
   | { errors?: Partial<Record<keyof z.infer<typeof crearSchema>, string[]>>; message?: string }
@@ -36,8 +82,10 @@ export async function crearClanAction(
 ): Promise<CrearClanState> {
   const parsed = crearSchema.safeParse({
     nombre: formData.get("nombre"),
+    alias: formData.get("alias") ?? "",
+    display_mode: formData.get("display_mode") ?? "alias",
     descripcion: formData.get("descripcion") || undefined,
-    color_hex: formData.get("color_hex") || undefined,
+    color_hex: formData.get("color_hex") || "",
     logo_url: formData.get("logo_url") || undefined,
   });
   if (!parsed.success) {
@@ -76,8 +124,10 @@ export async function crearClanAction(
     .insert({
       slug,
       nombre: parsed.data.nombre,
+      alias: parsed.data.alias || null,
+      display_mode: parsed.data.display_mode,
       descripcion: parsed.data.descripcion || null,
-      color_hex: parsed.data.color_hex || null,
+      color_hex: parsed.data.color_hex,
       logo_url: parsed.data.logo_url || null,
       capitan_id: user.id,
     })
