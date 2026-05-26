@@ -6,6 +6,7 @@ import { ScrollFx } from "./scroll-fx";
 const WHATSAPP_URL = "https://wa.me/5491138689783";
 const INSTAGRAM_URL = "https://www.instagram.com/experienciaairsoft/";
 const YOUTUBE_URL = "https://www.youtube.com/@experienciaairsoft8250";
+const TIENDA_URL = "https://tienda.experienciaairsoft.com";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -530,6 +531,15 @@ export default function Home() {
             </a>
             <a href="#reservar" className="hover:text-bone transition-colors">
               Reservar
+            </a>
+            <a
+              href={TIENDA_URL}
+              target="_blank"
+              rel="noopener"
+              className="hover:text-bone transition-colors"
+            >
+              Tienda
+              <span aria-hidden className="ml-1 text-smoke">↗</span>
             </a>
           </nav>
 
@@ -1639,6 +1649,17 @@ export default function Home() {
                   >
                     Airsoft vs paintball
                   </Link>
+                </li>
+                <li>
+                  <a
+                    href={TIENDA_URL}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Tienda
+                    <span aria-hidden className="ml-1 text-smoke">↗</span>
+                  </a>
                 </li>
               </ul>
             </div>
