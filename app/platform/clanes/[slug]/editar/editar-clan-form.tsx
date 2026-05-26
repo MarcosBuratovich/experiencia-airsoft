@@ -38,12 +38,25 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
   const [color, setColor] = useState(clan.color_hex);
   const [alias, setAlias] = useState(clan.alias);
   const [descripcion, setDescripcion] = useState(clan.descripcion);
+  const [logoUrl, setLogoUrl] = useState(clan.logo_url ?? "");
   const [displayMode, setDisplayMode] = useState<"alias" | "logo">(clan.display_mode);
 
   const aliasN = aliasLen(alias);
   const contraste = useMemo(() => contrasteSobreInk(color), [color]);
   const pasaContraste = contraste >= CONTRAST_MIN;
   const colorRender = colorLeibleSobreInk(color);
+
+  // Checklist client-side (lo mismo que en crear). El submit no se
+  // habilita hasta cumplir todo.
+  type Req = { ok: boolean; label: string };
+  const requisitos: Req[] = [
+    { ok: nombre.trim().length >= 2 && nombre.trim().length <= 40, label: "Nombre entre 2 y 40 caracteres" },
+    { ok: pasaContraste, label: "Color con contraste suficiente (verde ✓ en el preview)" },
+    ...(displayMode === "alias"
+      ? [{ ok: aliasN >= 1 && aliasN <= ALIAS_MAX, label: `Alias entre 1 y ${ALIAS_MAX} caracteres` }]
+      : [{ ok: !!logoUrl, label: "Logo cargado (modo Logo circular)" }]),
+  ];
+  const allReqsMet = requisitos.every((r) => r.ok);
 
   // Cuando el server responde ok, volvemos a la vista del clan
   if (state?.ok) {
@@ -203,7 +216,11 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
 
       <div>
         <span className="sect-label mb-1 block">Logo</span>
-        <LogoUploader initialUrl={clan.logo_url} pathHint={clan.slug} />
+        <LogoUploader
+          initialUrl={clan.logo_url}
+          pathHint={clan.slug}
+          onUrlChange={setLogoUrl}
+        />
         {state?.errors?.logo_url?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {state.errors.logo_url[0]}
@@ -215,12 +232,41 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
         <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
       )}
 
+      <div
+        className={`border ${
+          allReqsMet ? "border-green-500/40 bg-green-500/5" : "border-rail/60 bg-carbon"
+        } clip-notch p-4`}
+      >
+        <p className="sect-label mb-2">
+          {allReqsMet ? "// Listo para guardar" : "// Requisitos para guardar"}
+        </p>
+        <ul className="space-y-1.5 font-mono fluid-xs">
+          {requisitos.map((r) => (
+            <li
+              key={r.label}
+              className={`flex items-center gap-2 ${
+                r.ok ? "text-green-400" : "text-smoke"
+              }`}
+            >
+              <span aria-hidden className="w-4 text-center">
+                {r.ok ? "✓" : "·"}
+              </span>
+              <span>{r.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <button
         type="submit"
-        disabled={pending || !pasaContraste || aliasN > ALIAS_MAX}
+        disabled={pending || !allReqsMet}
         className="btn-wa w-full py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
       >
-        {pending ? "Guardando..." : "Guardar cambios"}
+        {pending
+          ? "Guardando..."
+          : allReqsMet
+            ? "Guardar cambios"
+            : "Completá los requisitos para guardar"}
       </button>
     </form>
   );

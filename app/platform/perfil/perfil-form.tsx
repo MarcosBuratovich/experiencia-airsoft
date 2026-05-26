@@ -19,10 +19,14 @@ function aliasLen(s: string): number {
 }
 
 export function PerfilForm({
+  nombre: initialNombre,
+  apellido: initialApellido,
   celular,
   playerNumber,
   alias: initialAlias,
 }: {
+  nombre: string;
+  apellido: string;
   celular: string;
   playerNumber: string | null;
   alias: string | null;
@@ -31,11 +35,48 @@ export function PerfilForm({
     actualizarPerfilAction,
     initial,
   );
+  const [nombre, setNombre] = useState(initialNombre);
+  const [apellido, setApellido] = useState(initialApellido);
   const [alias, setAlias] = useState(initialAlias ?? "");
   const aliasN = aliasLen(alias);
 
   return (
     <form action={action} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="sect-label mb-1 block">Nombre</span>
+          <input
+            name="nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            maxLength={50}
+            required
+            className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
+          />
+          {state?.errors?.nombre?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.nombre[0]}
+            </span>
+          )}
+        </label>
+        <label className="block">
+          <span className="sect-label mb-1 block">Apellido</span>
+          <input
+            name="apellido"
+            value={apellido}
+            onChange={(e) => setApellido(e.target.value)}
+            maxLength={50}
+            required
+            className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
+          />
+          {state?.errors?.apellido?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.apellido[0]}
+            </span>
+          )}
+        </label>
+      </div>
+
       <label className="block">
         <span className="sect-label mb-1 block">
           Alias (opcional · cómo te ven en partidas)

@@ -45,7 +45,6 @@ export default async function PerfilPage() {
       )}
 
       <div className="mb-6 border border-rail/60 bg-carbon clip-notch p-4 sm:p-5 space-y-1">
-        <SpecRow label="Nombre" value={`${profile.nombre} ${profile.apellido}`} />
         <SpecRow label="DNI" value={profile.dni} />
         <SpecRow label="Email" value={profile.email} />
         <SpecRow label="Rol" value={profile.role} />
@@ -59,13 +58,15 @@ export default async function PerfilPage() {
       </div>
 
       <PerfilForm
+        nombre={profile.nombre}
+        apellido={profile.apellido}
         celular={profile.celular}
         playerNumber={profile.player_number}
         alias={profile.alias ?? null}
       />
 
       <p className="mt-6 font-mono fluid-xs text-smoke">
-        Para cambiar nombre, apellido, DNI o email, hablá con un admin.
+        Para cambiar tu DNI o email, hablá con un admin.
       </p>
 
       <div className="mt-8 pt-6 border-t border-rail/40">

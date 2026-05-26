@@ -18,7 +18,34 @@ const aliasLen = graphemeLen;
 
 const ALIAS_MAX = 30;
 
+// Validación de nombre/apellido reales: solo letras (con acentos),
+// espacios, guiones y apóstrofes. Sin emojis, sin URLs, sin HTML.
+const NOMBRE_REAL_REGEX = /^[\p{L}][\p{L}\s'.-]*$/u;
+const nombreRealSchema = z
+  .string()
+  .trim()
+  .min(2, "Mínimo 2 caracteres")
+  .max(50, "Máximo 50 caracteres")
+  .regex(
+    NOMBRE_REAL_REGEX,
+    "Solo letras, espacios, guiones y apóstrofes",
+  )
+  .refine(
+    (s) => isCleanText(s),
+    "Contenido no permitido",
+  )
+  .refine(
+    (s) => countEmojis(s) === 0,
+    "No uses emojis en el nombre real (usá el alias para eso)",
+  )
+  .refine(
+    (s) => !hasExcessiveRepeat(s, 3),
+    "No repitas el mismo caracter más de 3 veces",
+  );
+
 const updateSchema = z.object({
+  nombre: nombreRealSchema,
+  apellido: nombreRealSchema,
   celular: z.string().trim().min(8, "Celular inválido"),
   player_number: z
     .string()
@@ -58,6 +85,8 @@ export async function actualizarPerfilAction(
   formData: FormData,
 ): Promise<ActualizarPerfilState> {
   const parsed = updateSchema.safeParse({
+    nombre: formData.get("nombre"),
+    apellido: formData.get("apellido"),
     celular: formData.get("celular"),
     player_number: formData.get("player_number"),
     alias: formData.get("alias") ?? "",
@@ -85,6 +114,8 @@ export async function actualizarPerfilAction(
   const { error } = await supabase
     .from("profiles")
     .update({
+      nombre: parsed.data.nombre,
+      apellido: parsed.data.apellido,
       celular: parsed.data.celular,
       player_number: parsed.data.player_number,
       alias: parsed.data.alias.length === 0 ? null : parsed.data.alias,
