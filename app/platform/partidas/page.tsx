@@ -26,25 +26,41 @@ export default async function PartidasPage() {
   // Las "en curso" caen acá porque su fecha es hoy aunque ya hayan empezado.
   const desde = new Date().toISOString().slice(0, 10);
 
-  const [{ data: partidas }, { data: profile }, { data: pagosCuota }] =
-    await Promise.all([
-      supabase
-        .from("partidas")
-        .select(
-          "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, inscripciones(count)",
-        )
-        .eq("visibilidad", "publica")
-        .neq("estado", "cancelada")
-        .gte("fecha", desde)
-        .order("fecha", { ascending: true })
-        .order("hora_inicio", { ascending: true }),
-      supabase
-        .from("profiles")
-        .select("socio, socio_desde, cuota_mensual")
-        .eq("id", user.id)
-        .maybeSingle(),
-      supabase.from("socio_pagos").select("periodo").eq("user_id", user.id),
-    ]);
+  const [
+    { data: partidas },
+    { data: privadas },
+    { data: profile },
+    { data: pagosCuota },
+  ] = await Promise.all([
+    supabase
+      .from("partidas")
+      .select(
+        "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, inscripciones(count)",
+      )
+      .eq("visibilidad", "publica")
+      .neq("estado", "cancelada")
+      .gte("fecha", desde)
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true }),
+    // Privadas accesibles para el user: organiza o está inscripto.
+    // RLS de partidas ya filtra esto (visibilidad='privada' + org/inscripto).
+    supabase
+      .from("partidas")
+      .select(
+        "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, organizador_id, inscripciones(count)",
+      )
+      .eq("visibilidad", "privada")
+      .neq("estado", "cancelada")
+      .gte("fecha", desde)
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("socio, socio_desde, cuota_mensual")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.from("socio_pagos").select("periodo").eq("user_id", user.id),
+  ]);
 
   const cuota = computarEstadoCuota(
     {
@@ -79,6 +95,30 @@ export default async function PartidasPage() {
     .filter((c) => c.estadoFx === "futura")
     .sort((a, b) => cmpFechaHora(a, b));
 
+  type PrivadaCard = PartidaCard & { soyOrganizador: boolean };
+  const privadasCards: PrivadaCard[] = (privadas ?? [])
+    .map((p) => ({
+      id: p.id,
+      fecha: p.fecha,
+      hora_inicio: p.hora_inicio,
+      duracion_min: p.duracion_min,
+      modalidad: p.modalidad,
+      cupo_max: p.cupo_max,
+      estado: p.estado,
+      inscriptos: Array.isArray(p.inscripciones)
+        ? (p.inscripciones[0]?.count ?? 0)
+        : 0,
+      estadoFx: estadoEfectivo({
+        fecha: p.fecha,
+        hora_inicio: p.hora_inicio,
+        duracion_min: p.duracion_min,
+        estado: p.estado,
+      }),
+      soyOrganizador: p.organizador_id === user.id,
+    }))
+    .filter((c) => c.estadoFx !== "pasada" && c.estadoFx !== "cancelada")
+    .sort((a, b) => cmpFechaHora(a, b));
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
@@ -108,6 +148,19 @@ export default async function PartidasPage() {
         <Section title="En curso" count={enCurso.length} accent>
           {enCurso.map((p) => (
             <PartidaRow key={p.id} p={p} variant="en_curso" />
+          ))}
+        </Section>
+      )}
+
+      {privadasCards.length > 0 && (
+        <Section title="Mis privadas" count={privadasCards.length}>
+          {privadasCards.map((p) => (
+            <PartidaRow
+              key={p.id}
+              p={p}
+              variant="privada"
+              soyOrganizador={p.soyOrganizador}
+            />
           ))}
         </Section>
       )}
@@ -221,9 +274,11 @@ function Section({
 function PartidaRow({
   p,
   variant,
+  soyOrganizador,
 }: {
   p: PartidaCard;
-  variant: "abierta" | "en_curso";
+  variant: "abierta" | "en_curso" | "privada";
+  soyOrganizador?: boolean;
 }) {
   const lleno = p.inscriptos >= p.cupo_max;
   const inscripcionesCerradas = p.estado === "cerrada";
@@ -231,7 +286,26 @@ function PartidaRow({
   const borderColor =
     variant === "en_curso"
       ? "border-orange"
-      : "border-rail/60 hover:border-orange";
+      : variant === "privada"
+        ? "border-bone/30 hover:border-bone"
+        : "border-rail/60 hover:border-orange";
+
+  const ctaLabel =
+    variant === "privada"
+      ? soyOrganizador
+        ? "Organizar →"
+        : "Ver →"
+      : variant === "en_curso"
+        ? lleno
+          ? "Lleno"
+          : inscripcionesCerradas
+            ? "Ver →"
+            : "Anotarme →"
+        : inscripcionesCerradas
+          ? "Ver →"
+          : lleno
+            ? "Espera →"
+            : "Anotarme →";
 
   return (
     <Link
@@ -258,6 +332,16 @@ function PartidaRow({
               En curso
             </span>
           )}
+          {variant === "privada" && (
+            <span className="px-1.5 py-0.5 border border-bone/30 text-bone font-mono fluid-xs uppercase tracking-[.18em]">
+              Privada
+            </span>
+          )}
+          {variant === "privada" && soyOrganizador && (
+            <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.18em]">
+              Organizás
+            </span>
+          )}
           {variant === "abierta" && inscripcionesCerradas && (
             <span className="px-1.5 py-0.5 border border-orange-300/40 text-orange-300 font-mono fluid-xs uppercase tracking-[.18em]">
               Inscripción cerrada
@@ -275,17 +359,7 @@ function PartidaRow({
           {p.inscriptos}/{p.cupo_max}
         </p>
         <p className="font-mono fluid-xs uppercase tracking-[.22em] mt-1 text-orange group-hover:underline">
-          {variant === "en_curso"
-            ? lleno
-              ? "Lleno"
-              : inscripcionesCerradas
-                ? "Ver →"
-                : "Anotarme →"
-            : inscripcionesCerradas
-              ? "Ver →"
-              : lleno
-                ? "Espera →"
-                : "Anotarme →"}
+          {ctaLabel}
         </p>
       </div>
     </Link>
