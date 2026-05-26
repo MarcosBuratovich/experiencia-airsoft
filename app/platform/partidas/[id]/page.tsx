@@ -47,23 +47,33 @@ export default async function PartidaDetail({
 
   const { data: inscriptos } = await supabase
     .from("inscripciones")
-    .select(
-      "id, user_id, guest_nombre, estado, posicion_waitlist, profiles!inscripciones_user_id_fkey(nombre, apellido, alias)",
-    )
+    .select("id, user_id, guest_nombre, estado, posicion_waitlist")
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
     .order("created_at");
+
+  const userIds = (inscriptos ?? [])
+    .map((i) => i.user_id)
+    .filter((id): id is string => !!id);
+
+  // Fetch profiles via profiles_publicos (bypassea RLS de profiles, solo
+  // expone campos no sensibles: nombre, apellido, alias). Así un jugador
+  // ve el roster aunque no sea admin ni dueño de los perfiles.
+  const { data: pubProfiles } = userIds.length
+    ? await supabase
+        .from("profiles_publicos")
+        .select("id, nombre, apellido, alias")
+        .in("id", userIds)
+    : { data: [] as { id: string; nombre: string; apellido: string; alias: string | null }[] };
+  const profileById = new Map(
+    (pubProfiles ?? []).map((p) => [p.id, p] as const),
+  );
 
   const mine = inscriptos?.find((i) => i.user_id === user.id) ?? null;
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
 
-  const clanesPorUser = await getClanesPorProfileIds(
-    supabase,
-    (inscriptos ?? [])
-      .map((i) => i.user_id)
-      .filter((id): id is string => !!id),
-  );
+  const clanesPorUser = await getClanesPorProfileIds(supabase, userIds);
   const lleno = confirmados.length >= partida.cupo_max;
   const fueraDeVentana = !inscripcionAbierta({
     fecha: partida.fecha,
@@ -168,7 +178,7 @@ export default async function PartidaDetail({
           partidaId={partida.id}
           shareUrl={await buildShareUrl(partida.id, partida.private_token)}
           inscripciones={(inscriptos ?? []).map((i) => {
-            const perfil = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+            const perfil = i.user_id ? profileById.get(i.user_id) : null;
             return {
               id: i.id,
               nombre:
@@ -187,7 +197,7 @@ export default async function PartidaDetail({
         <h2 className="sect-label mb-3">Confirmados ({confirmados.length})</h2>
         <ul className="space-y-1 mb-6">
           {confirmados.map((i) => {
-            const perfil = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+            const perfil = i.user_id ? profileById.get(i.user_id) : null;
             return (
               <li
                 key={i.id}
@@ -217,7 +227,7 @@ export default async function PartidaDetail({
             <h3 className="sect-label mb-3">Lista de espera ({waitlist.length})</h3>
             <ul className="space-y-1">
               {waitlist.map((i) => {
-                const perfil = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+                const perfil = i.user_id ? profileById.get(i.user_id) : null;
                 return (
                   <li
                     key={i.id}

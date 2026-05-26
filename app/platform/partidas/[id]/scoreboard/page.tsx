@@ -39,14 +39,24 @@ export default async function ScoreboardPage({
     .maybeSingle();
   if (!partida) notFound();
 
-  // Inscriptos confirmados (incluyendo los que no tienen eventos)
+  // Inscriptos confirmados (sin embedded join — profiles_publicos abajo).
   const { data: inscripciones } = await supabase
     .from("inscripciones")
-    .select(
-      "user_id, profiles!inscripciones_user_id_fkey!inner(id, nombre, apellido, socio, player_number)",
-    )
+    .select("user_id")
     .eq("partida_id", id)
     .eq("estado", "confirmado");
+
+  // Filtrar guests (sin user_id) y traer perfiles desde la vista pública.
+  const userIds = (inscripciones ?? [])
+    .map((i) => i.user_id)
+    .filter((id): id is string => !!id);
+  const { data: perfiles } = userIds.length
+    ? await supabase
+        .from("profiles_publicos")
+        .select("id, nombre, apellido, socio, player_number")
+        .in("id", userIds)
+    : { data: [] as { id: string; nombre: string; apellido: string; socio: boolean; player_number: string | null }[] };
+  const perfilById = new Map((perfiles ?? []).map((p) => [p.id, p]));
 
   // Stats por jugador desde la vista
   const statsRows = await getScoreboardPartida(supabase, id);
@@ -54,15 +64,15 @@ export default async function ScoreboardPage({
   for (const s of statsRows) statsByUser.set(s.user_id, s);
 
   // Armar filas
-  const filas: Fila[] = (inscripciones ?? []).map((i) => {
-    const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
-    const s = statsByUser.get(i.user_id);
+  const filas: Fila[] = userIds.map((uid) => {
+    const p = perfilById.get(uid);
+    const s = statsByUser.get(uid);
     const eliminaciones = s?.eliminaciones ?? 0;
     const capturas = s?.capturas ?? 0;
     const reanimaciones = s?.reanimaciones ?? 0;
     const plantos = s?.plantos ?? 0;
     return {
-      user_id: i.user_id,
+      user_id: uid,
       player_number: p?.player_number ?? null,
       nombre: p?.nombre ?? "",
       apellido: p?.apellido ?? "",
