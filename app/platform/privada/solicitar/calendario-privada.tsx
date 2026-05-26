@@ -44,6 +44,31 @@ function formatFecha(iso: string): { dia: string; numero: number; mes: string } 
   };
 }
 
+/**
+ * Maneja inputs numéricos enteros positivos con cap superior.
+ * - Strippea cualquier char que no sea dígito (mata signo negativo,
+ *   punto decimal, scientific notation, etc.).
+ * - Cap se aplica on-blur para no interrumpir la escritura.
+ */
+function makeIntHandlers(
+  set: (v: string) => void,
+  max: number,
+): {
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+} {
+  return {
+    onChange: (e) => set(e.target.value.replace(/[^\d]/g, "")),
+    onBlur: (e) => {
+      const v = e.target.value;
+      if (v === "") return;
+      const n = Number(v);
+      if (Number.isNaN(n)) return set("");
+      set(String(Math.min(max, n)));
+    },
+  };
+}
+
 const initialReq: SolicitarPrivadaState = undefined;
 const initialDir: CrearDirectaState = undefined;
 
@@ -260,12 +285,12 @@ function FormSolicitar({
           <span className="sect-label mb-1 block">¿Cuántas personas?</span>
           <input
             name="cupo_estimado"
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={2}
-            max={60}
+            pattern="\d*"
+            maxLength={2}
             value={cant}
-            onChange={(e) => setCant(e.target.value)}
+            {...makeIntHandlers(setCant, 60)}
             required
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-mono text-bone focus:border-orange outline-none"
           />
@@ -403,12 +428,12 @@ function FormAdminCrear({
           <span className="sect-label mb-1 block">Cupo máximo</span>
           <input
             name="cupo_max"
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={2}
-            max={60}
+            pattern="\d*"
+            maxLength={2}
             value={cupo}
-            onChange={(e) => setCupo(e.target.value)}
+            {...makeIntHandlers(setCupo, 60)}
             required
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-mono text-bone focus:border-orange outline-none"
           />
