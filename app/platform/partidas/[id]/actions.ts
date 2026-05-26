@@ -13,8 +13,6 @@ import { computarEstadoCuota } from "@/lib/socios";
 
 export type AnotarmeInput = {
   tipo_jugador: TipoJugador;
-  alquila_marcadora?: boolean;
-  alquila_premium?: boolean;
   alquila_chaleco?: boolean;
 };
 
@@ -70,20 +68,11 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   );
   const aplicaBeneficioSocio = cuota.esSocio && cuota.alDia;
 
-  // Si es alquiler, validar que tenga al menos una marcadora y no ambas.
+  // Alquiler tiene un único tier de equipo: si tipo=alquiler, marcadora=true.
   const alquila: AlquilerItems = {
-    marcadora: tipo_jugador === "alquiler" && !!input.alquila_marcadora,
-    premium: tipo_jugador === "alquiler" && !!input.alquila_premium,
+    marcadora: tipo_jugador === "alquiler",
     chaleco: tipo_jugador === "alquiler" && !!input.alquila_chaleco,
   };
-  if (tipo_jugador === "alquiler") {
-    if (alquila.marcadora && alquila.premium) {
-      return { error: "Elegí marcadora simple O avanzada, no ambas." };
-    }
-    if (!alquila.marcadora && !alquila.premium) {
-      return { error: "Tenés que alquilar una marcadora." };
-    }
-  }
 
   const precios = await getPreciosConfig(supabase);
   const { entrada, alquiler } = calcularPrecioInscripcion({
@@ -118,7 +107,6 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     posicion_waitlist,
     tipo_jugador,
     alquila_marcadora: alquila.marcadora,
-    alquila_premium: alquila.premium,
     alquila_chaleco: alquila.chaleco,
     precio_entrada: entrada,
     precio_alquiler: alquiler,

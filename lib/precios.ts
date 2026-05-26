@@ -7,8 +7,7 @@ export type TipoJugador = "alquiler" | "byop";
 export type PreciosKey =
   | "entrada_byop"
   | "entrada_socio"
-  | "alquiler_marcadora"   // Marcadora simple
-  | "alquiler_premium"     // Marcadora avanzada (con tracer)
+  | "alquiler_marcadora"   // Alquiler de equipo (unico tier)
   | "alquiler_chaleco"
   | "recarga_tracer_100"
   | "recarga_conv_200"
@@ -18,10 +17,9 @@ export type PreciosKey =
 export type PreciosConfig = Record<PreciosKey, number>;
 
 export const PRECIOS_DEFAULT: PreciosConfig = {
-  entrada_byop: 0,
+  entrada_byop: 25000,
   entrada_socio: 0,
-  alquiler_marcadora: 0,
-  alquiler_premium: 0,
+  alquiler_marcadora: 35000, // total para alquiler = entrada 25k + alquiler 35k = 60k
   alquiler_chaleco: 0,
   recarga_tracer_100: 0,
   recarga_conv_200: 0,
@@ -32,19 +30,15 @@ export const PRECIOS_DEFAULT: PreciosConfig = {
 export const PRECIOS_LABELS: Record<PreciosKey, { titulo: string; descripcion: string }> = {
   entrada_byop: {
     titulo: "Entrada base",
-    descripcion: "Jugador con equipo propio o que alquila. Socios al día no pagan entrada.",
+    descripcion: "Lo que paga cualquier jugador (BYOP o alquiler). Socios al día no pagan entrada.",
   },
   entrada_socio: {
     titulo: "Entrada · Socio",
     descripcion: "Lo que paga un socio al día (normalmente 0).",
   },
   alquiler_marcadora: {
-    titulo: "Marcadora simple",
-    descripcion: "Marcadora estándar + protección básica (anteojos).",
-  },
-  alquiler_premium: {
-    titulo: "Marcadora avanzada",
-    descripcion: "Marcadora con trazador + bbs tracer + protección.",
+    titulo: "Alquiler equipo",
+    descripcion: "Marcadora + tracer + protección. Se suma a la entrada para el total de alquiler.",
   },
   alquiler_chaleco: {
     titulo: "Chaleco táctico",
@@ -72,7 +66,6 @@ export const PRECIOS_KEYS_ORDER: PreciosKey[] = [
   "entrada_byop",
   "entrada_socio",
   "alquiler_marcadora",
-  "alquiler_premium",
   "alquiler_chaleco",
   "recarga_tracer_100",
   "recarga_conv_200",
@@ -94,10 +87,8 @@ export async function getPreciosConfig(
 }
 
 export type AlquilerItems = {
-  /** Marcadora simple (incluye protección básica). */
+  /** Alquiler de equipo (marcadora + tracer + protección). */
   marcadora: boolean;
-  /** Marcadora avanzada con tracer. Excluyente con `marcadora`. */
-  premium: boolean;
   /** Chaleco táctico extra. */
   chaleco: boolean;
 };
@@ -119,9 +110,8 @@ export type DesglosePrecio = {
  * Calcula el precio de una inscripción al momento de anotarse.
  *
  * Modelo:
- *   - Entrada: 0 si socio al día, sino entrada_byop ($25k al día de hoy).
- *   - Alquiler de marcadora: solo si tipo=alquiler. Simple O avanzada
- *     (excluyentes — la UI lo restringe; acá si llegan ambos suma ambos).
+ *   - Entrada: 0 si socio al día, sino entrada_byop.
+ *   - Alquiler equipo: solo si tipo=alquiler (un único tier).
  *   - Chaleco: opcional, suma al alquiler.
  *
  * Las recargas NO se incluyen acá — las asigna el admin durante el check-in
@@ -140,7 +130,6 @@ export function calcularPrecioInscripcion(opts: {
   let alquiler = 0;
   if (tipo_jugador === "alquiler") {
     if (alquila.marcadora) alquiler += precios.alquiler_marcadora;
-    if (alquila.premium) alquiler += precios.alquiler_premium;
     if (alquila.chaleco) alquiler += precios.alquiler_chaleco;
   }
 

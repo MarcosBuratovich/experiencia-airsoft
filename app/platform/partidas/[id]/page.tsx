@@ -142,7 +142,6 @@ export default async function PartidaDetail({
             entrada_byop: precios.entrada_byop,
             entrada_socio: precios.entrada_socio,
             alquiler_marcadora: precios.alquiler_marcadora,
-            alquiler_premium: precios.alquiler_premium,
             alquiler_chaleco: precios.alquiler_chaleco,
           }}
         />

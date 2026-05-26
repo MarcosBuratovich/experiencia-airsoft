@@ -10,8 +10,7 @@ type Inscripcion = { id: string; estado: string };
 type PreciosMin = {
   entrada_byop: number;
   entrada_socio: number;
-  alquiler_marcadora: number; // simple
-  alquiler_premium: number; // avanzada
+  alquiler_marcadora: number;
   alquiler_chaleco: number;
 };
 
@@ -69,7 +68,6 @@ export function AnotarmeButton({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [tipo, setTipo] = useState<TipoJugador>("byop");
-  const [marcadora, setMarcadora] = useState<"simple" | "avanzada">("simple");
   const [chaleco, setChaleco] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -81,13 +79,10 @@ export function AnotarmeButton({
 
   const alquilerMonto = useMemo(() => {
     if (tipo !== "alquiler") return 0;
-    let t =
-      marcadora === "simple"
-        ? precios.alquiler_marcadora
-        : precios.alquiler_premium;
+    let t = precios.alquiler_marcadora;
     if (chaleco) t += precios.alquiler_chaleco;
     return t;
-  }, [tipo, marcadora, chaleco, precios]);
+  }, [tipo, chaleco, precios]);
 
   const total = entrada + alquilerMonto;
 
@@ -136,8 +131,6 @@ export function AnotarmeButton({
     startTransition(async () => {
       const res = await anotarmeAction(partidaId, {
         tipo_jugador: tipo,
-        alquila_marcadora: tipo === "alquiler" && marcadora === "simple",
-        alquila_premium: tipo === "alquiler" && marcadora === "avanzada",
         alquila_chaleco: tipo === "alquiler" && chaleco,
       });
       if ("error" in res && res.error) {
@@ -223,44 +216,39 @@ export function AnotarmeButton({
         <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
           <legend className="sect-label px-2">Equipo a alquilar</legend>
 
-          <div className="space-y-2">
-            <MarcadoraOpt
-              value="simple"
-              current={marcadora}
-              setValue={setMarcadora}
-              title="Marcadora simple"
-              subtitle="Marcadora estándar + protección básica (anteojos)"
-              precio={precios.alquiler_marcadora}
-            />
-            <MarcadoraOpt
-              value="avanzada"
-              current={marcadora}
-              setValue={setMarcadora}
-              title="Marcadora avanzada"
-              subtitle="Con trazador + bbs tracer + protección"
-              precio={precios.alquiler_premium}
-            />
+          <div className="border border-orange/40 bg-orange/5 clip-notch px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-bone font-sans">Equipo completo</span>
+              <span className="font-mono fluid-xs text-bone shrink-0">
+                {ars(precios.alquiler_marcadora)}
+              </span>
+            </div>
+            <p className="font-mono fluid-xs text-smoke mt-0.5">
+              Marcadora + tracer + protección.
+            </p>
           </div>
 
-          <label className="flex items-start gap-3 px-2 py-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={chaleco}
-              onChange={(e) => setChaleco(e.target.checked)}
-              className="w-4 h-4 mt-0.5 accent-orange cursor-pointer shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-bone font-sans">Chaleco táctico</span>
-                <span className="font-mono fluid-xs text-ash shrink-0">
-                  {ars(precios.alquiler_chaleco)}
-                </span>
+          {precios.alquiler_chaleco > 0 && (
+            <label className="flex items-start gap-3 px-2 py-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={chaleco}
+                onChange={(e) => setChaleco(e.target.checked)}
+                className="w-4 h-4 mt-0.5 accent-orange cursor-pointer shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-bone font-sans">Chaleco táctico</span>
+                  <span className="font-mono fluid-xs text-ash shrink-0">
+                    {ars(precios.alquiler_chaleco)}
+                  </span>
+                </div>
+                <p className="font-mono fluid-xs text-smoke mt-0.5">
+                  Protección extra para el torso.
+                </p>
               </div>
-              <p className="font-mono fluid-xs text-smoke mt-0.5">
-                Protección extra para el torso.
-              </p>
-            </div>
-          </label>
+            </label>
+          )}
 
           <p className="font-mono fluid-xs text-smoke px-1">
             // Las recargas de munición se piden el día de la partida y las
@@ -352,47 +340,3 @@ function TipoOpt({
   );
 }
 
-function MarcadoraOpt({
-  value,
-  current,
-  setValue,
-  title,
-  subtitle,
-  precio,
-}: {
-  value: "simple" | "avanzada";
-  current: "simple" | "avanzada";
-  setValue: (v: "simple" | "avanzada") => void;
-  title: string;
-  subtitle: string;
-  precio: number;
-}) {
-  const active = current === value;
-  return (
-    <button
-      type="button"
-      onClick={() => setValue(value)}
-      className={`w-full text-left px-3 py-3 border transition clip-notch cursor-pointer ${
-        active ? "bg-ink/60 border-orange" : "bg-ink/30 border-rail/60 hover:border-rail"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className={`inline-block w-3 h-3 rounded-full border-2 transition mt-1 shrink-0 ${
-            active ? "bg-orange border-orange" : "border-rail"
-          }`}
-          aria-hidden
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-bone">{title}</span>
-            <span className="font-mono fluid-xs text-ash shrink-0">
-              ${precio.toLocaleString("es-AR")}
-            </span>
-          </div>
-          <p className="font-mono fluid-xs text-smoke mt-0.5">{subtitle}</p>
-        </div>
-      </div>
-    </button>
-  );
-}
