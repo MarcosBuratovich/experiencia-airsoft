@@ -12,7 +12,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, nombre, apellido, dni, celular, email, role, socio, player_number",
+      "id, nombre, apellido, alias, dni, celular, email, role, socio, player_number",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -59,6 +59,7 @@ export default async function PerfilPage() {
       <PerfilForm
         celular={profile.celular}
         playerNumber={profile.player_number}
+        alias={profile.alias ?? null}
       />
 
       <p className="mt-6 font-mono fluid-xs text-smoke">

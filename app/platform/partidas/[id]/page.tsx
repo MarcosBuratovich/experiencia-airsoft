@@ -41,7 +41,7 @@ export default async function PartidaDetail({
   const { data: inscriptos } = await supabase
     .from("inscripciones")
     .select(
-      "id, user_id, estado, posicion_waitlist, profiles!inner(nombre, apellido)",
+      "id, user_id, estado, posicion_waitlist, profiles!inner(nombre, apellido, alias)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -165,7 +165,10 @@ export default async function PartidaDetail({
                 className="border-b border-rail/40 py-1.5 flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em] text-ash"
               >
                 <NombreConClanes
-                  nombre={`${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()}
+                  nombre={
+                    perfil?.alias?.trim() ||
+                    `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()
+                  }
                   clanes={clanesPorUser.get(i.user_id) ?? []}
                   size="xs"
                   nameClassName="text-ash"
@@ -191,7 +194,10 @@ export default async function PartidaDetail({
                     className="border-b border-rail/40 py-1.5 flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.18em] text-smoke"
                   >
                     <NombreConClanes
-                      nombre={`${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()}
+                      nombre={
+                    perfil?.alias?.trim() ||
+                    `${perfil?.nombre ?? ""} ${perfil?.apellido ?? ""}`.trim()
+                  }
                       clanes={clanesPorUser.get(i.user_id) ?? []}
                       size="xs"
                       nameClassName="text-smoke"
