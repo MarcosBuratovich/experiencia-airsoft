@@ -37,6 +37,74 @@ export default async function LoginPage({
 
   const { signup, error, reset } = await searchParams;
 
+  // Si vino del signup, mostramos un takeover grande explicando que tiene
+  // que verificar el mail. El mail abre en otra pestaña, así que el botón
+  // "Ingresar" abajo es el camino de vuelta para cuando ya verificó.
+  if (signup === "ok") {
+    return (
+      <div className="max-w-xl mx-auto">
+        <div className="border border-orange/60 bg-orange/5 clip-notch p-6 sm:p-10 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-6 border-2 border-orange rounded-full text-orange">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="w-8 h-8 sm:w-10 sm:h-10"
+              aria-hidden
+            >
+              <path d="M5 12l5 5L20 7" strokeLinecap="square" />
+            </svg>
+          </div>
+
+          <p className="sect-label text-orange mb-3">// Cuenta creada</p>
+          <h1 className="font-display fluid-4xl uppercase leading-[.95] text-bone tracking-wider">
+            ¡Listo!
+            <br />
+            <span className="text-orange">Verificá tu mail</span>
+          </h1>
+
+          <p className="mt-6 text-ash fluid-md leading-relaxed max-w-[40ch] mx-auto">
+            Te mandamos un correo de confirmación. Hacé click en el link para
+            activar tu cuenta y después volvé acá para iniciar sesión.
+          </p>
+          <p className="mt-3 text-smoke font-mono fluid-xs uppercase tracking-[.22em]">
+            ¿No te llega? Revisá la carpeta de spam.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="btn-wa clip-tag inline-flex items-center gap-2 px-6 py-3 uppercase tracking-wider font-semibold fluid-sm"
+            >
+              Iniciar sesión
+              <span aria-hidden>→</span>
+            </Link>
+            <Link
+              href="/auth/forgot-password"
+              className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke hover:text-orange transition"
+            >
+              ¿Problemas con el mail?
+            </Link>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center font-mono fluid-xs text-smoke">
+          ¿Algo no anda con el email? Escribí por{" "}
+          <a
+            href="https://wa.me/5491166652698"
+            target="_blank"
+            rel="noopener"
+            className="text-orange hover:underline"
+          >
+            WhatsApp de soporte
+          </a>{" "}
+          y te ayudo.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-md mx-auto">
       {/* Banner para usuarios nuevos — primera cosa que ven */}
@@ -59,14 +127,6 @@ export default async function LoginPage({
         <p className="sect-label mb-2">Ingreso · plataforma</p>
         <h1 className="sect-title fluid-3xl">¿Ya tenés cuenta?</h1>
       </div>
-
-      {signup === "ok" && (
-        <div className="mb-6 border border-orange/50 bg-orange/10 px-4 py-3 clip-tag">
-          <p className="font-mono fluid-xs text-orange">
-            ¡Cuenta creada! Revisá tu email para confirmar y después ingresá.
-          </p>
-        </div>
-      )}
 
       {reset === "ok" && (
         <div className="mb-6 border border-orange/50 bg-orange/10 px-4 py-3 clip-tag">

@@ -210,6 +210,12 @@ export function AnotarmeButton({
             subtitle="Traigo el mío"
           />
         </div>
+
+        <p className="font-mono fluid-xs text-smoke px-1">
+          // <span className="text-ash">BYOP</span> = Bring Your Own
+          Player. Venís con tu marcadora, protección y munición propias —
+          solo pagás la entrada.
+        </p>
       </fieldset>
 
       {tipo === "alquiler" && (
