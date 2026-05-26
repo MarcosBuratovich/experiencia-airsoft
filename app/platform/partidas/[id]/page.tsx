@@ -10,6 +10,7 @@ import { getClanesPorProfileIds } from "@/lib/clanes";
 import { NombreConClanes } from "../../components/nombre-con-clanes";
 import { AnotarmeButton } from "./anotarme-button";
 import { OrganizadorPanel } from "./organizador-panel";
+import { MisAlquileresPanel } from "./mis-alquileres-panel";
 
 export default async function PartidaDetail({
   params,
@@ -47,7 +48,9 @@ export default async function PartidaDetail({
 
   const { data: inscriptos } = await supabase
     .from("inscripciones")
-    .select("id, user_id, guest_nombre, estado, posicion_waitlist")
+    .select(
+      "id, user_id, guest_nombre, agregado_por, estado, posicion_waitlist",
+    )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
     .order("created_at");
@@ -55,15 +58,21 @@ export default async function PartidaDetail({
   const userIds = (inscriptos ?? [])
     .map((i) => i.user_id)
     .filter((id): id is string => !!id);
+  // Para mostrar "(Por: nombre)" en cada guest, también necesitamos el
+  // perfil de quien lo agregó.
+  const agregadoIds = (inscriptos ?? [])
+    .map((i) => i.agregado_por)
+    .filter((id): id is string => !!id);
+  const allProfileIds = [...new Set([...userIds, ...agregadoIds])];
 
   // Fetch profiles via profiles_publicos (bypassea RLS de profiles, solo
   // expone campos no sensibles: nombre, apellido, alias). Así un jugador
   // ve el roster aunque no sea admin ni dueño de los perfiles.
-  const { data: pubProfiles } = userIds.length
+  const { data: pubProfiles } = allProfileIds.length
     ? await supabase
         .from("profiles_publicos")
         .select("id, nombre, apellido, alias")
-        .in("id", userIds)
+        .in("id", allProfileIds)
     : { data: [] as { id: string; nombre: string; apellido: string; alias: string | null }[] };
   const profileById = new Map(
     (pubProfiles ?? []).map((p) => [p.id, p] as const),
@@ -193,11 +202,30 @@ export default async function PartidaDetail({
         />
       )}
 
+      {/* Mis alquileres: cualquier inscripto puede agregar guests con su nombre */}
+      {mine && !soyOrganizador && (
+        <MisAlquileresPanel
+          partidaId={partida.id}
+          alquileres={(inscriptos ?? [])
+            .filter((i) => !!i.guest_nombre && i.agregado_por === user.id)
+            .map((i) => ({
+              id: i.id,
+              nombre: i.guest_nombre ?? "",
+              estado: i.estado,
+            }))}
+        />
+      )}
+
       <div>
         <h2 className="sect-label mb-3">Confirmados ({confirmados.length})</h2>
         <ul className="space-y-1 mb-6">
           {confirmados.map((i) => {
             const perfil = i.user_id ? profileById.get(i.user_id) : null;
+            const addedBy = i.agregado_por ? profileById.get(i.agregado_por) : null;
+            const addedByLabel = addedBy
+              ? addedBy.alias?.trim() ||
+                `${addedBy.nombre} ${addedBy.apellido}`.trim()
+              : null;
             return (
               <li
                 key={i.id}
@@ -213,6 +241,11 @@ export default async function PartidaDetail({
                   size="xs"
                   nameClassName="text-ash"
                 />
+                {i.guest_nombre && addedByLabel && (
+                  <span className="text-smoke normal-case tracking-normal font-sans">
+                    (Por: {addedByLabel})
+                  </span>
+                )}
               </li>
             );
           })}
@@ -228,6 +261,11 @@ export default async function PartidaDetail({
             <ul className="space-y-1">
               {waitlist.map((i) => {
                 const perfil = i.user_id ? profileById.get(i.user_id) : null;
+                const addedBy = i.agregado_por ? profileById.get(i.agregado_por) : null;
+                const addedByLabel = addedBy
+                  ? addedBy.alias?.trim() ||
+                    `${addedBy.nombre} ${addedBy.apellido}`.trim()
+                  : null;
                 return (
                   <li
                     key={i.id}
@@ -243,6 +281,11 @@ export default async function PartidaDetail({
                       size="xs"
                       nameClassName="text-smoke"
                     />
+                    {i.guest_nombre && addedByLabel && (
+                      <span className="text-smoke normal-case tracking-normal font-sans">
+                        (Por: {addedByLabel})
+                      </span>
+                    )}
                   </li>
                 );
               })}
