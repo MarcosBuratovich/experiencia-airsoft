@@ -10,6 +10,19 @@ export default async function ClanesRankingPage() {
 
   const rows = await getLeaderboardClanes(supabase);
 
+  // Fetch logos por separado (la view no los expone). Map clanId → logo_url.
+  const clanIds = rows.map((r) => r.clan_id);
+  const logoPorClan = new Map<string, string | null>();
+  if (clanIds.length) {
+    const { data: logos } = await supabase
+      .from("clanes")
+      .select("id, logo_url")
+      .in("id", clanIds);
+    for (const c of logos ?? []) {
+      logoPorClan.set(c.id, c.logo_url ?? null);
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <Link
@@ -54,11 +67,20 @@ export default async function ClanesRankingPage() {
                 <span className="font-display fluid-2xl text-smoke shrink-0 w-10">
                   #{i + 1}
                 </span>
-                <span
-                  className="inline-block w-8 h-8 rounded-full border border-rail/60 shrink-0"
-                  style={{ backgroundColor: c.color_hex ?? "#666" }}
-                  aria-hidden
-                />
+                {logoPorClan.get(c.clan_id) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoPorClan.get(c.clan_id) as string}
+                    alt={c.clan_nombre}
+                    className="w-10 h-10 rounded-full object-cover border border-rail/60 shrink-0"
+                  />
+                ) : (
+                  <span
+                    className="inline-block w-10 h-10 rounded-full border border-rail/60 shrink-0"
+                    style={{ backgroundColor: c.color_hex ?? "#666" }}
+                    aria-hidden
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/clanes/${c.slug}`}

@@ -81,11 +81,20 @@ export default async function ClanesDirectorio() {
                 className="border border-rail/60 bg-carbon clip-notch p-5 hover:border-orange transition flex flex-col gap-3"
               >
                 <div className="flex items-center gap-3">
-                  <span
-                    className="inline-block w-6 h-6 rounded-full border border-rail/60"
-                    style={{ backgroundColor: c.color_hex ?? "#666" }}
-                    aria-hidden
-                  />
+                  {c.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={c.logo_url}
+                      alt={c.nombre}
+                      className="w-10 h-10 rounded-full object-cover border border-rail/60 shrink-0"
+                    />
+                  ) : (
+                    <span
+                      className="inline-block w-10 h-10 rounded-full border border-rail/60 shrink-0"
+                      style={{ backgroundColor: c.color_hex ?? "#666" }}
+                      aria-hidden
+                    />
+                  )}
                   <span className="font-display text-bone uppercase tracking-wider">{c.nombre}</span>
                 </div>
                 {c.descripcion && (

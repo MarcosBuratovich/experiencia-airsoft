@@ -190,6 +190,7 @@ export default async function MiClanPage() {
               nombre: clan.nombre,
               descripcion: clan.descripcion,
               color_hex: clan.color_hex,
+              logo_url: clan.logo_url,
             }}
             userId={user.id}
             soyCapitan={soyCapitan}

@@ -18,6 +18,7 @@ type Clan = {
   nombre: string;
   descripcion: string | null;
   color_hex: string | null;
+  logo_url: string | null;
 };
 
 type Miembro = { id: string; nombre: string };
@@ -48,11 +49,20 @@ export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, soli
       className="group border border-rail/60 bg-carbon clip-notch"
     >
       <summary className="list-none cursor-pointer p-4 sm:p-5 flex items-center gap-3 flex-wrap">
-        <span
-          className="inline-block w-10 h-10 rounded-full border border-rail/60 shrink-0"
-          style={{ backgroundColor: clan.color_hex ?? "#666" }}
-          aria-hidden
-        />
+        {clan.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={clan.logo_url}
+            alt={clan.nombre}
+            className="w-10 h-10 rounded-full object-cover border border-rail/60 shrink-0"
+          />
+        ) : (
+          <span
+            className="inline-block w-10 h-10 rounded-full border border-rail/60 shrink-0"
+            style={{ backgroundColor: clan.color_hex ?? "#666" }}
+            aria-hidden
+          />
+        )}
         <div className="flex-1 min-w-0">
           <p className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
             {soyCapitan ? "Capitán" : "Miembro"}

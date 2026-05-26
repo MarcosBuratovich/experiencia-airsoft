@@ -38,16 +38,18 @@ export function NombreConClanes({
 
 function ClanBadge({ clan, size }: { clan: ClanChip; size: Size }) {
   const showLogo = clan.display_mode === "logo" && !!clan.logo_url;
+  // Logos un poco más prominentes que el texto del alias (el círculo
+  // necesita aire para que se reconozca el escudo del clan).
+  const logoPx = size === "xs" ? "w-7 h-7" : "w-8 h-8";
 
   if (showLogo) {
-    const px = size === "xs" ? "w-4 h-4" : "w-5 h-5";
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={clan.logo_url as string}
         alt={clan.nombre}
         title={clan.nombre}
-        className={`${px} rounded-full object-cover border border-rail/40 shrink-0`}
+        className={`${logoPx} rounded-full object-cover border border-rail/40 shrink-0`}
       />
     );
   }
@@ -56,14 +58,13 @@ function ClanBadge({ clan, size }: { clan: ClanChip; size: Size }) {
   // existe; sino no renderizamos nada para ese clan.
   if (!clan.alias) {
     if (clan.logo_url) {
-      const px = size === "xs" ? "w-4 h-4" : "w-5 h-5";
       return (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={clan.logo_url}
           alt={clan.nombre}
           title={clan.nombre}
-          className={`${px} rounded-full object-cover border border-rail/40 shrink-0`}
+          className={`${logoPx} rounded-full object-cover border border-rail/40 shrink-0`}
         />
       );
     }

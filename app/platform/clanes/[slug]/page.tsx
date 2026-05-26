@@ -67,11 +67,20 @@ export default async function ClanDetail({
       </Link>
 
       <div className="mt-4 mb-6 flex items-center gap-4">
-        <span
-          className="inline-block w-10 h-10 rounded-full border border-rail/60"
-          style={{ backgroundColor: clan.color_hex ?? "#666" }}
-          aria-hidden
-        />
+        {clan.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={clan.logo_url}
+            alt={clan.nombre}
+            className="w-14 h-14 rounded-full object-cover border border-rail/60 shrink-0"
+          />
+        ) : (
+          <span
+            className="inline-block w-14 h-14 rounded-full border border-rail/60 shrink-0"
+            style={{ backgroundColor: clan.color_hex ?? "#666" }}
+            aria-hidden
+          />
+        )}
         <div>
           <p className="sect-label mb-1">Clan</p>
           <h1 className="sect-title fluid-3xl">{clan.nombre}</h1>
