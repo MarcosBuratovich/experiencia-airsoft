@@ -75,6 +75,8 @@ export function PlatformNav({
     };
   }, [mobileOpen]);
 
+  const closeMobile = () => setMobileOpen(false);
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -280,18 +282,20 @@ export function PlatformNav({
               <div>
                 <p className="sect-label mb-2">Jugador</p>
                 <ul className="space-y-1">
-                  <MobileLink href="/partidas" label="Partidas" active={isSectionActive(pathname, "/partidas")} />
-                  <MobileLink href="/ranking" label="Ranking" active={isSectionActive(pathname, "/ranking")} />
-                  <MobileLink href="/clanes" label="Clanes" active={isSectionActive(pathname, "/clanes") || pathname === "/mi-clan"} />
+                  <MobileLink href="/partidas" label="Partidas" active={isSectionActive(pathname, "/partidas")} onNavigate={closeMobile} />
+                  <MobileLink href="/ranking" label="Ranking" active={isSectionActive(pathname, "/ranking")} onNavigate={closeMobile} />
+                  <MobileLink href="/clanes" label="Clanes" active={isSectionActive(pathname, "/clanes") || pathname === "/mi-clan"} onNavigate={closeMobile} />
                   <MobileLink
                     href="/mis-solicitudes"
                     label="Privadas"
                     active={isSectionActive(pathname, "/mis-solicitudes") || isSectionActive(pathname, "/privada")}
+                    onNavigate={closeMobile}
                   />
                   <MobileLink
                     href="/perfil"
                     label="Perfil"
                     active={isSectionActive(pathname, "/perfil")}
+                    onNavigate={closeMobile}
                   />
                 </ul>
               </div>
@@ -307,6 +311,7 @@ export function PlatformNav({
                         label={l.label}
                         active={pathname === l.href || pathname.startsWith(l.href + "/")}
                         badge={l.badge}
+                        onNavigate={closeMobile}
                       />
                     ))}
                   </ul>
@@ -323,6 +328,7 @@ export function PlatformNav({
                         href={l.href}
                         label={l.label}
                         active={pathname === l.href}
+                        onNavigate={closeMobile}
                       />
                     ))}
                   </ul>
@@ -407,16 +413,22 @@ function MobileLink({
   label,
   active,
   badge,
+  onNavigate,
 }: {
   href: string;
   label: string;
   active: boolean;
   badge?: number;
+  /** Se llama en cada click, incluso si el href apunta a la página actual.
+   * Sirve para cerrar el drawer cuando el usuario clickea la tab activa
+   * (clickear el mismo href no dispara el useEffect de pathname). */
+  onNavigate?: () => void;
 }) {
   return (
     <li>
       <Link
         href={href}
+        onClick={onNavigate}
         className={`flex items-center justify-between py-2 px-3 border-l-2 transition ${
           active
             ? "border-orange bg-orange/10 text-orange"
