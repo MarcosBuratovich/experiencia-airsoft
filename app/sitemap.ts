@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "./(marketing)/blog/_posts";
 
 const SITE_URL = "https://www.experienciaairsoft.com";
+const APP_URL = "https://app.experienciaairsoft.com";
 
 // Fechas reales de ultima edicion de contenido. Actualizar a mano cuando se
 // cambia copy/JSON-LD de una pagina. Google desconfia de sitemaps que mienten
@@ -15,6 +16,9 @@ const LAST_UPDATED = {
   cumpleanos: "2026-05-22",
   airsoftVsPaintball: "2026-05-22",
   blogIndex: "2026-05-22",
+  appLanding: "2026-05-26",
+  appLogin: "2026-05-26",
+  appSignup: "2026-05-26",
 } as const;
 
 const toDate = (iso: string) => new Date(`${iso}T00:00:00-03:00`);
@@ -77,5 +81,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     ...blogEntries,
+    // Subdominio app.* — landing pública + login + signup (las páginas
+    // autenticadas son noindex y no se listan acá). Domain property en
+    // GSC para experienciaairsoft.com cubre ambos hosts.
+    {
+      url: APP_URL,
+      lastModified: toDate(LAST_UPDATED.appLanding),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${APP_URL}/signup`,
+      lastModified: toDate(LAST_UPDATED.appSignup),
+      changeFrequency: "yearly",
+      priority: 0.7,
+    },
+    {
+      url: `${APP_URL}/login`,
+      lastModified: toDate(LAST_UPDATED.appLogin),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
   ];
 }

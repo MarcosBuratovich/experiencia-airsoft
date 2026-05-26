@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,24 @@ import {
   SOPORTE_WHATSAPP_URL,
 } from "@/app/_components/site-constants";
 import { SignupForm } from "./signup-form";
+
+const APP_URL = "https://app.experienciaairsoft.com";
+
+export const metadata: Metadata = {
+  title: "Crear cuenta de jugador",
+  description:
+    "Creá tu cuenta gratis para reservar partidas de airsoft en Experiencia Airsoft (CABA). Te lleva un minuto: nombre, DNI, celular y email.",
+  alternates: { canonical: `${APP_URL}/signup` },
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    url: `${APP_URL}/signup`,
+    siteName: "Experiencia Airsoft",
+    title: "Crear cuenta · Experiencia Airsoft",
+    description:
+      "Creá tu cuenta gratis y reservá tu lugar en una partida.",
+  },
+};
 
 export default async function SignupPage() {
   const supabase = await createClient();

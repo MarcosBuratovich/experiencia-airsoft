@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,24 @@ import {
   SOPORTE_WHATSAPP_URL,
 } from "@/app/_components/site-constants";
 import { LoginForm } from "./login-form";
+
+const APP_URL = "https://app.experienciaairsoft.com";
+
+export const metadata: Metadata = {
+  title: "Ingresar a la plataforma",
+  description:
+    "Ingresá a tu cuenta de Experiencia Airsoft para reservar partidas, gestionar clanes y tu perfil de jugador.",
+  alternates: { canonical: `${APP_URL}/login` },
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    url: `${APP_URL}/login`,
+    siteName: "Experiencia Airsoft",
+    title: "Ingresar a la plataforma · Experiencia Airsoft",
+    description:
+      "Accedé a tu cuenta o creá una nueva para reservar tu lugar en una partida.",
+  },
+};
 
 export default async function LoginPage({
   searchParams,

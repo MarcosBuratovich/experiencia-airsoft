@@ -11,7 +11,10 @@ import { PlatformNav } from "./platform-nav";
 export const metadata: Metadata = {
   title: "Experiencia Airsoft — Plataforma",
   description: "Reservas, listas semanales y gestión interna.",
-  robots: { index: false, follow: false },
+  // Default: noindex pero follow=true (Google sigue links a páginas
+  // públicas como /login, /signup, /). Las páginas públicas overridean
+  // explícitamente con robots: { index: true }.
+  robots: { index: false, follow: true },
 };
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
