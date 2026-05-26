@@ -41,7 +41,7 @@ export default async function PartidaDetail({
   const { data: inscriptos } = await supabase
     .from("inscripciones")
     .select(
-      "id, user_id, estado, posicion_waitlist, profiles!inner(nombre, apellido, socio)",
+      "id, user_id, estado, posicion_waitlist, profiles!inner(nombre, apellido)",
     )
     .eq("partida_id", id)
     .in("estado", ["confirmado", "waitlist"])
@@ -170,11 +170,6 @@ export default async function PartidaDetail({
                   size="xs"
                   nameClassName="text-ash"
                 />
-                {perfil?.socio && (
-                  <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
-                    Socio
-                  </span>
-                )}
               </li>
             );
           })}
@@ -201,11 +196,6 @@ export default async function PartidaDetail({
                       size="xs"
                       nameClassName="text-smoke"
                     />
-                    {perfil?.socio && (
-                      <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
-                        Socio
-                      </span>
-                    )}
                   </li>
                 );
               })}
