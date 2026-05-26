@@ -137,11 +137,60 @@ export async function crearClanAction(
     return { message: insertError?.message ?? "No se pudo crear el clan" };
   }
 
+  // Si el logo se subió a pending/ (caso default al crear, porque al
+  // momento del upload el clan todavía no existe), lo movemos a la
+  // carpeta del slug. Así los assets quedan organizados.
+  if (parsed.data.logo_url) {
+    const moved = await moverLogoPendingASlug(
+      supabase,
+      parsed.data.logo_url,
+      clan.slug,
+    );
+    if (moved && moved !== parsed.data.logo_url) {
+      await supabase
+        .from("clanes")
+        .update({ logo_url: moved })
+        .eq("id", clan.id);
+    }
+  }
+
   await addMemberToClan(supabase, user.id, clan.id);
 
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
   redirect(`/clanes/${clan.slug}`);
+}
+
+/**
+ * Si `logoUrl` apunta a `clan-logos/pending/<file>`, mueve el archivo a
+ * `clan-logos/<slug>/<file>` y devuelve la nueva public URL. Si no es
+ * un upload pending o falla el move, devuelve la URL original (la app
+ * sigue funcionando, solo queda el archivo en pending/ — orgánicamente
+ * lo levanta el cleanup del LogoUploader en el próximo upload).
+ */
+async function moverLogoPendingASlug(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  logoUrl: string,
+  slug: string,
+): Promise<string | null> {
+  const match = logoUrl.match(/\/clan-logos\/pending\/([^/?]+)/);
+  if (!match) return logoUrl;
+  const filename = match[1];
+  const oldPath = `pending/${filename}`;
+  const newPath = `${slug}/${filename}`;
+
+  const { error: moveErr } = await supabase.storage
+    .from("clan-logos")
+    .move(oldPath, newPath);
+  if (moveErr) {
+    console.warn("[crearClanAction] move logo falló:", moveErr.message);
+    return logoUrl;
+  }
+
+  const { data: pub } = supabase.storage
+    .from("clan-logos")
+    .getPublicUrl(newPath);
+  return pub.publicUrl;
 }
 
 const MAX_CLANES_POR_USER = 3;
@@ -527,4 +576,89 @@ export async function eliminarClanAction(clanId: string) {
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
   return { ok: true };
+}
+
+// =========================================================================
+// Migración one-shot: mover logos viejos de pending/ a {slug}/
+// =========================================================================
+
+export type MigrarLogosResult =
+  | { error: string }
+  | {
+      ok: true;
+      total: number;
+      movidos: number;
+      yaOk: number;
+      fallidos: { slug: string; error: string }[];
+    };
+
+/**
+ * Recorre todos los clanes con logo_url apuntando a /clan-logos/pending/,
+ * mueve el archivo a /clan-logos/{slug}/ y actualiza la URL en DB.
+ * Admin-only. Idempotente: si ya está movido, no hace nada.
+ */
+export async function migrarLogosPendientesAction(): Promise<MigrarLogosResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    return { error: "No autorizado" };
+  }
+
+  const { data: clanes, error: qErr } = await supabase
+    .from("clanes")
+    .select("id, slug, logo_url");
+  if (qErr) return { error: qErr.message };
+
+  let movidos = 0;
+  let yaOk = 0;
+  const fallidos: { slug: string; error: string }[] = [];
+
+  for (const clan of clanes ?? []) {
+    if (!clan.logo_url) {
+      yaOk++;
+      continue;
+    }
+    const match = clan.logo_url.match(/\/clan-logos\/pending\/([^/?]+)/);
+    if (!match) {
+      // Logo no está en pending — ya está OK.
+      yaOk++;
+      continue;
+    }
+    const filename = match[1];
+    const oldPath = `pending/${filename}`;
+    const newPath = `${clan.slug}/${filename}`;
+
+    const { error: moveErr } = await supabase.storage
+      .from("clan-logos")
+      .move(oldPath, newPath);
+    if (moveErr) {
+      fallidos.push({ slug: clan.slug, error: moveErr.message });
+      continue;
+    }
+
+    const { data: pub } = supabase.storage
+      .from("clan-logos")
+      .getPublicUrl(newPath);
+    const { error: updErr } = await supabase
+      .from("clanes")
+      .update({ logo_url: pub.publicUrl })
+      .eq("id", clan.id);
+    if (updErr) {
+      fallidos.push({ slug: clan.slug, error: updErr.message });
+      continue;
+    }
+
+    movidos++;
+  }
+
+  revalidatePath("/clanes");
+  revalidatePath("/mi-clan");
+  return { ok: true, total: clanes?.length ?? 0, movidos, yaOk, fallidos };
 }
