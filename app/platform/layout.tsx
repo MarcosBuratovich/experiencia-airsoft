@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import {
+  SOPORTE_WHATSAPP_NUMBER,
+  SOPORTE_WHATSAPP_URL,
+} from "@/app/_components/site-constants";
 import { PlatformNav } from "./platform-nav";
 
 export const metadata: Metadata = {
@@ -34,7 +38,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="min-h-dvh bg-ink text-bone">
+    <div className="min-h-dvh bg-ink text-bone flex flex-col">
       <header className="sticky top-0 z-40 border-b border-rail/60 bg-carbon/85 backdrop-blur">
         <div className="fluid-gutter-x flex items-center justify-between gap-3 py-3 sm:py-4">
           <Link
@@ -60,7 +64,21 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           />
         </div>
       </header>
-      <main className="fluid-gutter-x py-6 sm:py-10">{children}</main>
+      <main className="flex-1 fluid-gutter-x py-6 sm:py-10">{children}</main>
+
+      <footer className="mt-auto border-t border-rail/40 bg-carbon/40">
+        <div className="fluid-gutter-x py-5 flex items-center justify-between flex-wrap gap-3 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
+          <span>© Experiencia Airsoft</span>
+          <a
+            href={SOPORTE_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener"
+            className="hover:text-orange transition"
+          >
+            ¿Algo no anda? Soporte WhatsApp {SOPORTE_WHATSAPP_NUMBER}
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

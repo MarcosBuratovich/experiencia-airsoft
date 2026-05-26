@@ -42,6 +42,8 @@ const APP_URL =
 const LOGO_URL = `${SITE_URL}/icon.png`;
 const WHATSAPP_URL = "https://wa.me/5491138689783";
 const INSTAGRAM_URL = "https://www.instagram.com/experienciaairsoft/";
+const SOPORTE_WHATSAPP_NUMBER = "+54 9 11 6665-2698";
+const SOPORTE_WHATSAPP_URL = "https://wa.me/5491166652698";
 
 const main: CSSProperties = {
   backgroundColor: BRAND.ink,
@@ -200,7 +202,13 @@ export function EmailLayout({
           {children}
 
           <Section style={footer}>
-            <Text style={{ ...muted, marginTop: 0 }}>
+            <Text style={{ ...muted, marginTop: 0, color: BRAND.bone }}>
+              ¿Algo no anda? Soporte técnico:{" "}
+              <Link href={SOPORTE_WHATSAPP_URL} style={footerLink}>
+                WhatsApp {SOPORTE_WHATSAPP_NUMBER}
+              </Link>
+            </Text>
+            <Text style={{ ...muted, marginTop: 16 }}>
               <strong style={{ color: BRAND.bone }}>Experiencia Airsoft</strong>
               {" — "}
               Centro de airsoft CQB indoor en Buenos Aires.
@@ -216,7 +224,7 @@ export function EmailLayout({
               </Link>
               &nbsp;·&nbsp;{" "}
               <Link href={WHATSAPP_URL} style={footerLink}>
-                WhatsApp
+                Reservas
               </Link>
             </Text>
             <Text style={{ ...muted, marginTop: 16, color: BRAND.smoke }}>
