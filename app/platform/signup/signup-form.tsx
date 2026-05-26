@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { signupAction, type SignupState } from "../actions/auth";
+import { PhoneInput } from "../components/phone-input";
 
 const initial: SignupState = undefined;
 
@@ -38,7 +39,21 @@ export function SignupForm() {
         <Field label="Apellido" name="apellido" error={state?.errors?.apellido} />
       </div>
       <Field label="DNI" name="dni" inputMode="numeric" error={state?.errors?.dni} />
-      <Field label="Celular" name="celular" inputMode="tel" error={state?.errors?.celular} />
+
+      <label className="block">
+        <span className="sect-label mb-1 block">Celular</span>
+        <PhoneInput name="celular" required />
+        <span className="mt-1 block font-mono fluid-xs text-smoke">
+          Elegí tu país y escribí el número sin código (ej. 11 1234 5678).
+          Lo formateamos automático.
+        </span>
+        {state?.errors?.celular?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.celular[0]}
+          </span>
+        )}
+      </label>
+
       <Field label="Email" name="email" type="email" error={state?.errors?.email} />
 
       <label className="block">

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actualizarPerfilAction, type ActualizarPerfilState } from "./actions";
+import { PhoneInput } from "../components/phone-input";
 
 const initial: ActualizarPerfilState = undefined;
 
@@ -69,14 +70,10 @@ export function PerfilForm({
 
       <label className="block">
         <span className="sect-label mb-1 block">Celular</span>
-        <input
-          name="celular"
-          type="tel"
-          inputMode="tel"
-          defaultValue={celular}
-          required
-          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
-        />
+        <PhoneInput name="celular" defaultValue={celular} required />
+        <span className="mt-1 block font-mono fluid-xs text-smoke">
+          Elegí tu país y escribí el número sin código. Lo formateamos automático.
+        </span>
         {state?.errors?.celular?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {state.errors.celular[0]}

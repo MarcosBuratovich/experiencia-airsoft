@@ -62,7 +62,6 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif, var(--font-emoji);
   /* Forzar variante color del emoji (algunos chars Unicode tienen
    * variante texto monocroma por default — esto los pinta en color). */
-  font-variant-emoji: emoji;
   -webkit-font-smoothing: antialiased;
   position: relative;
   overflow-x: clip;
