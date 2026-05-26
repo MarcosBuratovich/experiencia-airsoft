@@ -12,10 +12,19 @@
   --color-orange-600: #e85a0f;
   --color-orange-300: #ffb085;
 
-  --font-display: var(--font-oswald), system-ui, sans-serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-anton: var(--font-anton), system-ui, sans-serif;
+  /* Fallback de emojis al final de cada stack: las fuentes web (Oswald,
+   * Inter, JetBrains, Anton) no incluyen glifos de emoji, así que el
+   * browser tiene que caer a la fuente de emoji del sistema. En la
+   * mayoría de casos lo hace automático, pero algunos combos (Linux
+   * sin Noto Color Emoji, Safari viejo, etc.) renderizan los emojis
+   * como texto monocromo. Listar las fuentes de emoji por OS garantiza
+   * color emoji en todas las plataformas. */
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji", "EmojiOne Color", "Twemoji Mozilla", sans-serif;
+  --font-display: var(--font-oswald), system-ui, sans-serif, var(--font-emoji);
+  --font-sans: var(--font-inter), system-ui, sans-serif, var(--font-emoji);
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace, var(--font-emoji);
+  --font-anton: var(--font-anton), system-ui, sans-serif, var(--font-emoji);
 }
 
 :root {
@@ -52,7 +61,10 @@ html {
 body {
   background: #0a0a0a;
   color: #f5f5f0;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif, var(--font-emoji);
+  /* Forzar variante color del emoji (algunos chars Unicode tienen
+   * variante texto monocroma por default — esto los pinta en color). */
+  font-variant-emoji: emoji;
   -webkit-font-smoothing: antialiased;
   position: relative;
   overflow-x: clip;
@@ -245,14 +257,14 @@ button:focus-visible {
 
 /* section label / title */
 .sect-label {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-jetbrains), ui-monospace, monospace, var(--font-emoji);
   font-size: var(--fs-xs);
   letter-spacing: 0.28em;
   color: #b8b8b8;
   text-transform: uppercase;
 }
 .sect-title {
-  font-family: var(--font-oswald), sans-serif;
+  font-family: var(--font-oswald), sans-serif, var(--font-emoji);
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 0.92;
@@ -285,7 +297,7 @@ button:focus-visible {
 
 /* checkered stencil tag */
 .mil-tag {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-jetbrains), ui-monospace, monospace, var(--font-emoji);
   font-size: var(--fs-xs);
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -305,7 +317,7 @@ button:focus-visible {
 
 /* day-card stencil number */
 .op-num {
-  font-family: var(--font-oswald), sans-serif;
+  font-family: var(--font-oswald), sans-serif, var(--font-emoji);
   font-weight: 700;
   font-size: clamp(5rem, 2.5rem + 8vw, 8.75rem);
   line-height: 1;
@@ -342,7 +354,7 @@ section {
   gap: 0.75rem;
   padding: 0.625rem 0;
   border-top: 1px solid rgba(245, 245, 240, 0.08);
-  font-family: var(--font-jetbrains), monospace;
+  font-family: var(--font-jetbrains), monospace, var(--font-emoji);
   font-size: var(--fs-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
