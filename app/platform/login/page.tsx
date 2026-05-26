@@ -29,13 +29,18 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ signup?: string; error?: string; reset?: string }>;
+  searchParams: Promise<{
+    signup?: string;
+    error?: string;
+    reset?: string;
+    deleted?: string;
+  }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/partidas");
 
-  const { signup, error, reset } = await searchParams;
+  const { signup, error, reset, deleted } = await searchParams;
 
   // Si vino del signup, mostramos un takeover grande explicando que tiene
   // que verificar el mail. El mail abre en otra pestaña, así que el botón
@@ -127,6 +132,14 @@ export default async function LoginPage({
         <p className="sect-label mb-2">Ingreso · plataforma</p>
         <h1 className="sect-title fluid-3xl">¿Ya tenés cuenta?</h1>
       </div>
+
+      {deleted === "ok" && (
+        <div className="mb-6 border border-orange-300/60 bg-orange/5 px-4 py-3 clip-tag">
+          <p className="font-mono fluid-xs text-orange-300">
+            Tu cuenta fue eliminada. Si querés volver, podés crear una nueva.
+          </p>
+        </div>
+      )}
 
       {reset === "ok" && (
         <div className="mb-6 border border-orange/50 bg-orange/10 px-4 py-3 clip-tag">

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getClanesPorProfileIds } from "@/lib/clanes";
 import { PerfilForm } from "./perfil-form";
+import { CambiarContrasenaSection } from "./cambiar-contrasena";
+import { BorrarCuentaSection } from "./borrar-cuenta";
 
 export default async function PerfilPage() {
   const supabase = await createClient();
@@ -74,6 +76,9 @@ export default async function PerfilPage() {
           {misClanes.length ? "Mis clanes →" : "Buscar clanes →"}
         </Link>
       </div>
+
+      <CambiarContrasenaSection />
+      <BorrarCuentaSection email={profile.email} />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { numeroDisponible } from "@/lib/player-number";
 
 /** Cuenta grafemas (emojis cuentan como 1). */
@@ -83,4 +85,137 @@ export async function actualizarPerfilAction(
   revalidatePath("/perfil");
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+// =========================================================================
+// Cambiar contraseña (in-place, sin email)
+// =========================================================================
+
+const changePwSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Ingresá tu contraseña actual"),
+    newPassword: z
+      .string()
+      .min(8, "Mínimo 8 caracteres")
+      .regex(/[A-Z]/, "Debe tener al menos una mayúscula")
+      .regex(/[a-z]/, "Debe tener al menos una minúscula")
+      .regex(/[0-9]/, "Debe tener al menos un número"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
+
+export type CambiarContrasenaState =
+  | {
+      errors?: Partial<
+        Record<"currentPassword" | "newPassword" | "confirmPassword", string[]>
+      >;
+      message?: string;
+      ok?: boolean;
+    }
+  | undefined;
+
+export async function cambiarContrasenaAction(
+  _prev: CambiarContrasenaState,
+  formData: FormData,
+): Promise<CambiarContrasenaState> {
+  const parsed = changePwSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return { message: "No autenticado" };
+
+  // Reauth: verificamos que la contraseña actual sea correcta intentando
+  // un signInWithPassword (no rompe la sesión existente — Supabase devuelve
+  // el mismo user/session).
+  const { error: signinErr } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: parsed.data.currentPassword,
+  });
+  if (signinErr) {
+    return { errors: { currentPassword: ["Contraseña actual incorrecta"] } };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.newPassword,
+  });
+  if (error) return { message: error.message };
+
+  return { ok: true };
+}
+
+// =========================================================================
+// Borrar cuenta
+// =========================================================================
+
+const deleteSchema = z.object({
+  confirmEmail: z.string().trim().min(1, "Confirmación obligatoria"),
+});
+
+export type BorrarCuentaState =
+  | { errors?: { confirmEmail?: string[] }; message?: string }
+  | undefined;
+
+export async function borrarCuentaAction(
+  _prev: BorrarCuentaState,
+  formData: FormData,
+): Promise<BorrarCuentaState> {
+  const parsed = deleteSchema.safeParse({
+    confirmEmail: formData.get("confirmEmail"),
+  });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return { message: "No autenticado" };
+
+  // El user tiene que escribir su email exacto para confirmar (case-insensitive).
+  if (
+    parsed.data.confirmEmail.trim().toLowerCase() !==
+    user.email.toLowerCase()
+  ) {
+    return {
+      errors: {
+        confirmEmail: ["El email no coincide con el de tu cuenta"],
+      },
+    };
+  }
+
+  // Si es capitán de algún clan, no puede borrarse — tiene que transferir
+  // primero. Evita que la deletion deje al clan sin capitán.
+  const { data: clanesComoCapitan } = await supabase
+    .from("clanes")
+    .select("id, nombre")
+    .eq("capitan_id", user.id);
+  if (clanesComoCapitan && clanesComoCapitan.length > 0) {
+    const nombres = clanesComoCapitan.map((c) => c.nombre).join(", ");
+    return {
+      message: `Sos capitán de ${clanesComoCapitan.length === 1 ? "el clan" : "los clanes"} ${nombres}. Transferí la capitanía o eliminá el clan antes de borrar tu cuenta.`,
+    };
+  }
+
+  // Borrar el auth user via service role. El ON DELETE CASCADE en
+  // profiles → auth.users limpia el profile, inscripciones, profile_clanes,
+  // clan_requests, eventos, etc. en cadena.
+  const admin = createServiceRoleClient();
+  const { error: delErr } = await admin.auth.admin.deleteUser(user.id);
+  if (delErr) return { message: delErr.message };
+
+  // Cerrar sesión local para limpiar cookies.
+  await supabase.auth.signOut();
+
+  // Hard redirect porque el server action's redirect mantiene la session
+  // del usuario borrado en cookies por un tick.
+  redirect("/login?deleted=ok");
 }
