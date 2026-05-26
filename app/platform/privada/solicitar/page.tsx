@@ -61,11 +61,26 @@ export default async function SolicitarPrivadaPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">
-        <LegendItem cls="bg-carbon border-rail/60 text-bone" label="Libre" />
-        <LegendItem cls="bg-orange/15 border-orange/50 text-orange" label="Pendiente" />
-        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Reservado" />
-        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Pública" />
-        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Tomado" />
+        <LegendItem
+          cls="bg-green-500/5 border-green-500/50 text-green-400"
+          label="Libre"
+        />
+        <LegendItem
+          cls="bg-orange/15 border-orange/60 text-orange"
+          label="Pendiente"
+        />
+        <LegendItem
+          cls="bg-amber-500/5 border-dashed border-amber-500/60 text-amber-400"
+          label="Reservado"
+        />
+        <LegendItem
+          cls="bg-red-500/10 border-red-400/50 text-red-300"
+          label="Pública"
+        />
+        <LegendItem
+          cls="bg-orange/30 border-orange text-bone"
+          label="Tomado"
+        />
       </div>
 
       <CalendarioPrivada slots={slots} isAdmin={isAdmin} />

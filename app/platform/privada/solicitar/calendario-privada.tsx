@@ -590,37 +590,41 @@ function SlotButton({
   );
 }
 
+// Paleta tactical-style: cada estado tiene un color base distinguible
+// para que el usuario vea el calendario y entienda de un vistazo qué
+// puede tocar y qué está bloqueado. Los colores usan estándar de
+// semáforo táctico (verde=go, ámbar=warning, rojo=ocupado).
 const SLOT_STYLES: Record<
   SlotEstado,
   { cls: string; tag: string; tooltip: string }
 > = {
   disponible: {
-    cls: "border border-rail/60 bg-ink/30 text-bone",
+    cls: "border border-green-500/50 bg-green-500/5 text-green-400",
     tag: "Libre",
     tooltip: "Disponible — click para reservar",
   },
   pendiente: {
-    cls: "border border-orange/40 bg-orange/5 text-orange",
+    cls: "border border-orange/60 bg-orange/15 text-orange",
     tag: "Pendiente",
     tooltip: "Hay una solicitud pendiente de aprobación",
   },
   publica: {
-    cls: "border border-rail/40 bg-ink/40 text-smoke",
+    cls: "border border-red-400/50 bg-red-500/10 text-red-300",
     tag: "Pública",
     tooltip: "Ya hay una partida pública en este rango",
   },
   aprobada: {
-    cls: "border border-rail/40 bg-ink/40 text-smoke",
+    cls: "border border-orange bg-orange/30 text-bone",
     tag: "Tomado",
     tooltip: "Ya hay una privada confirmada",
   },
   reservada: {
-    cls: "border border-rail/40 bg-ink/40 text-smoke",
+    cls: "border border-dashed border-amber-500/60 bg-amber-500/5 text-amber-400",
     tag: "Reservado",
     tooltip: "Slot reservado para públicas — admin puede liberarlo",
   },
   pasada: {
-    cls: "border border-rail/30 bg-ink/20 text-smoke opacity-50",
+    cls: "border border-rail/30 bg-ink/20 text-smoke opacity-40",
     tag: "Pasada",
     tooltip: "Ya pasó",
   },
