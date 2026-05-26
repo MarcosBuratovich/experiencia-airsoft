@@ -93,6 +93,7 @@ export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, soli
             <MiembroRow
               key={m.id}
               miembro={m}
+              clanId={clan.id}
               esCapitan={m.id === capitanId}
               soyCapitan={soyCapitan}
               esYo={m.id === userId}
@@ -106,9 +107,9 @@ export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, soli
         <h2 className="sect-label mb-3">Acciones</h2>
         <div className="flex gap-3 flex-wrap">
           {soyCapitan ? (
-            <EliminarClanButton setError={setError} />
+            <EliminarClanButton clanId={clan.id} setError={setError} />
           ) : (
-            <SalirClanButton setError={setError} />
+            <SalirClanButton clanId={clan.id} setError={setError} />
           )}
         </div>
       </section>
@@ -202,12 +203,14 @@ function SolicitudCapitanRow({
 
 function MiembroRow({
   miembro,
+  clanId,
   esCapitan,
   soyCapitan,
   esYo,
   setError,
 }: {
   miembro: Miembro;
+  clanId: string;
   esCapitan: boolean;
   soyCapitan: boolean;
   esYo: boolean;
@@ -220,7 +223,7 @@ function MiembroRow({
     if (!confirm(`Expulsar a ${miembro.nombre}?`)) return;
     setError(null);
     startTransition(async () => {
-      const res = await expulsarMiembroAction(miembro.id);
+      const res = await expulsarMiembroAction(miembro.id, clanId);
       if ("error" in res && res.error) setError(res.error);
       else router.refresh();
     });
@@ -230,7 +233,7 @@ function MiembroRow({
     if (!confirm(`Transferir la capitanía a ${miembro.nombre}? Dejás de ser capitán.`)) return;
     setError(null);
     startTransition(async () => {
-      const res = await transferirCapitaniaAction(miembro.id);
+      const res = await transferirCapitaniaAction(miembro.id, clanId);
       if ("error" in res && res.error) setError(res.error);
       else router.refresh();
     });
@@ -270,19 +273,25 @@ function MiembroRow({
   );
 }
 
-function SalirClanButton({ setError }: { setError: (e: string | null) => void }) {
+function SalirClanButton({
+  clanId,
+  setError,
+}: {
+  clanId: string;
+  setError: (e: string | null) => void;
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   return (
     <button
       type="button"
       onClick={() => {
-        if (!confirm("¿Salir del clan?")) return;
+        if (!confirm("¿Salir de este clan?")) return;
         setError(null);
         startTransition(async () => {
-          const res = await salirDelClanAction();
+          const res = await salirDelClanAction(clanId);
           if ("error" in res && res.error) setError(res.error);
-          else router.push("/clanes");
+          else router.refresh();
         });
       }}
       disabled={pending}
@@ -293,7 +302,13 @@ function SalirClanButton({ setError }: { setError: (e: string | null) => void })
   );
 }
 
-function EliminarClanButton({ setError }: { setError: (e: string | null) => void }) {
+function EliminarClanButton({
+  clanId,
+  setError,
+}: {
+  clanId: string;
+  setError: (e: string | null) => void;
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   return (
@@ -308,9 +323,9 @@ function EliminarClanButton({ setError }: { setError: (e: string | null) => void
           return;
         setError(null);
         startTransition(async () => {
-          const res = await eliminarClanAction();
+          const res = await eliminarClanAction(clanId);
           if ("error" in res && res.error) setError(res.error);
-          else router.push("/clanes");
+          else router.refresh();
         });
       }}
       disabled={pending}

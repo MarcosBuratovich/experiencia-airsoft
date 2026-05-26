@@ -7,11 +7,10 @@ export default async function ClanesDirectorio() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: miProfile } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { count: miCantClanes } = await supabase
+    .from("profile_clanes")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", user.id);
 
   const { data: clanes } = await supabase
     .from("clanes")
@@ -22,13 +21,15 @@ export default async function ClanesDirectorio() {
   const memberCounts = new Map<string, number>();
   if (clanIds.length) {
     const { data: counts } = await supabase
-      .from("profiles")
+      .from("profile_clanes")
       .select("clan_id")
       .in("clan_id", clanIds);
     for (const row of counts ?? []) {
-      if (row.clan_id) memberCounts.set(row.clan_id, (memberCounts.get(row.clan_id) ?? 0) + 1);
+      memberCounts.set(row.clan_id, (memberCounts.get(row.clan_id) ?? 0) + 1);
     }
   }
+  const tengoAlgunClan = (miCantClanes ?? 0) > 0;
+  const llenoDeClanes = (miCantClanes ?? 0) >= 3;
 
   return (
     <div>
@@ -44,14 +45,15 @@ export default async function ClanesDirectorio() {
           >
             Ranking →
           </Link>
-          {miProfile?.clan_id ? (
+          {tengoAlgunClan && (
             <Link
               href="/mi-clan"
               className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"
             >
-              Mi clan →
+              Mis clanes →
             </Link>
-          ) : (
+          )}
+          {!llenoDeClanes && (
             <Link
               href="/clanes/nuevo"
               className="btn-wa px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold cursor-pointer"

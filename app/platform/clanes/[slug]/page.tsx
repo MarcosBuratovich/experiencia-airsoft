@@ -21,30 +21,38 @@ export default async function ClanDetail({
     .maybeSingle();
   if (!clan) notFound();
 
-  const { data: miembros } = await supabase
-    .from("profiles")
-    .select("id, nombre, apellido")
-    .eq("clan_id", clan.id)
-    .order("apellido");
+  // Miembros del clan via la junction (con fallback al modelo viejo).
+  const { data: membershipRows } = await supabase
+    .from("profile_clanes")
+    .select("profile_id, profiles!inner(id, nombre, apellido)")
+    .eq("clan_id", clan.id);
+  const miembros = (membershipRows ?? [])
+    .map((r) => {
+      const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+      return p ? { id: p.id, nombre: p.nombre, apellido: p.apellido } : null;
+    })
+    .filter((m): m is { id: string; nombre: string; apellido: string } => !!m)
+    .sort((a, b) => a.apellido.localeCompare(b.apellido));
 
-  const { data: miProfile } = await supabase
-    .from("profiles")
+  const { data: misClanes } = await supabase
+    .from("profile_clanes")
     .select("clan_id")
-    .eq("id", user.id)
-    .maybeSingle();
+    .eq("profile_id", user.id);
+  const misClanIds = new Set((misClanes ?? []).map((r) => r.clan_id));
 
-  const { data: miSolicitud } = await supabase
+  const { data: misSolicitudes } = await supabase
     .from("clan_requests")
     .select("id, estado, clan_id")
     .eq("user_id", user.id)
-    .eq("estado", "pendiente")
-    .maybeSingle();
+    .eq("estado", "pendiente");
+  const misPendingClanIds = new Set(
+    (misSolicitudes ?? []).map((r) => r.clan_id),
+  );
 
-  const soyMiembro = miProfile?.clan_id === clan.id;
+  const soyMiembro = misClanIds.has(clan.id);
   const soyCapitan = clan.capitan_id === user.id;
-  const tengoOtroClan = !!miProfile?.clan_id && miProfile.clan_id !== clan.id;
-  const yaSoliciteAqui = miSolicitud?.clan_id === clan.id;
-  const tengoSolicitudOtroClan = !!miSolicitud && miSolicitud.clan_id !== clan.id;
+  const llenoDeClanes = misClanIds.size >= 3;
+  const yaSoliciteAqui = misPendingClanIds.has(clan.id);
 
   const capitan = miembros?.find((m) => m.id === clan.capitan_id) ?? null;
   const stats = await getClanStats(supabase, clan.id);
@@ -84,15 +92,11 @@ export default async function ClanDetail({
             href="/mi-clan"
             className="btn-ghost px-4 py-2.5 clip-tag uppercase tracking-wider font-semibold inline-block"
           >
-            {soyCapitan ? "Gestionar clan →" : "Ir a mi clan →"}
+            {soyCapitan ? "Gestionar clan →" : "Mis clanes →"}
           </Link>
-        ) : tengoOtroClan ? (
+        ) : llenoDeClanes ? (
           <p className="font-mono fluid-xs text-smoke uppercase tracking-[.2em]">
-            Ya pertenecés a otro clan.
-          </p>
-        ) : tengoSolicitudOtroClan ? (
-          <p className="font-mono fluid-xs text-smoke uppercase tracking-[.2em]">
-            Tenés una solicitud pendiente en otro clan.
+            Ya estás en 3 clanes (máximo). Salí de uno para unirte a éste.
           </p>
         ) : yaSoliciteAqui ? (
           <p className="font-mono fluid-xs text-orange uppercase tracking-[.2em]">

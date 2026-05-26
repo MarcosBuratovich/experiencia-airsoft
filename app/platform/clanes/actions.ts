@@ -119,6 +119,15 @@ export async function crearClanAction(
     slug = `${base}-${i}`;
   }
 
+  // Validar que no esté ya en 3 clanes
+  const { count: cuantos } = await supabase
+    .from("profile_clanes")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", user.id);
+  if ((cuantos ?? 0) >= 3) {
+    return { message: "Ya estás en 3 clanes. Salí de uno antes de crear." };
+  }
+
   const { data: clan, error: insertError } = await supabase
     .from("clanes")
     .insert({
@@ -137,12 +146,86 @@ export async function crearClanAction(
     return { message: insertError?.message ?? "No se pudo crear el clan" };
   }
 
-  // el capitán pasa a ser miembro del clan que acaba de crear
-  await supabase.from("profiles").update({ clan_id: clan.id }).eq("id", user.id);
+  await addMemberToClan(supabase, user.id, clan.id);
 
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
   redirect(`/clanes/${clan.slug}`);
+}
+
+const MAX_CLANES_POR_USER = 3;
+
+/**
+ * Inserta (user, clan) en profile_clanes en la próxima posición libre y
+ * mantiene profiles.clan_id en sync (apunta al primer clan del usuario)
+ * para compat con código que todavía lee la columna vieja.
+ */
+async function addMemberToClan(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  clanId: string,
+): Promise<{ error?: string }> {
+  // Buscar posiciones ocupadas
+  const { data: actuales } = await supabase
+    .from("profile_clanes")
+    .select("clan_id, posicion")
+    .eq("profile_id", userId)
+    .order("posicion");
+
+  if ((actuales ?? []).some((r) => r.clan_id === clanId)) {
+    return { error: "Ya sos miembro de ese clan" };
+  }
+  if ((actuales ?? []).length >= MAX_CLANES_POR_USER) {
+    return { error: `Máximo ${MAX_CLANES_POR_USER} clanes por usuario` };
+  }
+
+  const ocupadas = new Set((actuales ?? []).map((r) => r.posicion));
+  let posicion = 1;
+  while (ocupadas.has(posicion)) posicion++;
+
+  const { error } = await supabase.from("profile_clanes").insert({
+    profile_id: userId,
+    clan_id: clanId,
+    posicion,
+  });
+  if (error) return { error: error.message };
+
+  await syncProfileClanIdLegacy(supabase, userId);
+  return {};
+}
+
+async function removeMemberFromClan(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  clanId: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("profile_clanes")
+    .delete()
+    .eq("profile_id", userId)
+    .eq("clan_id", clanId);
+  if (error) return { error: error.message };
+
+  await syncProfileClanIdLegacy(supabase, userId);
+  return {};
+}
+
+/** Mantiene profiles.clan_id apuntando al clan de menor posicion (o null). */
+async function syncProfileClanIdLegacy(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+) {
+  const { data } = await supabase
+    .from("profile_clanes")
+    .select("clan_id")
+    .eq("profile_id", userId)
+    .order("posicion")
+    .limit(1)
+    .maybeSingle();
+  await supabase
+    .from("profiles")
+    .update({ clan_id: data?.clan_id ?? null })
+    .eq("id", userId);
 }
 
 export async function solicitarUnirseAction(clanId: string, mensaje?: string) {
@@ -150,20 +233,26 @@ export async function solicitarUnirseAction(clanId: string, mensaje?: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile?.clan_id) return { error: "Ya pertenecés a un clan" };
+  const { data: actuales, count } = await supabase
+    .from("profile_clanes")
+    .select("clan_id", { count: "exact" })
+    .eq("profile_id", user.id);
+  if ((count ?? 0) >= MAX_CLANES_POR_USER) {
+    return { error: `Ya pertenecés a ${MAX_CLANES_POR_USER} clanes. Salí de uno antes.` };
+  }
+  if ((actuales ?? []).some((r) => r.clan_id === clanId)) {
+    return { error: "Ya sos miembro de ese clan" };
+  }
 
+  // Una solicitud pendiente por (user, clan).
   const { data: existing } = await supabase
     .from("clan_requests")
     .select("id")
     .eq("user_id", user.id)
+    .eq("clan_id", clanId)
     .eq("estado", "pendiente")
     .maybeSingle();
-  if (existing) return { error: "Ya tenés una solicitud pendiente" };
+  if (existing) return { error: "Ya tenés una solicitud pendiente a este clan" };
 
   const { error } = await supabase.from("clan_requests").insert({
     clan_id: clanId,
@@ -173,7 +262,7 @@ export async function solicitarUnirseAction(clanId: string, mensaje?: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/clanes");
-  revalidatePath(`/clanes`);
+  revalidatePath(`/clanes/[slug]`, "page");
   revalidatePath("/mi-clan");
   return { ok: true };
 }
@@ -221,13 +310,17 @@ export async function aprobarSolicitudAction(requestId: string) {
   const ctx = await esCapitanDeSolicitud(supabase, user.id, requestId);
   if (!ctx) return { error: "No autorizado o solicitud no encontrada" };
 
-  // verificar que el solicitante sigue sin clan
-  const { data: requester } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", ctx.requesterId)
-    .maybeSingle();
-  if (requester?.clan_id) return { error: "El usuario ya está en otro clan" };
+  // verificar que el solicitante todavía tiene espacio
+  const { data: actuales, count } = await supabase
+    .from("profile_clanes")
+    .select("clan_id", { count: "exact" })
+    .eq("profile_id", ctx.requesterId);
+  if ((count ?? 0) >= MAX_CLANES_POR_USER) {
+    return { error: `El usuario ya está en ${MAX_CLANES_POR_USER} clanes.` };
+  }
+  if ((actuales ?? []).some((r) => r.clan_id === ctx.clanId)) {
+    return { error: "El usuario ya es miembro de tu clan" };
+  }
 
   const { error: upErr } = await supabase
     .from("clan_requests")
@@ -239,11 +332,8 @@ export async function aprobarSolicitudAction(requestId: string) {
     .eq("id", requestId);
   if (upErr) return { error: upErr.message };
 
-  const { error: profErr } = await supabase
-    .from("profiles")
-    .update({ clan_id: ctx.clanId })
-    .eq("id", ctx.requesterId);
-  if (profErr) return { error: profErr.message };
+  const addRes = await addMemberToClan(supabase, ctx.requesterId, ctx.clanId);
+  if (addRes.error) return { error: addRes.error };
 
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
@@ -273,96 +363,98 @@ export async function rechazarSolicitudAction(requestId: string, respuesta?: str
   return { ok: true };
 }
 
-export async function expulsarMiembroAction(userId: string) {
+export async function expulsarMiembroAction(userId: string, clanId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
   if (userId === user.id) return { error: "No podés expulsarte a vos mismo" };
 
-  // encontrar clan del capitán
-  const { data: miClan } = await supabase
+  const { data: clan } = await supabase
     .from("clanes")
-    .select("id")
-    .eq("capitan_id", user.id)
+    .select("id, capitan_id")
+    .eq("id", clanId)
     .maybeSingle();
-  if (!miClan) return { error: "No sos capitán de ningún clan" };
+  if (!clan || clan.capitan_id !== user.id) {
+    return { error: "No sos capitán de ese clan" };
+  }
 
-  // validar que el user está en ese clan
-  const { data: target } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", userId)
+  const { data: membership } = await supabase
+    .from("profile_clanes")
+    .select("profile_id")
+    .eq("profile_id", userId)
+    .eq("clan_id", clanId)
     .maybeSingle();
-  if (target?.clan_id !== miClan.id) return { error: "Ese usuario no está en tu clan" };
+  if (!membership) return { error: "Ese usuario no está en tu clan" };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ clan_id: null })
-    .eq("id", userId);
-  if (error) return { error: error.message };
+  const res = await removeMemberFromClan(supabase, userId, clanId);
+  if (res.error) return { error: res.error };
 
   revalidatePath("/mi-clan");
   return { ok: true };
 }
 
-export async function salirDelClanAction() {
+export async function salirDelClanAction(clanId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", user.id)
+  const { data: membership } = await supabase
+    .from("profile_clanes")
+    .select("profile_id")
+    .eq("profile_id", user.id)
+    .eq("clan_id", clanId)
     .maybeSingle();
-  if (!profile?.clan_id) return { error: "No pertenecés a ningún clan" };
+  if (!membership) return { error: "No pertenecés a ese clan" };
 
   const { data: clan } = await supabase
     .from("clanes")
     .select("capitan_id")
-    .eq("id", profile.clan_id)
+    .eq("id", clanId)
     .maybeSingle();
   if (clan?.capitan_id === user.id) {
     return {
-      error: "Sos el capitán: transferí la capitanía a otro miembro o eliminá el clan antes de salir",
+      error: "Sos el capitán: transferí la capitanía o eliminá el clan antes de salir",
     };
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ clan_id: null })
-    .eq("id", user.id);
-  if (error) return { error: error.message };
+  const res = await removeMemberFromClan(supabase, user.id, clanId);
+  if (res.error) return { error: res.error };
 
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
   return { ok: true };
 }
 
-export async function transferirCapitaniaAction(nuevoCapitanId: string) {
+export async function transferirCapitaniaAction(
+  nuevoCapitanId: string,
+  clanId: string,
+) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
-  const { data: miClan } = await supabase
+  const { data: clan } = await supabase
     .from("clanes")
-    .select("id")
-    .eq("capitan_id", user.id)
+    .select("id, capitan_id")
+    .eq("id", clanId)
     .maybeSingle();
-  if (!miClan) return { error: "No sos capitán de ningún clan" };
+  if (!clan || clan.capitan_id !== user.id) {
+    return { error: "No sos capitán de ese clan" };
+  }
 
-  const { data: target } = await supabase
-    .from("profiles")
-    .select("clan_id")
-    .eq("id", nuevoCapitanId)
+  const { data: membership } = await supabase
+    .from("profile_clanes")
+    .select("profile_id")
+    .eq("profile_id", nuevoCapitanId)
+    .eq("clan_id", clanId)
     .maybeSingle();
-  if (target?.clan_id !== miClan.id) return { error: "Ese usuario no está en tu clan" };
+  if (!membership) return { error: "Ese usuario no está en tu clan" };
 
   const { error } = await supabase
     .from("clanes")
     .update({ capitan_id: nuevoCapitanId })
-    .eq("id", miClan.id);
+    .eq("id", clanId);
   if (error) return { error: error.message };
 
   revalidatePath("/mi-clan");
@@ -370,20 +462,23 @@ export async function transferirCapitaniaAction(nuevoCapitanId: string) {
   return { ok: true };
 }
 
-export async function eliminarClanAction() {
+export async function eliminarClanAction(clanId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
-  const { data: miClan } = await supabase
+  const { data: clan } = await supabase
     .from("clanes")
-    .select("id")
-    .eq("capitan_id", user.id)
+    .select("id, capitan_id")
+    .eq("id", clanId)
     .maybeSingle();
-  if (!miClan) return { error: "No sos capitán de ningún clan" };
+  if (!clan || clan.capitan_id !== user.id) {
+    return { error: "No sos capitán de ese clan" };
+  }
 
-  // ON DELETE SET NULL en profiles.clan_id limpia a los miembros automaticamente
-  const { error } = await supabase.from("clanes").delete().eq("id", miClan.id);
+  // ON DELETE CASCADE en profile_clanes y SET NULL en profiles.clan_id
+  // limpian las membresías automaticamente.
+  const { error } = await supabase.from("clanes").delete().eq("id", clan.id);
   if (error) return { error: error.message };
 
   revalidatePath("/clanes");
