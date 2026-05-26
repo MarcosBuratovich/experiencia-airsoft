@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PlatformNav } from "./platform-nav";
@@ -35,9 +36,20 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   return (
     <div className="min-h-dvh bg-ink text-bone">
       <header className="sticky top-0 z-40 border-b border-rail/60 bg-carbon/85 backdrop-blur">
-        <div className="fluid-gutter-x flex items-center justify-between py-4">
-          <Link href="/" className="font-display fluid-lg uppercase tracking-wider text-bone">
-            Experiencia <span className="text-orange">Airsoft</span>
+        <div className="fluid-gutter-x flex items-center justify-between gap-3 py-3 sm:py-4">
+          <Link
+            href="/"
+            aria-label="Experiencia Airsoft — inicio"
+            className="flex items-center shrink-0"
+          >
+            <Image
+              src="/img/00_logo_cropped.png"
+              alt="Logo Experiencia Airsoft"
+              width={840}
+              height={240}
+              priority
+              className="h-8 sm:h-9 w-auto"
+            />
           </Link>
           <PlatformNav
             isAuthed={!!user}
@@ -48,7 +60,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           />
         </div>
       </header>
-      <main className="fluid-gutter-x py-10">{children}</main>
+      <main className="fluid-gutter-x py-6 sm:py-10">{children}</main>
     </div>
   );
 }
