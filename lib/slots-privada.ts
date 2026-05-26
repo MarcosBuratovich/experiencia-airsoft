@@ -90,6 +90,17 @@ export async function getSlotsEstado(
     .lte("fecha_propuesta", max)
     .eq("estado", "pendiente");
 
+  // 3) Overrides de admin (slots reservados habilitados puntualmente).
+  const { data: overrides } = await supabase
+    .from("slots_privada_overrides")
+    .select("fecha, hora_inicio, habilitado")
+    .gte("fecha", min)
+    .lte("fecha", max);
+  const overridesSet = new Set<string>();
+  for (const o of overrides ?? []) {
+    if (o.habilitado) overridesSet.add(`${o.fecha}|${o.hora_inicio}`);
+  }
+
   // Indexar por fecha → conjuntos de horas ocupadas
   type Ocupacion = { startMin: number; endMin: number; visibilidad: string };
   const partidasPorFecha = new Map<string, Ocupacion[]>();
@@ -135,8 +146,8 @@ export async function getSlotsEstado(
         continue;
       }
 
-      // 5. Slot reservado para públicas
-      if (slotEsReservado(fecha, hora)) {
+      // 5. Slot reservado para públicas (a menos que admin lo haya liberado)
+      if (slotEsReservado(fecha, hora) && !overridesSet.has(key)) {
         map.set(key, "reservada");
         continue;
       }

@@ -186,6 +186,149 @@ export async function aprobarPrivadaAction(
   return { ok: true, partidaId: partida.id, token: partida.private_token };
 }
 
+// =========================================================================
+// Admin desde el calendario
+// =========================================================================
+
+const SLOT_HORAS_VALIDAS = SLOTS_PRIVADA.map((s) => s.hora) as readonly string[];
+
+/** Libera (o vuelve a bloquear) un slot reservado para públicas. */
+export async function toggleSlotOverrideAction(
+  fecha: string,
+  hora: string,
+  habilitado: boolean,
+) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Fecha inválida" };
+  if (!SLOT_HORAS_VALIDAS.includes(hora)) return { error: "Hora inválida" };
+
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase, userId } = ctx;
+
+  if (habilitado) {
+    const { error } = await supabase
+      .from("slots_privada_overrides")
+      .upsert({
+        fecha,
+        hora_inicio: hora,
+        habilitado: true,
+        creado_por: userId,
+      });
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("slots_privada_overrides")
+      .delete()
+      .eq("fecha", fecha)
+      .eq("hora_inicio", hora);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath("/privada/solicitar");
+  return { ok: true };
+}
+
+const crearDirectaSchema = z.object({
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+  hora_inicio: z.string().refine(
+    (v) => SLOT_HORAS_VALIDAS.includes(v),
+    "Horario inválido",
+  ),
+  visibilidad: z.enum(["privada", "publica"]),
+  cupo_max: z.coerce.number().int().min(2, "Mínimo 2").max(60, "Máximo 60"),
+  modalidad: z.enum(["dinamica", "tacsim", "speedsoft"]),
+  titulo: z.string().trim().max(80).optional(),
+  notas: z.string().trim().max(500).optional(),
+});
+
+export type CrearDirectaState =
+  | {
+      errors?: Partial<Record<keyof z.infer<typeof crearDirectaSchema>, string[]>>;
+      message?: string;
+      ok?: boolean;
+      partidaId?: string;
+      token?: string | null;
+    }
+  | undefined;
+
+/** Admin crea una partida directamente desde el calendario. */
+export async function crearPartidaDirectaAction(
+  _prev: CrearDirectaState,
+  formData: FormData,
+): Promise<CrearDirectaState> {
+  const parsed = crearDirectaSchema.safeParse({
+    fecha: formData.get("fecha"),
+    hora_inicio: formData.get("hora_inicio"),
+    visibilidad: formData.get("visibilidad"),
+    cupo_max: formData.get("cupo_max"),
+    modalidad: formData.get("modalidad"),
+    titulo: formData.get("titulo") || undefined,
+    notas: formData.get("notas") || undefined,
+  });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+  const v = parsed.data;
+
+  const inicio = inicioPartida(v.fecha, v.hora_inicio.slice(0, 5));
+  if (inicio.getTime() <= Date.now()) {
+    return { errors: { fecha: ["La fecha/hora tiene que ser futura"] } };
+  }
+
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { message: ctx.error };
+  const { supabase, userId } = ctx;
+
+  // El slot tiene que estar realmente libre (no pisar partidas ni pendientes).
+  const estados = await getSlotsEstado(supabase, [v.fecha]);
+  const estado = estados.get(`${v.fecha}|${v.hora_inicio}`);
+  if (
+    estado === "publica" ||
+    estado === "aprobada" ||
+    estado === "pendiente" ||
+    estado === "pasada"
+  ) {
+    return { message: `El slot está ${estado}, no se puede crear acá.` };
+  }
+  // "reservada" se permite porque el admin puede crear igual; al crear la
+  // partida queda bloqueado para el resto.
+
+  const private_token =
+    v.visibilidad === "privada" ? randomBytes(16).toString("hex") : null;
+
+  const { data: partida, error: insErr } = await supabase
+    .from("partidas")
+    .insert({
+      titulo:
+        v.titulo ||
+        `${modalidadLabel(v.modalidad)} ${v.visibilidad === "privada" ? "privada" : ""}`.trim(),
+      fecha: v.fecha,
+      hora_inicio: v.hora_inicio,
+      duracion_min: SLOT_DURACION_MIN,
+      modalidad: v.modalidad,
+      cupo_max: v.cupo_max,
+      visibilidad: v.visibilidad,
+      private_token,
+      precio: 0,
+      notas: v.notas || null,
+      creado_por: userId,
+    })
+    .select("id, private_token")
+    .single();
+  if (insErr || !partida) {
+    return { message: insErr?.message ?? "No se pudo crear la partida" };
+  }
+
+  revalidatePath("/privada/solicitar");
+  revalidatePath("/admin/partidas");
+  revalidatePath("/partidas");
+  return {
+    ok: true,
+    partidaId: partida.id,
+    token: partida.private_token ?? null,
+  };
+}
+
 export async function rechazarPrivadaAction(
   solicitudId: string,
   respuesta?: string,

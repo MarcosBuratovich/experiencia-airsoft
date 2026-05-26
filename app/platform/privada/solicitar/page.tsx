@@ -18,6 +18,13 @@ export default async function SolicitarPrivadaPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
+
   const fechas = rangoDeFechasAhora(VENTANA_DIAS);
   const estados = await getSlotsEstado(supabase, fechas);
 
@@ -34,30 +41,34 @@ export default async function SolicitarPrivadaPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <Link
-        href="/mis-solicitudes"
+        href={isAdmin ? "/admin/partidas" : "/mis-solicitudes"}
         className="font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.25em]"
       >
-        ← Mis solicitudes
+        ← {isAdmin ? "Admin partidas" : "Mis solicitudes"}
       </Link>
       <div className="mt-4 mb-6">
-        <p className="sect-label mb-2">Privada · reservar</p>
-        <h1 className="sect-title fluid-3xl">Reservar partida privada</h1>
+        <p className="sect-label mb-2">
+          {isAdmin ? "Admin · calendario privadas" : "Privada · reservar"}
+        </p>
+        <h1 className="sect-title fluid-3xl">
+          {isAdmin ? "Calendario de privadas" : "Reservar partida privada"}
+        </h1>
         <p className="mt-3 text-ash fluid-sm">
-          Cada partida dura 4 horas. Elegí un slot libre y un admin la
-          confirma. Mientras tu solicitud está pendiente, ese slot queda
-          bloqueado para los demás.
+          {isAdmin
+            ? "Click en cualquier slot para crear una partida directa o liberar un slot reservado para que un usuario pueda pedirlo."
+            : "Cada partida dura 4 horas. Elegí un slot libre y un admin la confirma. Mientras tu solicitud está pendiente, ese slot queda bloqueado para los demás."}
         </p>
       </div>
 
       <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">
         <LegendItem cls="bg-carbon border-rail/60 text-bone" label="Libre" />
-        <LegendItem cls="bg-orange/15 border-orange/50 text-orange" label="Tu pedido" />
+        <LegendItem cls="bg-orange/15 border-orange/50 text-orange" label="Pendiente" />
         <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Reservado" />
-        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Pendiente" />
+        <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Pública" />
         <LegendItem cls="bg-ink/40 border-rail/40 text-smoke" label="Tomado" />
       </div>
 
-      <CalendarioPrivada slots={slots} />
+      <CalendarioPrivada slots={slots} isAdmin={isAdmin} />
 
       <div className="mt-8 border border-rail/60 bg-carbon clip-notch p-4">
         <p className="sect-label mb-2">Slots reservados para públicas</p>
