@@ -81,8 +81,15 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
   });
 
   if (error) {
-    if (error.message.toLowerCase().includes("already") || error.code === "user_already_exists") {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("already") || error.code === "user_already_exists") {
       return { message: "Ese email ya está registrado. Iniciá sesión." };
+    }
+    if (msg.includes("rate limit") || msg.includes("for security purposes")) {
+      return {
+        message:
+          "Estamos enviando muchos emails ahora. Esperá unos minutos y volvé a intentar.",
+      };
     }
     return { message: error.message };
   }
@@ -156,10 +163,27 @@ export async function forgotPasswordAction(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://app.experienciaairsoft.com";
 
   const supabase = await createClient();
-  // No revelamos si el email existe o no — siempre devolvemos ok.
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl}/auth/reset-password`,
-  });
+  // No revelamos si el email existe o no — para "user not found" devolvemos
+  // ok igual. Pero si hay rate limit u otro error técnico, sí mostramos
+  // (no leakea info de usuario, ayuda a entender por qué no llega el mail).
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    parsed.data.email,
+    { redirectTo: `${appUrl}/auth/reset-password` },
+  );
+
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("rate limit") || msg.includes("for security purposes")) {
+      return {
+        message:
+          "Estamos enviando muchos emails ahora. Esperá unos minutos y volvé a intentar.",
+      };
+    }
+    // Otros errores no de "user not found" los mostramos también.
+    if (!msg.includes("not found")) {
+      return { message: error.message };
+    }
+  }
 
   return {
     ok: true,
