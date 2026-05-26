@@ -21,14 +21,30 @@ function aliasLen(s: string): number {
 
 export function NuevoClanForm() {
   const [state, action, pending] = useActionState(crearClanAction, initial);
+  const [nombre, setNombre] = useState("");
   const [color, setColor] = useState("#ff6b1a");
   const [alias, setAlias] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [displayMode, setDisplayMode] = useState<"alias" | "logo">("alias");
 
   const aliasN = aliasLen(alias);
   const contraste = useMemo(() => contrasteSobreInk(color), [color]);
   const pasaContraste = contraste >= CONTRAST_MIN;
   const colorRender = colorLeibleSobreInk(color);
+
+  // Checklist de requisitos visible — el usuario ve exactamente qué le
+  // falta para poder crear. Estos son los chequeos client-side; el
+  // server además valida unicidad (nombre/alias) y devuelve banner si
+  // falla.
+  type Req = { ok: boolean; label: string };
+  const requisitos: Req[] = [
+    { ok: nombre.trim().length >= 2 && nombre.trim().length <= 40, label: "Nombre entre 2 y 40 caracteres" },
+    { ok: pasaContraste, label: "Color con contraste suficiente (verde ✓ en el preview)" },
+    ...(displayMode === "alias"
+      ? [{ ok: aliasN >= 1 && aliasN <= ALIAS_MAX, label: `Alias entre 1 y ${ALIAS_MAX} caracteres` }]
+      : [{ ok: !!logoUrl, label: "Logo subido (modo Logo circular)" }]),
+  ];
+  const allReqsMet = requisitos.every((r) => r.ok);
 
   // Resumen de errores para banner. Cuando el server devuelve errores
   // de campo, queremos que el usuario los vea SI o SI (no se pierda
@@ -75,12 +91,22 @@ export function NuevoClanForm() {
           )}
         </div>
       )}
-      <Field
-        label="Nombre del clan"
-        name="nombre"
-        placeholder="Ej: Lobos de Acero"
-        error={state?.errors?.nombre}
-      />
+      <label className="block">
+        <span className="sect-label mb-1 block">Nombre del clan</span>
+        <input
+          name="nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          maxLength={40}
+          placeholder="Ej: Lobos de Acero"
+          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
+        />
+        {state?.errors?.nombre?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.nombre[0]}
+          </span>
+        )}
+      </label>
 
       <div className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
         <p className="sect-label mb-1">// Alias del clan</p>
@@ -237,7 +263,7 @@ export function NuevoClanForm() {
         <span className="sect-label mb-1 block">
           Logo (opcional · necesario si display = Logo circular)
         </span>
-        <LogoUploader />
+        <LogoUploader onUrlChange={setLogoUrl} />
         {state?.errors?.logo_url?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {state.errors.logo_url[0]}
@@ -249,12 +275,43 @@ export function NuevoClanForm() {
         <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
       )}
 
+      {/* Checklist de requisitos — el usuario ve exactamente qué le
+          falta. El submit queda disabled hasta que todo esté ✓. */}
+      <div
+        className={`border ${
+          allReqsMet ? "border-green-500/40 bg-green-500/5" : "border-rail/60 bg-carbon"
+        } clip-notch p-4`}
+      >
+        <p className="sect-label mb-2">
+          {allReqsMet ? "// Listo para crear" : "// Requisitos para crear"}
+        </p>
+        <ul className="space-y-1.5 font-mono fluid-xs">
+          {requisitos.map((r) => (
+            <li
+              key={r.label}
+              className={`flex items-center gap-2 ${
+                r.ok ? "text-green-400" : "text-smoke"
+              }`}
+            >
+              <span aria-hidden className="w-4 text-center">
+                {r.ok ? "✓" : "·"}
+              </span>
+              <span>{r.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <button
         type="submit"
-        disabled={pending || !pasaContraste || aliasN > ALIAS_MAX}
+        disabled={pending || !allReqsMet}
         className="btn-wa w-full py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
       >
-        {pending ? "Creando..." : "Crear clan"}
+        {pending
+          ? "Creando..."
+          : allReqsMet
+            ? "Crear clan"
+            : "Completá los requisitos para crear"}
       </button>
     </form>
   );

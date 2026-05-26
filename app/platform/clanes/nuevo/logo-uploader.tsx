@@ -10,6 +10,9 @@ type Props = {
   initialUrl?: string | null;
   /** Hint del path en el bucket. Por ej. el slug futuro del clan. */
   pathHint?: string;
+  /** Callback opcional cuando cambia el URL (para que el form padre
+   * sepa si ya hay logo cargado, ej. para checklist de requisitos). */
+  onUrlChange?: (url: string) => void;
 };
 
 const OUTPUT_SIZE = 512;
@@ -53,12 +56,25 @@ async function cropToJpeg(imageSrc: string, area: Area): Promise<Blob> {
   });
 }
 
-export function LogoUploader({ name = "logo_url", initialUrl, pathHint }: Props) {
+export function LogoUploader({
+  name = "logo_url",
+  initialUrl,
+  pathHint,
+  onUrlChange,
+}: Props) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
-  const [url, setUrl] = useState<string>(initialUrl ?? "");
+  const [url, setUrlRaw] = useState<string>(initialUrl ?? "");
+  // Wrap setter para notificar al parent (checklist de requisitos).
+  const setUrl = useCallback(
+    (next: string) => {
+      setUrlRaw(next);
+      onUrlChange?.(next);
+    },
+    [onUrlChange],
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
