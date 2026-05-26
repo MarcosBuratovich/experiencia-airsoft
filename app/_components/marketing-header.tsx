@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { WHATSAPP_URL } from "./site-constants";
+import { TIENDA_URL, WHATSAPP_URL } from "./site-constants";
 
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/", label: "Inicio" },
@@ -41,6 +41,15 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
               {item.label}
             </Link>
           ))}
+          <a
+            href={TIENDA_URL}
+            target="_blank"
+            rel="noopener"
+            className="transition-colors hover:text-bone"
+          >
+            Tienda
+            <span aria-hidden className="ml-1 text-smoke">↗</span>
+          </a>
         </nav>
 
         <a
@@ -66,6 +75,15 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
               {item.label}
             </Link>
           ))}
+          <a
+            href={TIENDA_URL}
+            target="_blank"
+            rel="noopener"
+            className="transition-colors hover:text-bone shrink-0"
+          >
+            Tienda
+            <span aria-hidden className="ml-1 text-smoke">↗</span>
+          </a>
         </div>
       </nav>
     </header>

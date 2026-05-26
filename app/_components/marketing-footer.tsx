@@ -4,6 +4,7 @@ import {
   ADDRESS_STREET,
   ADDRESS_CITY,
   INSTAGRAM_URL,
+  TIENDA_URL,
   WHATSAPP_NUMBER,
   WHATSAPP_URL,
   YOUTUBE_URL,
@@ -78,6 +79,17 @@ export function MarketingFooter() {
                 <Link href="/blog" className="hover:text-bone transition">
                   Blog
                 </Link>
+              </li>
+              <li>
+                <a
+                  href={TIENDA_URL}
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-bone transition"
+                >
+                  Tienda
+                  <span aria-hidden className="ml-1 text-smoke">↗</span>
+                </a>
               </li>
             </ul>
           </div>
