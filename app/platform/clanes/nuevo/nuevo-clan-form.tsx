@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { crearClanAction, type CrearClanState } from "../actions";
 import { colorLeibleSobreInk, contrasteSobreInk, CONTRAST_MIN } from "@/lib/clanes";
+import { LogoUploader } from "./logo-uploader";
 
 const initial: CrearClanState = undefined;
 
@@ -151,13 +152,17 @@ export function NuevoClanForm() {
         )}
       </label>
 
-      <Field
-        label="URL del logo (opcional)"
-        name="logo_url"
-        placeholder="https://..."
-        type="url"
-        error={state?.errors?.logo_url}
-      />
+      <div>
+        <span className="sect-label mb-1 block">
+          Logo (opcional · necesario si display = Logo circular)
+        </span>
+        <LogoUploader />
+        {state?.errors?.logo_url?.[0] && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            {state.errors.logo_url[0]}
+          </span>
+        )}
+      </div>
 
       {state?.message && (
         <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
