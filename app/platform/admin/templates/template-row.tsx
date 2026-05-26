@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { actualizarTemplateAction } from "./actions";
+import { actualizarTemplateAction, eliminarTemplateAction } from "./actions";
 import { Select } from "../../components/select";
 
 const MODALIDAD_OPTS = [
@@ -31,7 +31,9 @@ export function TemplateRow({ template }: { template: Template }) {
   const [activo, setActivo] = useState(template.activo);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [deleting, startDelete] = useTransition();
   const router = useRouter();
 
   const dirty =
@@ -57,6 +59,19 @@ export function TemplateRow({ template }: { template: Template }) {
         setError(res.error);
       } else {
         setSaved(true);
+        router.refresh();
+      }
+    });
+  };
+
+  const eliminar = () => {
+    setError(null);
+    startDelete(async () => {
+      const res = await eliminarTemplateAction({ id: template.id });
+      if ("error" in res && res.error) {
+        setError(res.error);
+        setConfirmingDelete(false);
+      } else {
         router.refresh();
       }
     });
@@ -133,6 +148,34 @@ export function TemplateRow({ template }: { template: Template }) {
         >
           {pending ? "..." : "Guardar"}
         </button>
+        {confirmingDelete ? (
+          <>
+            <button
+              type="button"
+              onClick={eliminar}
+              disabled={deleting}
+              className="px-3 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold bg-orange-300/20 border border-orange-300/60 text-orange-300 hover:bg-orange-300/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {deleting ? "..." : "Confirmar eliminar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              className="font-mono fluid-xs uppercase tracking-[.2em] text-ash hover:text-bone cursor-pointer"
+            >
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            className="ml-auto font-mono fluid-xs uppercase tracking-[.2em] text-smoke hover:text-orange-300 cursor-pointer"
+          >
+            Eliminar
+          </button>
+        )}
         {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
         {saved && !dirty && !pending && !error && (
           <p className="font-mono fluid-xs text-green-400 uppercase tracking-[.2em]">Guardado</p>

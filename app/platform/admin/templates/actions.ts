@@ -192,3 +192,52 @@ export async function actualizarTemplateAction(input: z.infer<typeof updateSchem
   revalidatePath("/admin/templates");
   return { ok: true };
 }
+
+const createSchema = z.object({
+  dia_semana: z.coerce.number().int().min(0).max(6),
+  hora_inicio: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+  duracion_min: z.coerce.number().int().min(60).max(480),
+  modalidad: z.enum(["dinamica", "tacsim", "speedsoft"]),
+  cupo_max: z.coerce.number().int().min(1).max(60),
+});
+
+export async function crearTemplateAction(input: z.infer<typeof createSchema>) {
+  const parsed = createSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
+  const { error } = await supabase.from("partida_templates").insert({
+    dia_semana: parsed.data.dia_semana,
+    hora_inicio: `${parsed.data.hora_inicio}:00`,
+    duracion_min: parsed.data.duracion_min,
+    modalidad: parsed.data.modalidad,
+    cupo_max: parsed.data.cupo_max,
+    activo: true,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/templates");
+  return { ok: true };
+}
+
+export async function eliminarTemplateAction(input: { id: string }) {
+  const parsed = z.object({ id: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { error: "ID inválido" };
+
+  const ctx = await assertAdmin();
+  if ("error" in ctx) return { error: ctx.error };
+  const { supabase } = ctx;
+
+  const { error } = await supabase
+    .from("partida_templates")
+    .delete()
+    .eq("id", parsed.data.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/templates");
+  return { ok: true };
+}

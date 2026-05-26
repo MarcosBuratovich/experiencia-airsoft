@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TemplateRow } from "./template-row";
+import { NuevoTemplateForm } from "./nuevo-template-form";
 
 export default async function TemplatesPage() {
   const supabase = await createClient();
@@ -29,10 +30,15 @@ export default async function TemplatesPage() {
         <p className="sect-label mb-2">Admin · super</p>
         <h1 className="sect-title fluid-3xl">Templates</h1>
         <p className="mt-3 text-ash fluid-sm">
-          Partidas recurrentes que se generan cada semana con el botón
-          &ldquo;Generar semana&rdquo; en el listado admin. Dejá un template
+          Partidas recurrentes que aparecen en el preview de &ldquo;Generar
+          semana&rdquo;. Podés tener varios templates en el mismo día (ej. dos
+          horarios distintos) y combinarlos por modalidad. Dejá un template
           inactivo para suspenderlo sin borrarlo.
         </p>
+      </div>
+
+      <div className="mb-4">
+        <NuevoTemplateForm />
       </div>
 
       <div className="space-y-3">
@@ -53,7 +59,8 @@ export default async function TemplatesPage() {
         {!templates?.length && (
           <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
             <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
-              No hay templates. Corré la migración 3F para cargar los 4 por defecto.
+              No hay templates todavía. Creá el primero con &ldquo;Nuevo
+              template&rdquo;.
             </p>
           </div>
         )}
