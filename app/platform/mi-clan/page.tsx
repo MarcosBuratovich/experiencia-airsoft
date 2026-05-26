@@ -147,8 +147,8 @@ export default async function MiClanPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-10">
-      <div>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-6">
         <p className="sect-label mb-2">Mis clanes</p>
         <h1 className="sect-title fluid-3xl">
           {misClanes.length === 1
@@ -158,11 +158,25 @@ export default async function MiClanPage() {
         {misClanes.length < 3 && (
           <p className="mt-2 font-mono fluid-xs uppercase tracking-[.2em] text-smoke">
             Te quedan {3 - misClanes.length}{" "}
-            {3 - misClanes.length === 1 ? "lugar" : "lugares"} para más clanes.
+            {3 - misClanes.length === 1 ? "lugar" : "lugares"} libres ·{" "}
+            <Link
+              href="/clanes"
+              className="text-orange hover:underline"
+            >
+              Buscar clanes
+            </Link>{" "}
+            ·{" "}
+            <Link
+              href="/clanes/nuevo"
+              className="text-orange hover:underline"
+            >
+              Crear nuevo
+            </Link>
           </p>
         )}
       </div>
 
+      <div className="space-y-3">
       {(clanesFull ?? []).map((clan) => {
         const miembros = miembrosPorClan.get(clan.id) ?? [];
         const soyCapitan = clan.capitan_id === user.id;
@@ -185,6 +199,7 @@ export default async function MiClanPage() {
           />
         );
       })}
+      </div>
     </div>
   );
 }

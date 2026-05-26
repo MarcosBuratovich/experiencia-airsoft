@@ -40,80 +40,111 @@ type Props = {
 
 export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, solicitudes }: Props) {
   const [error, setError] = useState<string | null>(null);
+  const hayPendientes = soyCapitan && solicitudes.length > 0;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mt-0 mb-6 flex items-center gap-4">
+    <details
+      open={hayPendientes}
+      className="group border border-rail/60 bg-carbon clip-notch"
+    >
+      <summary className="list-none cursor-pointer p-4 sm:p-5 flex items-center gap-3 flex-wrap">
         <span
-          className="inline-block w-10 h-10 rounded-full border border-rail/60"
+          className="inline-block w-10 h-10 rounded-full border border-rail/60 shrink-0"
           style={{ backgroundColor: clan.color_hex ?? "#666" }}
           aria-hidden
         />
-        <div>
-          <p className="sect-label mb-1">Mi clan{soyCapitan && " · capitán"}</p>
-          <h1 className="sect-title fluid-3xl">{clan.nombre}</h1>
+        <div className="flex-1 min-w-0">
+          <p className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
+            {soyCapitan ? "Capitán" : "Miembro"}
+            {hayPendientes && (
+              <span className="ml-2 text-orange">
+                · {solicitudes.length} pendiente{solicitudes.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </p>
+          <h2 className="font-display fluid-xl uppercase tracking-wider text-bone truncate">
+            {clan.nombre}
+          </h2>
         </div>
-        <Link
-          href={`/clanes/${clan.slug}`}
-          className="ml-auto font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.25em]"
-        >
-          Vista pública →
-        </Link>
-      </div>
+        <span className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke shrink-0 group-open:hidden">
+          Expandir ↓
+        </span>
+        <span className="font-mono fluid-xs uppercase tracking-[.2em] text-smoke shrink-0 hidden group-open:inline">
+          Colapsar ↑
+        </span>
+      </summary>
 
-      {clan.descripcion && (
-        <div className="mb-6 border border-rail/60 bg-carbon clip-notch p-4 md:p-5">
-          <p className="text-ash fluid-base leading-relaxed whitespace-pre-wrap">
+      <div className="px-4 sm:px-5 pb-5 border-t border-rail/40 pt-4 space-y-6">
+        <div className="flex items-center gap-3 flex-wrap font-mono fluid-xs uppercase tracking-[.22em]">
+          <Link
+            href={`/clanes/${clan.slug}`}
+            className="text-smoke hover:text-orange"
+          >
+            Vista pública →
+          </Link>
+          {soyCapitan && (
+            <Link
+              href={`/clanes/${clan.slug}/editar`}
+              className="text-orange hover:underline"
+            >
+              Editar clan ✎
+            </Link>
+          )}
+        </div>
+
+        {clan.descripcion && (
+          <p className="text-ash fluid-sm leading-relaxed whitespace-pre-wrap">
             {clan.descripcion}
           </p>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="mb-4 border border-orange/40 bg-orange/5 clip-notch p-3">
-          <p className="font-mono fluid-xs text-orange-300">{error}</p>
-        </div>
-      )}
+        {error && (
+          <div className="border border-orange/40 bg-orange/5 clip-notch p-3">
+            <p className="font-mono fluid-xs text-orange-300">{error}</p>
+          </div>
+        )}
 
-      {soyCapitan && solicitudes.length > 0 && (
-        <section className="mb-8">
-          <h2 className="sect-label mb-3">Solicitudes pendientes ({solicitudes.length})</h2>
-          <ul className="space-y-2">
-            {solicitudes.map((s) => (
-              <SolicitudCapitanRow key={s.id} solicitud={s} setError={setError} />
+        {hayPendientes && (
+          <section>
+            <h3 className="sect-label mb-3">
+              Solicitudes pendientes ({solicitudes.length})
+            </h3>
+            <ul className="space-y-2">
+              {solicitudes.map((s) => (
+                <SolicitudCapitanRow key={s.id} solicitud={s} setError={setError} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section>
+          <h3 className="sect-label mb-3">Miembros ({miembros.length})</h3>
+          <ul className="space-y-1">
+            {miembros.map((m) => (
+              <MiembroRow
+                key={m.id}
+                miembro={m}
+                clanId={clan.id}
+                esCapitan={m.id === capitanId}
+                soyCapitan={soyCapitan}
+                esYo={m.id === userId}
+                setError={setError}
+              />
             ))}
           </ul>
         </section>
-      )}
 
-      <section className="mb-8">
-        <h2 className="sect-label mb-3">Miembros ({miembros.length})</h2>
-        <ul className="space-y-1">
-          {miembros.map((m) => (
-            <MiembroRow
-              key={m.id}
-              miembro={m}
-              clanId={clan.id}
-              esCapitan={m.id === capitanId}
-              soyCapitan={soyCapitan}
-              esYo={m.id === userId}
-              setError={setError}
-            />
-          ))}
-        </ul>
-      </section>
-
-      <section className="border-t border-rail/40 pt-6">
-        <h2 className="sect-label mb-3">Acciones</h2>
-        <div className="flex gap-3 flex-wrap">
-          {soyCapitan ? (
-            <EliminarClanButton clanId={clan.id} setError={setError} />
-          ) : (
-            <SalirClanButton clanId={clan.id} setError={setError} />
-          )}
-        </div>
-      </section>
-    </div>
+        <section className="border-t border-rail/40 pt-4">
+          <div className="flex gap-3 flex-wrap">
+            {soyCapitan ? (
+              <EliminarClanButton clanId={clan.id} setError={setError} />
+            ) : (
+              <SalirClanButton clanId={clan.id} setError={setError} />
+            )}
+          </div>
+        </section>
+      </div>
+    </details>
   );
 }
 

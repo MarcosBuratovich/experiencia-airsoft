@@ -86,7 +86,7 @@ export default async function ClanDetail({
         </div>
       )}
 
-      <div className="mb-8">
+      <div className="mb-8 flex items-center gap-3 flex-wrap">
         {soyMiembro ? (
           <Link
             href="/mi-clan"
@@ -104,6 +104,14 @@ export default async function ClanDetail({
           </p>
         ) : (
           <SolicitarUnirseButton clanId={clan.id} />
+        )}
+        {soyCapitan && (
+          <Link
+            href={`/clanes/${clan.slug}/editar`}
+            className="font-mono fluid-xs uppercase tracking-[.22em] text-orange hover:underline"
+          >
+            Editar clan ✎
+          </Link>
         )}
       </div>
 

@@ -462,6 +462,84 @@ export async function transferirCapitaniaAction(
   return { ok: true };
 }
 
+const editarSchema = z
+  .object({
+    id: z.uuid(),
+    nombre: z.string().trim().min(2, "Mínimo 2 caracteres").max(40, "Máximo 40 caracteres"),
+    alias: aliasSchema,
+    display_mode: displayModeSchema,
+    descripcion: z.string().trim().max(500, "Máximo 500 caracteres").optional(),
+    color_hex: colorSchema,
+    logo_url: z.url("URL inválida").optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => data.display_mode !== "alias" || aliasLen(data.alias) >= 1,
+    {
+      message: "El alias es obligatorio si elegís mostrarlo como texto",
+      path: ["alias"],
+    },
+  )
+  .refine(
+    (data) => data.display_mode !== "logo" || !!(data.logo_url && data.logo_url.length > 0),
+    {
+      message: "Subí o cargá una URL de logo si elegís mostrar imagen",
+      path: ["logo_url"],
+    },
+  );
+
+export type EditarClanState =
+  | { errors?: Partial<Record<keyof z.infer<typeof editarSchema>, string[]>>; message?: string; ok?: boolean }
+  | undefined;
+
+export async function editarClanAction(
+  _prev: EditarClanState,
+  formData: FormData,
+): Promise<EditarClanState> {
+  const parsed = editarSchema.safeParse({
+    id: formData.get("id"),
+    nombre: formData.get("nombre"),
+    alias: formData.get("alias") ?? "",
+    display_mode: formData.get("display_mode") ?? "alias",
+    descripcion: formData.get("descripcion") || undefined,
+    color_hex: formData.get("color_hex") || "",
+    logo_url: formData.get("logo_url") || undefined,
+  });
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { message: "No autenticado" };
+
+  const { data: clan } = await supabase
+    .from("clanes")
+    .select("id, capitan_id, slug")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+  if (!clan || clan.capitan_id !== user.id) {
+    return { message: "No sos capitán de ese clan" };
+  }
+
+  const { error } = await supabase
+    .from("clanes")
+    .update({
+      nombre: parsed.data.nombre,
+      alias: parsed.data.alias || null,
+      display_mode: parsed.data.display_mode,
+      descripcion: parsed.data.descripcion || null,
+      color_hex: parsed.data.color_hex,
+      logo_url: parsed.data.logo_url || null,
+    })
+    .eq("id", clan.id);
+  if (error) return { message: error.message };
+
+  revalidatePath("/clanes");
+  revalidatePath(`/clanes/${clan.slug}`);
+  revalidatePath("/mi-clan");
+  return { ok: true };
+}
+
 export async function eliminarClanAction(clanId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

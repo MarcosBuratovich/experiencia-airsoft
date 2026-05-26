@@ -101,6 +101,22 @@ export function LogoUploader({ name = "logo_url", initialUrl, pathHint }: Props)
       const slug = pathHint ?? "pending";
       const filename = `${user.id}-${Date.now()}.jpg`;
       const path = `${slug}/${filename}`;
+
+      // Cleanup: si el user ya tiene uploads previos en pending/ (form
+      // anterior abandonado), los borramos antes de subir el nuevo. Solo
+      // borramos los del mismo user_id, así no tocamos uploads ajenos.
+      if (slug === "pending") {
+        const { data: existing } = await supabase.storage
+          .from("clan-logos")
+          .list("pending", { limit: 100 });
+        const mios = (existing ?? [])
+          .filter((f) => f.name.startsWith(`${user.id}-`))
+          .map((f) => `pending/${f.name}`);
+        if (mios.length) {
+          await supabase.storage.from("clan-logos").remove(mios);
+        }
+      }
+
       const { error: upErr } = await supabase.storage
         .from("clan-logos")
         .upload(path, blob, {
