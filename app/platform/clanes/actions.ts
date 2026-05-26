@@ -66,6 +66,38 @@ export type CrearClanState =
   | { errors?: Partial<Record<keyof z.infer<typeof crearSchema>, string[]>>; message?: string }
   | undefined;
 
+/** ¿Ya existe un clan con ese nombre (case-insensitive)? */
+async function clanNombreOcupado(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  nombre: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const query = supabase
+    .from("clanes")
+    .select("id")
+    .ilike("nombre", nombre.trim())
+    .limit(1);
+  if (exceptId) query.neq("id", exceptId);
+  const { data } = await query.maybeSingle();
+  return !!data;
+}
+
+/** ¿Ya existe un clan con ese alias (case-insensitive)? */
+async function clanAliasOcupado(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  alias: string,
+  exceptId?: string,
+): Promise<boolean> {
+  const query = supabase
+    .from("clanes")
+    .select("id")
+    .ilike("alias", alias.trim())
+    .limit(1);
+  if (exceptId) query.neq("id", exceptId);
+  const { data } = await query.maybeSingle();
+  return !!data;
+}
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -107,6 +139,24 @@ export async function crearClanAction(
 
   const base = slugify(parsed.data.nombre);
   if (!base) return { errors: { nombre: ["Nombre inválido"] } };
+
+  // Nombre único (case-insensitive)
+  const nombreOcupado = await clanNombreOcupado(supabase, parsed.data.nombre);
+  if (nombreOcupado) {
+    return {
+      errors: { nombre: ["Ya existe un clan con ese nombre. Elegí otro."] },
+    };
+  }
+
+  // Alias único (case-insensitive, solo si no es vacío)
+  if (parsed.data.alias) {
+    const aliasOcupado = await clanAliasOcupado(supabase, parsed.data.alias);
+    if (aliasOcupado) {
+      return {
+        errors: { alias: ["Ese alias ya está en uso por otro clan."] },
+      };
+    }
+  }
 
   let slug = base;
   for (let i = 2; i < 20; i++) {
@@ -534,6 +584,32 @@ export async function editarClanAction(
     .maybeSingle();
   if (!clan || clan.capitan_id !== user.id) {
     return { message: "No sos capitán de ese clan" };
+  }
+
+  // Nombre único (case-insensitive, excluyendo el propio clan)
+  const nombreOcupado = await clanNombreOcupado(
+    supabase,
+    parsed.data.nombre,
+    clan.id,
+  );
+  if (nombreOcupado) {
+    return {
+      errors: { nombre: ["Ya existe otro clan con ese nombre."] },
+    };
+  }
+
+  // Alias único (case-insensitive, excluyendo el propio clan)
+  if (parsed.data.alias) {
+    const aliasOcupado = await clanAliasOcupado(
+      supabase,
+      parsed.data.alias,
+      clan.id,
+    );
+    if (aliasOcupado) {
+      return {
+        errors: { alias: ["Ese alias ya está en uso por otro clan."] },
+      };
+    }
   }
 
   const { error } = await supabase
