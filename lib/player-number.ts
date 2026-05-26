@@ -20,6 +20,12 @@ export function validarFormato(numero: string): ValidacionResult {
  * Valida que el número no esté en uso por otro usuario.
  * `exceptUserId` permite editar el número del propio usuario sin colisionar
  * consigo mismo (caso típico: admin reasigna o user lo cambia desde su perfil).
+ *
+ * IMPORTANTE: usa la vista `profiles_publicos` en vez de `profiles`. La RLS
+ * de profiles oculta filas ajenas (incluso para usuarios anónimos en signup),
+ * lo que haría que esta validación siempre devuelva true y el insert
+ * explote con "database error saving new user" al chocar contra el unique
+ * index. profiles_publicos es security_invoker=false y expone player_number.
  */
 export async function numeroDisponible(
   supabase: ServerSupabase,
@@ -27,7 +33,7 @@ export async function numeroDisponible(
   exceptUserId?: string,
 ): Promise<boolean> {
   const query = supabase
-    .from("profiles")
+    .from("profiles_publicos")
     .select("id")
     .eq("player_number", numero)
     .limit(1);

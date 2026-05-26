@@ -6,22 +6,29 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { numeroDisponible } from "@/lib/player-number";
 
-const signupSchema = z.object({
-  nombre: z.string().trim().min(2, "Mínimo 2 caracteres"),
-  apellido: z.string().trim().min(2, "Mínimo 2 caracteres"),
-  dni: z.string().trim().regex(/^\d{7,8}$/, "DNI inválido (7-8 dígitos)"),
-  celular: z.string().trim().min(8, "Celular inválido"),
-  email: z.email("Email inválido"),
-  password: z
-    .string()
-    .min(8, "Mínimo 8 caracteres")
-    .regex(/[a-zA-Z]/, "Debe tener al menos una letra")
-    .regex(/[0-9]/, "Debe tener al menos un número"),
-  player_number: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/, "Tienen que ser exactamente 6 dígitos"),
-});
+const signupSchema = z
+  .object({
+    nombre: z.string().trim().min(2, "Mínimo 2 caracteres"),
+    apellido: z.string().trim().min(2, "Mínimo 2 caracteres"),
+    dni: z.string().trim().regex(/^\d{7,8}$/, "DNI inválido (7-8 dígitos)"),
+    celular: z.string().trim().min(8, "Celular inválido"),
+    email: z.email("Email inválido"),
+    password: z
+      .string()
+      .min(8, "Mínimo 8 caracteres")
+      .regex(/[A-Z]/, "Debe tener al menos una mayúscula")
+      .regex(/[a-z]/, "Debe tener al menos una minúscula")
+      .regex(/[0-9]/, "Debe tener al menos un número"),
+    confirmPassword: z.string(),
+    player_number: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "Tienen que ser exactamente 6 dígitos"),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
 
 export type SignupState = {
   errors?: Partial<Record<keyof z.infer<typeof signupSchema>, string[]>>;
@@ -36,6 +43,7 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
     celular: formData.get("celular"),
     email: formData.get("email"),
     password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
     player_number: formData.get("player_number"),
   });
 
@@ -165,7 +173,8 @@ const resetSchema = z
     password: z
       .string()
       .min(8, "Mínimo 8 caracteres")
-      .regex(/[a-zA-Z]/, "Debe tener al menos una letra")
+      .regex(/[A-Z]/, "Debe tener al menos una mayúscula")
+      .regex(/[a-z]/, "Debe tener al menos una minúscula")
       .regex(/[0-9]/, "Debe tener al menos un número"),
     confirmPassword: z.string(),
   })
