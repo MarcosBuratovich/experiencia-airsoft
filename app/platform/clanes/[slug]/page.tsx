@@ -21,17 +21,22 @@ export default async function ClanDetail({
     .maybeSingle();
   if (!clan) notFound();
 
-  // Miembros del clan via la junction (con fallback al modelo viejo).
+  // Miembros del clan via la junction. Como profiles RLS solo expone el
+  // perfil propio, traemos los IDs y luego fetchamos los datos desde la
+  // vista profiles_publicos (campos no sensibles, bypass RLS).
   const { data: membershipRows } = await supabase
     .from("profile_clanes")
-    .select("profile_id, profiles!inner(id, nombre, apellido)")
+    .select("profile_id")
     .eq("clan_id", clan.id);
-  const miembros = (membershipRows ?? [])
-    .map((r) => {
-      const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-      return p ? { id: p.id, nombre: p.nombre, apellido: p.apellido } : null;
-    })
-    .filter((m): m is { id: string; nombre: string; apellido: string } => !!m)
+  const memberIds = (membershipRows ?? []).map((r) => r.profile_id);
+  const { data: miembrosData } = memberIds.length
+    ? await supabase
+        .from("profiles_publicos")
+        .select("id, nombre, apellido")
+        .in("id", memberIds)
+    : { data: [] as { id: string; nombre: string; apellido: string }[] };
+  const miembros = (miembrosData ?? [])
+    .map((p) => ({ id: p.id, nombre: p.nombre, apellido: p.apellido }))
     .sort((a, b) => a.apellido.localeCompare(b.apellido));
 
   const { data: misClanes } = await supabase

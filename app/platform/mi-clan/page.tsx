@@ -80,9 +80,21 @@ export default async function MiClanPage() {
       .in("id", clanIds),
     supabase
       .from("profile_clanes")
-      .select("clan_id, profiles!inner(id, nombre, apellido)")
+      .select("clan_id, profile_id")
       .in("clan_id", clanIds),
   ]);
+
+  // Resolver perfiles vía profiles_publicos (bypassea RLS de profiles).
+  const allMemberIds = [
+    ...new Set((allMembership ?? []).map((r) => r.profile_id)),
+  ];
+  const { data: pubProfiles } = allMemberIds.length
+    ? await supabase
+        .from("profiles_publicos")
+        .select("id, nombre, apellido")
+        .in("id", allMemberIds)
+    : { data: [] as { id: string; nombre: string; apellido: string }[] };
+  const profileById = new Map((pubProfiles ?? []).map((p) => [p.id, p]));
 
   // Miembros agrupados por clan
   const miembrosPorClan = new Map<
@@ -90,7 +102,7 @@ export default async function MiClanPage() {
     { id: string; nombre: string }[]
   >();
   for (const row of allMembership ?? []) {
-    const p = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const p = profileById.get(row.profile_id);
     if (!p) continue;
     const arr = miembrosPorClan.get(row.clan_id) ?? [];
     arr.push({ id: p.id, nombre: `${p.nombre} ${p.apellido}` });
@@ -123,7 +135,7 @@ export default async function MiClanPage() {
     const profilesById = new Map<string, { nombre: string; apellido: string }>();
     if (userIds.length) {
       const { data: profs } = await supabase
-        .from("profiles")
+        .from("profiles_publicos")
         .select("id, nombre, apellido")
         .in("id", userIds);
       for (const p of profs ?? []) {
