@@ -41,25 +41,27 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
               {item.label}
             </Link>
           ))}
+        </nav>
+
+        <div className="flex items-center gap-2 shrink-0">
           <a
             href={TIENDA_URL}
             target="_blank"
             rel="noopener"
-            className="transition-colors hover:text-bone"
+            className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider font-semibold fluid-xs inline-flex items-center gap-1.5"
           >
-            Tienda
-            <span aria-hidden className="ml-1 text-smoke">↗</span>
+            <span>Tienda</span>
+            <span aria-hidden>↗</span>
           </a>
-        </nav>
-
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener"
-          className="btn-wa px-4 py-2 clip-tag uppercase tracking-wider font-semibold text-ink fluid-xs"
-        >
-          Reservar
-        </a>
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener"
+            className="btn-wa px-4 py-2 clip-tag uppercase tracking-wider font-semibold text-ink fluid-xs"
+          >
+            Reservar
+          </a>
+        </div>
       </div>
 
       <nav className="md:hidden border-t border-bone/10">
@@ -75,15 +77,6 @@ export function MarketingHeader({ activeHref }: { activeHref?: string }) {
               {item.label}
             </Link>
           ))}
-          <a
-            href={TIENDA_URL}
-            target="_blank"
-            rel="noopener"
-            className="transition-colors hover:text-bone shrink-0"
-          >
-            Tienda
-            <span aria-hidden className="ml-1 text-smoke">↗</span>
-          </a>
         </div>
       </nav>
     </header>

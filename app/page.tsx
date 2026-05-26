@@ -532,22 +532,18 @@ export default function Home() {
             <a href="#reservar" className="hover:text-bone transition-colors">
               Reservar
             </a>
+          </nav>
+
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <a
               href={TIENDA_URL}
               target="_blank"
               rel="noopener"
-              className="hover:text-bone transition-colors"
+              className="btn-ghost clip-notch inline-flex items-center gap-2 px-[clamp(0.75rem,1.5vw,1.25rem)] py-[clamp(0.55rem,1vw,0.75rem)] fluid-xs tracking-[.2em] uppercase"
             >
-              Tienda
-              <span aria-hidden className="ml-1 text-smoke">↗</span>
+              <span>Tienda</span>
+              <span aria-hidden>↗</span>
             </a>
-          </nav>
-
-          <div className="flex items-center gap-2 md:gap-3 shrink-0">
-            <span className="inline-flex mil-tag bone">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange pulse-dot"></span>
-              <span className="hidden sm:inline">BAJO </span>RESERVA
-            </span>
             <a
               href={WHATSAPP_URL}
               target="_blank"
