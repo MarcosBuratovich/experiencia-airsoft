@@ -216,6 +216,47 @@ export function NuevoClanForm() {
         )}
       </label>
 
+      <div className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
+        <p className="sect-label mb-1">// Redes sociales (opcional)</p>
+        <p className="font-sans fluid-sm text-ash leading-relaxed mb-3">
+          Si tu clan tiene canal o perfil, va a aparecer como botón en la
+          vista pública. Solo aceptamos links oficiales (youtube.com,
+          youtu.be o instagram.com).
+        </p>
+        <label className="block mb-3">
+          <span className="sect-label mb-1 block">YouTube</span>
+          <input
+            name="youtube_url"
+            type="url"
+            inputMode="url"
+            maxLength={300}
+            placeholder="https://www.youtube.com/@miclan"
+            className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
+          />
+          {state?.errors?.youtube_url?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.youtube_url[0]}
+            </span>
+          )}
+        </label>
+        <label className="block">
+          <span className="sect-label mb-1 block">Instagram</span>
+          <input
+            name="instagram_url"
+            type="url"
+            inputMode="url"
+            maxLength={300}
+            placeholder="https://www.instagram.com/miclan"
+            className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
+          />
+          {state?.errors?.instagram_url?.[0] && (
+            <span className="mt-1 block font-mono fluid-xs text-orange-300">
+              {state.errors.instagram_url[0]}
+            </span>
+          )}
+        </label>
+      </div>
+
       <label className="block">
         <span className="sect-label mb-1 block">Color del clan</span>
         <div className="flex items-center gap-3 flex-wrap">

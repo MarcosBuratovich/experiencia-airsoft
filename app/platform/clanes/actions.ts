@@ -84,6 +84,30 @@ const colorSchema = z
 
 const displayModeSchema = z.enum(["alias", "logo"]).default("alias");
 
+// Validación de URLs sociales: solo aceptamos https + dominio oficial.
+// El constraint en la DB (phase-14) replica esto como defense-in-depth.
+const youtubeUrlSchema = z
+  .string()
+  .trim()
+  .max(300, "URL muy larga (máx 300 caracteres)")
+  .regex(
+    /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//,
+    "Tiene que ser un link de youtube.com, youtu.be o m.youtube.com (con https)",
+  )
+  .optional()
+  .or(z.literal(""));
+
+const instagramUrlSchema = z
+  .string()
+  .trim()
+  .max(300, "URL muy larga (máx 300 caracteres)")
+  .regex(
+    /^https:\/\/(www\.)?instagram\.com\//,
+    "Tiene que ser un link de instagram.com (con https)",
+  )
+  .optional()
+  .or(z.literal(""));
+
 const crearSchema = z
   .object({
     nombre: nombreSchema,
@@ -92,6 +116,8 @@ const crearSchema = z
     descripcion: descripcionSchema,
     color_hex: colorSchema,
     logo_url: z.url("URL inválida").optional().or(z.literal("")),
+    youtube_url: youtubeUrlSchema,
+    instagram_url: instagramUrlSchema,
   })
   .refine(
     (data) => data.display_mode !== "alias" || aliasLen(data.alias) >= 1,
@@ -165,6 +191,8 @@ export async function crearClanAction(
     descripcion: formData.get("descripcion") || undefined,
     color_hex: formData.get("color_hex") || "",
     logo_url: formData.get("logo_url") || undefined,
+    youtube_url: formData.get("youtube_url") || "",
+    instagram_url: formData.get("instagram_url") || "",
   };
   const parsed = crearSchema.safeParse(inputRaw);
   if (!parsed.success) {
@@ -231,6 +259,8 @@ export async function crearClanAction(
       descripcion: parsed.data.descripcion || null,
       color_hex: parsed.data.color_hex,
       logo_url: parsed.data.logo_url || null,
+      youtube_url: parsed.data.youtube_url || null,
+      instagram_url: parsed.data.instagram_url || null,
       capitan_id: user.id,
     })
     .select("id, slug")
@@ -608,6 +638,8 @@ const editarSchema = z
     descripcion: descripcionSchema,
     color_hex: colorSchema,
     logo_url: z.url("URL inválida").optional().or(z.literal("")),
+    youtube_url: youtubeUrlSchema,
+    instagram_url: instagramUrlSchema,
   })
   .refine(
     (data) => data.display_mode !== "alias" || aliasLen(data.alias) >= 1,
@@ -640,6 +672,8 @@ export async function editarClanAction(
     descripcion: formData.get("descripcion") || undefined,
     color_hex: formData.get("color_hex") || "",
     logo_url: formData.get("logo_url") || undefined,
+    youtube_url: formData.get("youtube_url") || "",
+    instagram_url: formData.get("instagram_url") || "",
   });
   if (!parsed.success) {
     return { errors: z.flattenError(parsed.error).fieldErrors };
@@ -693,6 +727,8 @@ export async function editarClanAction(
       descripcion: parsed.data.descripcion || null,
       color_hex: parsed.data.color_hex,
       logo_url: parsed.data.logo_url || null,
+      youtube_url: parsed.data.youtube_url || null,
+      instagram_url: parsed.data.instagram_url || null,
     })
     .eq("id", clan.id);
   if (error) return { message: error.message };

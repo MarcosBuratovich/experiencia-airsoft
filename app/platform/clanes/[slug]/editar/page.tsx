@@ -16,7 +16,7 @@ export default async function EditarClanPage({
   const { data: clan } = await supabase
     .from("clanes")
     .select(
-      "id, slug, nombre, alias, descripcion, color_hex, logo_url, display_mode, capitan_id",
+      "id, slug, nombre, alias, descripcion, color_hex, logo_url, display_mode, youtube_url, instagram_url, capitan_id",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -50,6 +50,8 @@ export default async function EditarClanPage({
           color_hex: clan.color_hex ?? "#ff6b1a",
           logo_url: clan.logo_url ?? "",
           display_mode: (clan.display_mode as "alias" | "logo") ?? "alias",
+          youtube_url: clan.youtube_url ?? "",
+          instagram_url: clan.instagram_url ?? "",
         }}
       />
     </div>

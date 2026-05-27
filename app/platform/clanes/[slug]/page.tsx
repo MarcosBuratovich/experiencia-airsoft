@@ -17,7 +17,9 @@ export default async function ClanDetail({
 
   const { data: clan } = await supabase
     .from("clanes")
-    .select("id, slug, nombre, descripcion, color_hex, logo_url, capitan_id, created_at")
+    .select(
+      "id, slug, nombre, descripcion, color_hex, logo_url, youtube_url, instagram_url, capitan_id, created_at",
+    )
     .eq("slug", slug)
     .maybeSingle();
   if (!clan) notFound();
@@ -116,6 +118,35 @@ export default async function ClanDetail({
           <p className="text-ash fluid-base leading-relaxed whitespace-pre-wrap">
             {clan.descripcion}
           </p>
+        </div>
+      )}
+
+      {(clan.youtube_url || clan.instagram_url) && (
+        <div className="mb-6 flex items-center gap-2 flex-wrap">
+          {clan.youtube_url && (
+            <a
+              href={clan.youtube_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost px-3 py-2 clip-tag uppercase tracking-wider font-mono fluid-xs inline-flex items-center gap-2"
+            >
+              <YouTubeIcon />
+              YouTube
+              <span aria-hidden className="text-smoke">→</span>
+            </a>
+          )}
+          {clan.instagram_url && (
+            <a
+              href={clan.instagram_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost px-3 py-2 clip-tag uppercase tracking-wider font-mono fluid-xs inline-flex items-center gap-2"
+            >
+              <InstagramIcon />
+              Instagram
+              <span aria-hidden className="text-smoke">→</span>
+            </a>
+          )}
         </div>
       )}
 
@@ -233,5 +264,39 @@ function ClanStat({
         {value}
       </p>
     </div>
+  );
+}
+
+function YouTubeIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+    </svg>
   );
 }
