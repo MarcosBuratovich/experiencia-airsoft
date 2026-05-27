@@ -19,9 +19,9 @@ export default async function SociosPage() {
     .order("apellido");
 
   const ahora = periodoActual();
-  // últimos N meses, ordenados de viejo a nuevo
+  // últimos N meses, ordenados de nuevo a viejo (mes actual a la izquierda)
   const periodos: string[] = [];
-  for (let i = MESES_VISIBLES - 1; i >= 0; i--) {
+  for (let i = 0; i < MESES_VISIBLES; i++) {
     periodos.push(restarMeses(ahora, i));
   }
 
