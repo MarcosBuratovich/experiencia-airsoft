@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cargarEventosManualesAction } from "../../actions";
 import { TIPOS_EVENTO } from "@/lib/match-events";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../../../_components/error-banner";
 
 type Jugador = {
   user_id: string;
@@ -34,7 +36,7 @@ export function CargarForm({
   // Editamos el delta — lo ya cargado se respeta (no se puede borrar desde
   // este form, eso se hace desde /admin/eventos individuales).
   const [delta, setDelta] = useState<Counts>({});
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -109,14 +111,17 @@ export function CargarForm({
     }
 
     if (sinNumero > 0) {
-      setError(
-        `${sinNumero} entrada(s) ignoradas: el jugador no tiene número asignado. Asignaselo desde /admin/usuarios y volvé.`,
-      );
+      setError({
+        titulo: `${sinNumero} entrada(s) ignoradas`,
+        detalle:
+          "Esos jugadores no tienen número asignado. Asignaselo desde /admin/usuarios y volvé.",
+        mostrarSoporte: false,
+      });
       return;
     }
 
     if (!eventos.length) {
-      setError("No hay eventos para cargar — sumá al menos uno.");
+      setError({ titulo: "No hay eventos para cargar — sumá al menos uno.", mostrarSoporte: false });
       return;
     }
 
@@ -126,7 +131,7 @@ export function CargarForm({
         eventos,
       });
       if ("error" in res && res.error) {
-        setError(res.error);
+        setError(typeof res.error === 'string' ? { titulo: res.error, mostrarSoporte: false } : res.error);
         return;
       }
       setSuccess(`${"insertados" in res ? res.insertados : 0} eventos cargados.`);
@@ -220,7 +225,7 @@ export function CargarForm({
             ? "Guardando..."
             : `Cargar ${totalEventos} ${totalEventos === 1 ? "evento" : "eventos"}`}
         </button>
-        {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
+        <ErrorBanner error={error} variant="inline" />
         {success && (
           <p className="font-mono fluid-xs text-green-400 uppercase tracking-[.22em]">
             {success}

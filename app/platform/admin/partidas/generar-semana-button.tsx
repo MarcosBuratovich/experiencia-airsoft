@@ -8,6 +8,8 @@ import {
 } from "../templates/actions";
 import type { PartidaPreviewItem, SemanaSel } from "../templates/types";
 import { formatHora, modalidadLabel } from "@/lib/format";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const DIAS_LARGOS = [
   "Domingo",
@@ -31,7 +33,7 @@ function formatDiaMes(iso: string): string {
 
 type Feedback =
   | { ok: true; creadas: number; omitidas: number }
-  | { ok: false; error: string }
+  | { ok: false; error: FriendlyError }
   | null;
 
 export function GenerarSemanaButton() {
@@ -266,9 +268,7 @@ export function GenerarSemanaButton() {
                     +{feedback.creadas} creadas · {feedback.omitidas} omitidas
                   </span>
                 ) : feedback && feedback.ok === false ? (
-                  <span className="text-orange-300">
-                    Error: {feedback.error}
-                  </span>
+                  <ErrorBanner error={feedback.error} variant="inline" />
                 ) : (
                   <span className="text-smoke">
                     {elegidos}/{seleccionables.length} seleccionadas

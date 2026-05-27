@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addGuestAction, quitarInscripcionAction } from "./organizador-actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Inscripcion = {
   id: string;
@@ -22,7 +24,7 @@ export function OrganizadorPanel({
 }) {
   const router = useRouter();
   const [nombre, setNombre] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function OrganizadorPanel({
     setError(null);
     const v = nombre.trim();
     if (v.length < 2) {
-      setError("Mínimo 2 caracteres");
+      setError({ titulo: "Mínimo 2 caracteres", mostrarSoporte: false });
       return;
     }
     startTransition(async () => {
@@ -128,9 +130,7 @@ export function OrganizadorPanel({
         </p>
       </div>
 
-      {error && (
-        <p className="mb-4 font-mono fluid-xs text-orange-300">{error}</p>
-      )}
+      <ErrorBanner error={error} variant="inline" className="mb-4" />
 
       <div>
         <p className="sect-label mb-2">Inscriptos ({inscripciones.length})</p>

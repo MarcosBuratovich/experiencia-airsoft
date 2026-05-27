@@ -9,6 +9,8 @@ import {
   reabrirInscripcionPartidaAction,
 } from "../../actions";
 import type { EstadoEfectivo } from "@/lib/partidas";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../../../_components/error-banner";
 
 type Props = {
   partidaId: string;
@@ -17,12 +19,12 @@ type Props = {
 };
 
 export function PartidaActionsButtons({ partidaId, estado, estadoFx }: Props) {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
   const run = (
-    fn: (id: string) => Promise<{ error?: string; ok?: boolean }>,
+    fn: (id: string) => Promise<{ error?: FriendlyError } | { ok?: boolean }>,
     confirmMsg?: string,
   ) => {
     if (confirmMsg && !confirm(confirmMsg)) return;
@@ -106,7 +108,7 @@ export function PartidaActionsButtons({ partidaId, estado, estadoFx }: Props) {
           </button>
         )}
       </div>
-      {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
+      <ErrorBanner error={error} variant="inline" />
     </div>
   );
 }

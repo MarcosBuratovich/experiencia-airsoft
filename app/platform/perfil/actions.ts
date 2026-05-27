@@ -13,6 +13,11 @@ import {
   hasExcessiveRepeat,
   isCleanText,
 } from "@/lib/sanitize-text";
+import {
+  actionError,
+  actionFieldErrors,
+  type ActionErrorState,
+} from "@/lib/errors";
 
 const aliasLen = graphemeLen;
 
@@ -73,11 +78,8 @@ const updateSchema = z.object({
 });
 
 export type ActualizarPerfilState =
-  | {
-      errors?: Partial<Record<keyof z.infer<typeof updateSchema>, string[]>>;
-      message?: string;
-      ok?: boolean;
-    }
+  | ActionErrorState
+  | { ok: true }
   | undefined;
 
 export async function actualizarPerfilAction(
@@ -92,12 +94,12 @@ export async function actualizarPerfilAction(
     alias: formData.get("alias") ?? "",
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { message: "No autenticado" };
+  if (!user) return actionError("No autenticado");
 
   // Si el number ya está en uso por OTRO usuario, error.
   const disponible = await numeroDisponible(
@@ -106,9 +108,9 @@ export async function actualizarPerfilAction(
     user.id,
   );
   if (!disponible) {
-    return {
-      errors: { player_number: ["Ese número ya está en uso. Elegí otro"] },
-    };
+    return actionFieldErrors({
+      player_number: ["Ese número ya está en uso. Elegí otro"],
+    });
   }
 
   const { error } = await supabase
@@ -121,7 +123,10 @@ export async function actualizarPerfilAction(
       alias: parsed.data.alias.length === 0 ? null : parsed.data.alias,
     })
     .eq("id", user.id);
-  if (error) return { message: error.message };
+  if (error) {
+    console.error("[actualizarPerfilAction] update falló:", error);
+    return actionError(error);
+  }
 
   revalidatePath("/perfil");
   revalidatePath("/", "layout");
@@ -149,13 +154,8 @@ const changePwSchema = z
   });
 
 export type CambiarContrasenaState =
-  | {
-      errors?: Partial<
-        Record<"currentPassword" | "newPassword" | "confirmPassword", string[]>
-      >;
-      message?: string;
-      ok?: boolean;
-    }
+  | ActionErrorState
+  | { ok: true }
   | undefined;
 
 export async function cambiarContrasenaAction(
@@ -168,12 +168,12 @@ export async function cambiarContrasenaAction(
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return { message: "No autenticado" };
+  if (!user?.email) return actionError("No autenticado");
 
   // Reauth: verificamos que la contraseña actual sea correcta intentando
   // un signInWithPassword (no rompe la sesión existente — Supabase devuelve
@@ -183,13 +183,18 @@ export async function cambiarContrasenaAction(
     password: parsed.data.currentPassword,
   });
   if (signinErr) {
-    return { errors: { currentPassword: ["Contraseña actual incorrecta"] } };
+    return actionFieldErrors({
+      currentPassword: ["Contraseña actual incorrecta"],
+    });
   }
 
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.newPassword,
   });
-  if (error) return { message: error.message };
+  if (error) {
+    console.error("[cambiarContrasenaAction] updateUser falló:", error);
+    return actionError(error);
+  }
 
   return { ok: true };
 }
@@ -202,9 +207,7 @@ const deleteSchema = z.object({
   confirmEmail: z.string().trim().min(1, "Confirmación obligatoria"),
 });
 
-export type BorrarCuentaState =
-  | { errors?: { confirmEmail?: string[] }; message?: string }
-  | undefined;
+export type BorrarCuentaState = ActionErrorState | undefined;
 
 export async function borrarCuentaAction(
   _prev: BorrarCuentaState,
@@ -214,23 +217,21 @@ export async function borrarCuentaAction(
     confirmEmail: formData.get("confirmEmail"),
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return { message: "No autenticado" };
+  if (!user?.email) return actionError("No autenticado");
 
   // El user tiene que escribir su email exacto para confirmar (case-insensitive).
   if (
     parsed.data.confirmEmail.trim().toLowerCase() !==
     user.email.toLowerCase()
   ) {
-    return {
-      errors: {
-        confirmEmail: ["El email no coincide con el de tu cuenta"],
-      },
-    };
+    return actionFieldErrors({
+      confirmEmail: ["El email no coincide con el de tu cuenta"],
+    });
   }
 
   // Si es capitán de algún clan, no puede borrarse — tiene que transferir
@@ -241,9 +242,9 @@ export async function borrarCuentaAction(
     .eq("capitan_id", user.id);
   if (clanesComoCapitan && clanesComoCapitan.length > 0) {
     const nombres = clanesComoCapitan.map((c) => c.nombre).join(", ");
-    return {
-      message: `Sos capitán de ${clanesComoCapitan.length === 1 ? "el clan" : "los clanes"} ${nombres}. Transferí la capitanía o eliminá el clan antes de borrar tu cuenta.`,
-    };
+    return actionError(
+      `Sos capitán de ${clanesComoCapitan.length === 1 ? "el clan" : "los clanes"} ${nombres}. Transferí la capitanía o eliminá el clan antes de borrar tu cuenta.`,
+    );
   }
 
   // Borrar el auth user via service role. El ON DELETE CASCADE en
@@ -251,7 +252,10 @@ export async function borrarCuentaAction(
   // clan_requests, eventos, etc. en cadena.
   const admin = createServiceRoleClient();
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id);
-  if (delErr) return { message: delErr.message };
+  if (delErr) {
+    console.error("[borrarCuentaAction] deleteUser falló:", delErr);
+    return actionError(delErr);
+  }
 
   // Cerrar sesión local para limpiar cookies.
   await supabase.auth.signOut();

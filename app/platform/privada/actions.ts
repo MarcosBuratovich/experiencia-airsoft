@@ -13,6 +13,17 @@ import {
   SLOTS_PRIVADA,
   SLOT_DURACION_MIN,
 } from "@/lib/slots-privada";
+import {
+  actionError,
+  actionFieldErrors,
+  friendlyError,
+  type ActionErrorState,
+  type FriendlyError,
+} from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
 
 const SLOT_HORAS = SLOTS_PRIVADA.map((s) => s.hora) as readonly string[];
 
@@ -25,9 +36,7 @@ const crearSchema = z.object({
   notas: z.string().trim().max(500).optional(),
 });
 
-export type SolicitarPrivadaState =
-  | { errors?: Partial<Record<keyof z.infer<typeof crearSchema>, string[]>>; message?: string }
-  | undefined;
+export type SolicitarPrivadaState = ActionErrorState | undefined;
 
 export async function solicitarPrivadaAction(
   _prev: SolicitarPrivadaState,
@@ -40,7 +49,7 @@ export async function solicitarPrivadaAction(
     notas: formData.get("notas") || undefined,
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const v = parsed.data;
@@ -48,35 +57,34 @@ export async function solicitarPrivadaAction(
   // La fecha no puede ser en el pasado
   const inicio = inicioPartida(v.fecha_propuesta, v.hora_inicio.slice(0, 5));
   if (inicio.getTime() <= Date.now()) {
-    return { errors: { fecha_propuesta: ["La fecha/hora tiene que ser futura"] } };
+    return actionFieldErrors({ fecha_propuesta: ["La fecha/hora tiene que ser futura"] });
   }
 
   // No puede caer en un horario recurrente (los slots reservados para públicas)
   const slot = slotRecurrentePisado(v.fecha_propuesta, v.hora_inicio.slice(0, 5));
   if (slot) {
-    return {
-      message: `Ese slot está reservado para partidas públicas (${slot.label}). Pedile a un admin que lo habilite si lo necesitás.`,
-    };
+    return actionError(
+      `Ese slot está reservado para partidas públicas (${slot.label}). Pedile a un admin que lo habilite si lo necesitás.`,
+    );
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { message: "No autenticado" };
+  if (!user) return actionError("No autenticado");
 
   // Verificar que el slot siga libre (no se haya pisado entre que vimos el calendario y mandamos).
   const estados = await getSlotsEstado(supabase, [v.fecha_propuesta]);
   const estado = estados.get(`${v.fecha_propuesta}|${v.hora_inicio}`);
   if (estado && estado !== "disponible") {
-    return {
-      message:
-        estado === "pendiente"
-          ? "Alguien acaba de pedir ese slot. Elegí otro."
-          : estado === "publica"
-            ? "Ya hay una partida pública en ese rango."
-            : estado === "aprobada"
-              ? "Ese slot ya tiene una privada confirmada."
-              : "Ese slot no está disponible.",
-    };
+    return actionError(
+      estado === "pendiente"
+        ? "Alguien acaba de pedir ese slot. Elegí otro."
+        : estado === "publica"
+          ? "Ya hay una partida pública en ese rango."
+          : estado === "aprobada"
+            ? "Ese slot ya tiene una privada confirmada."
+            : "Ese slot no está disponible.",
+    );
   }
 
   const { error } = await supabase.from("solicitudes_privada").insert({
@@ -88,7 +96,10 @@ export async function solicitarPrivadaAction(
     modalidad: "dinamica",
     notas: v.notas || null,
   });
-  if (error) return { message: error.message };
+  if (error) {
+    console.error("[solicitarPrivadaAction] insert falló:", error);
+    return actionError(error);
+  }
 
   revalidatePath("/mis-solicitudes");
   revalidatePath("/admin/solicitudes");
@@ -99,7 +110,7 @@ export async function solicitarPrivadaAction(
 export async function cancelarPrivadaAction(solicitudId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   const { error } = await supabase
     .from("solicitudes_privada")
@@ -107,7 +118,10 @@ export async function cancelarPrivadaAction(solicitudId: string) {
     .eq("id", solicitudId)
     .eq("user_id", user.id)
     .eq("estado", "pendiente");
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[cancelarPrivadaAction] update falló:", error);
+    return ERR(error);
+  }
 
   revalidatePath("/mis-solicitudes");
   revalidatePath("/admin/solicitudes");
@@ -117,7 +131,7 @@ export async function cancelarPrivadaAction(solicitudId: string) {
 async function assertAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" as const };
+  if (!user) return ERR("No autenticado");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -125,7 +139,7 @@ async function assertAdmin() {
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    return { error: "No autorizado" as const };
+    return ERR("No autorizado");
   }
   return { supabase, userId: user.id };
 }
@@ -135,7 +149,7 @@ export async function aprobarPrivadaAction(
   respuesta?: string,
 ) {
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, userId } = ctx;
 
   const { data: solicitud } = await supabase
@@ -145,8 +159,8 @@ export async function aprobarPrivadaAction(
     )
     .eq("id", solicitudId)
     .maybeSingle();
-  if (!solicitud) return { error: "Solicitud no encontrada" };
-  if (solicitud.estado !== "pendiente") return { error: "Ya fue resuelta" };
+  if (!solicitud) return ERR("Solicitud no encontrada");
+  if (solicitud.estado !== "pendiente") return ERR("Ya fue resuelta");
 
   const private_token = randomBytes(16).toString("hex");
 
@@ -168,7 +182,10 @@ export async function aprobarPrivadaAction(
     })
     .select("id, private_token")
     .single();
-  if (partidaErr || !partida) return { error: partidaErr?.message ?? "No se pudo crear la partida" };
+  if (partidaErr || !partida) {
+    console.error("[aprobarPrivadaAction] insert partida falló:", partidaErr);
+    return ERR(partidaErr ?? "No se pudo crear la partida");
+  }
 
   const { error: updErr } = await supabase
     .from("solicitudes_privada")
@@ -180,7 +197,10 @@ export async function aprobarPrivadaAction(
       resolved_at: new Date().toISOString(),
     })
     .eq("id", solicitudId);
-  if (updErr) return { error: updErr.message };
+  if (updErr) {
+    console.error("[aprobarPrivadaAction] update solicitud falló:", updErr);
+    return ERR(updErr);
+  }
 
   revalidatePath("/admin/solicitudes");
   revalidatePath("/mis-solicitudes");
@@ -199,11 +219,11 @@ export async function toggleSlotOverrideAction(
   hora: string,
   habilitado: boolean,
 ) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: "Fecha inválida" };
-  if (!SLOT_HORAS_VALIDAS.includes(hora)) return { error: "Hora inválida" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return ERR("Fecha inválida");
+  if (!SLOT_HORAS_VALIDAS.includes(hora)) return ERR("Hora inválida");
 
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, userId } = ctx;
 
   if (habilitado) {
@@ -215,14 +235,20 @@ export async function toggleSlotOverrideAction(
         habilitado: true,
         creado_por: userId,
       });
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("[toggleSlotOverrideAction] upsert falló:", error);
+      return ERR(error);
+    }
   } else {
     const { error } = await supabase
       .from("slots_privada_overrides")
       .delete()
       .eq("fecha", fecha)
       .eq("hora_inicio", hora);
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("[toggleSlotOverrideAction] delete falló:", error);
+      return ERR(error);
+    }
   }
 
   revalidatePath("/privada/solicitar");
@@ -243,13 +269,8 @@ const crearDirectaSchema = z.object({
 });
 
 export type CrearDirectaState =
-  | {
-      errors?: Partial<Record<keyof z.infer<typeof crearDirectaSchema>, string[]>>;
-      message?: string;
-      ok?: boolean;
-      partidaId?: string;
-      token?: string | null;
-    }
+  | ActionErrorState
+  | { ok: true; partidaId: string; token: string | null }
   | undefined;
 
 /** Admin crea una partida directamente desde el calendario. */
@@ -267,17 +288,17 @@ export async function crearPartidaDirectaAction(
     notas: formData.get("notas") || undefined,
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
   const v = parsed.data;
 
   const inicio = inicioPartida(v.fecha, v.hora_inicio.slice(0, 5));
   if (inicio.getTime() <= Date.now()) {
-    return { errors: { fecha: ["La fecha/hora tiene que ser futura"] } };
+    return actionFieldErrors({ fecha: ["La fecha/hora tiene que ser futura"] });
   }
 
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { message: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, userId } = ctx;
 
   // El slot tiene que estar realmente libre (no pisar partidas ni pendientes).
@@ -289,7 +310,7 @@ export async function crearPartidaDirectaAction(
     estado === "pendiente" ||
     estado === "pasada"
   ) {
-    return { message: `El slot está ${estado}, no se puede crear acá.` };
+    return actionError(`El slot está ${estado}, no se puede crear acá.`);
   }
   // "reservada" se permite porque el admin puede crear igual; al crear la
   // partida queda bloqueado para el resto.
@@ -317,7 +338,8 @@ export async function crearPartidaDirectaAction(
     .select("id, private_token")
     .single();
   if (insErr || !partida) {
-    return { message: insErr?.message ?? "No se pudo crear la partida" };
+    console.error("[crearPartidaDirectaAction] insert falló:", insErr);
+    return actionError(insErr ?? "No se pudo crear la partida");
   }
 
   revalidatePath("/privada/solicitar");
@@ -335,7 +357,7 @@ export async function rechazarPrivadaAction(
   respuesta?: string,
 ) {
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, userId } = ctx;
 
   const { error } = await supabase
@@ -348,7 +370,10 @@ export async function rechazarPrivadaAction(
     })
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[rechazarPrivadaAction] update falló:", error);
+    return ERR(error);
+  }
 
   revalidatePath("/admin/solicitudes");
   revalidatePath("/mis-solicitudes");

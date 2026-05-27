@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Props = {
   /** Nombre del input hidden que va al form (recibe la URL final). */
@@ -76,14 +78,18 @@ export function LogoUploader({
     [onUrlChange],
   );
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > 4 * 1024 * 1024) {
-      setError("Imagen muy grande (máx 4 MB).");
+      setError({
+        titulo: "La imagen es muy grande",
+        detalle: "Máximo 4 MB. Recortala o comprimila y volvé a intentar.",
+        mostrarSoporte: false,
+      });
       return;
     }
     setError(null);
@@ -111,7 +117,11 @@ export function LogoUploader({
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("Sesión perdida — recargá la página");
+        setError({
+          titulo: "Tu sesión expiró",
+          detalle: "Recargá la página e iniciá sesión de nuevo.",
+          mostrarSoporte: false,
+        });
         return;
       }
       const slug = pathHint ?? "pending";
@@ -140,7 +150,8 @@ export function LogoUploader({
           upsert: false,
         });
       if (upErr) {
-        setError(upErr.message);
+        console.error("[LogoUploader] upload falló:", upErr);
+        setError(friendlyError(upErr));
         return;
       }
       const { data: pub } = supabase.storage
@@ -149,7 +160,8 @@ export function LogoUploader({
       setUrl(pub.publicUrl);
       setImageSrc(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error subiendo el logo");
+      console.error("[LogoUploader] crop/upload threw:", e);
+      setError(friendlyError(e));
     } finally {
       setUploading(false);
     }
@@ -300,9 +312,7 @@ export function LogoUploader({
         </div>
       )}
 
-      {error && (
-        <p className="font-mono fluid-xs text-orange-300">{error}</p>
-      )}
+      <ErrorBanner error={error} variant="inline" />
     </div>
   );
 }

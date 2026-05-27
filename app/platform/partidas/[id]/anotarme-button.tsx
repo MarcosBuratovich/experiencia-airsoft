@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anotarmeAction, desanotarmeAction } from "./actions";
 import type { TipoJugador } from "@/lib/precios";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Inscripcion = { id: string; estado: string };
 
@@ -69,7 +71,7 @@ export function AnotarmeButton({
   const [pending, startTransition] = useTransition();
   const [tipo, setTipo] = useState<TipoJugador>("byop");
   const [chaleco, setChaleco] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const router = useRouter();
 
   const aplicaBeneficio = esSocio && socioAlDia;
@@ -287,7 +289,7 @@ export function AnotarmeButton({
         </p>
       )}
 
-      {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
+      <ErrorBanner error={error} variant="inline" />
 
       <button
         type="button"

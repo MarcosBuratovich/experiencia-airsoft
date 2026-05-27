@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { solicitarUnirseAction } from "../actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 export function SolicitarUnirseButton({ clanId }: { clanId: string }) {
   const [mensaje, setMensaje] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -32,9 +34,7 @@ export function SolicitarUnirseButton({ clanId }: { clanId: string }) {
         placeholder="Mensaje para el capitán (opcional)"
         className="w-full bg-carbon border border-rail/60 px-3 py-2 font-sans text-bone focus:border-orange outline-none transition resize-y"
       />
-      {error && (
-        <p className="font-mono fluid-xs text-orange-300">{error}</p>
-      )}
+      <ErrorBanner error={error} variant="inline" />
       <button
         type="button"
         onClick={submit}

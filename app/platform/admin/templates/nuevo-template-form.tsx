@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { crearTemplateAction } from "./actions";
 import { Select } from "../../components/select";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const DIAS_OPTS = [
   { value: "1", label: "Lunes" },
@@ -29,7 +31,7 @@ export function NuevoTemplateForm() {
   const [duracion, setDuracion] = useState("180");
   const [modalidad, setModalidad] = useState("dinamica");
   const [cupo, setCupo] = useState("20");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
 
   const reset = () => {
@@ -52,7 +54,7 @@ export function NuevoTemplateForm() {
         cupo_max: Number(cupo),
       });
       if ("error" in res && res.error) {
-        setError(res.error);
+        setError(typeof res.error === 'string' ? { titulo: res.error, mostrarSoporte: false } : res.error);
       } else {
         reset();
         setOpen(false);
@@ -146,9 +148,7 @@ export function NuevoTemplateForm() {
         >
           {pending ? "Creando..." : "Crear template"}
         </button>
-        {error && (
-          <p className="font-mono fluid-xs text-orange-300">{error}</p>
-        )}
+        <ErrorBanner error={error} variant="inline" />
       </div>
     </div>
   );

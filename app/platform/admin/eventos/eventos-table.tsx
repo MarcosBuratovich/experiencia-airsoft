@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Select } from "../../components/select";
 import { descartarEventoAction, reasignarEventoAction } from "./actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Fila = {
   id: string;
@@ -49,7 +51,7 @@ export function EventosTable({
   const [partidaParaReasignar, setPartidaParaReasignar] = useState<
     Record<string, string>
   >({});
-  const [error, setError] = useState<Record<string, string | null>>({});
+  const [error, setError] = useState<Record<string, FriendlyError | null>>({});
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -57,7 +59,10 @@ export function EventosTable({
   const reasignar = (filaId: string) => {
     const partidaId = partidaParaReasignar[filaId];
     if (!partidaId) {
-      setError((p) => ({ ...p, [filaId]: "Elegí una partida primero" }));
+      setError((p) => ({
+        ...p,
+        [filaId]: { titulo: "Elegí una partida primero", mostrarSoporte: false },
+      }));
       return;
     }
     setError((p) => ({ ...p, [filaId]: null }));
@@ -65,7 +70,7 @@ export function EventosTable({
     startTransition(async () => {
       const res = await reasignarEventoAction(filaId, partidaId);
       if ("error" in res && res.error) {
-        setError((p) => ({ ...p, [filaId]: res.error ?? null }));
+        setError((p) => ({ ...p, [filaId]: res.error ?? null }) as Record<string, FriendlyError | null>);
       } else {
         setReasignando(null);
         router.refresh();
@@ -81,7 +86,7 @@ export function EventosTable({
     startTransition(async () => {
       const res = await descartarEventoAction(filaId);
       if ("error" in res && res.error) {
-        setError((p) => ({ ...p, [filaId]: res.error ?? null }));
+        setError((p) => ({ ...p, [filaId]: res.error ?? null }) as Record<string, FriendlyError | null>);
       } else {
         router.refresh();
       }
@@ -201,11 +206,7 @@ export function EventosTable({
                     </div>
                   </div>
                 )}
-                {error[f.id] && (
-                  <p className="mt-2 font-mono fluid-xs text-orange-300">
-                    {error[f.id]}
-                  </p>
-                )}
+                <ErrorBanner error={error[f.id]} variant="inline" className="mt-2" />
               </div>
             )}
 

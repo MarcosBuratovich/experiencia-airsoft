@@ -11,6 +11,12 @@ import {
   isCleanText,
 } from "@/lib/sanitize-text";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 const guestNombreSchema = z
   .string()
   .trim()
@@ -29,14 +35,14 @@ const guestNombreSchema = z
 async function assertOrganizadorOAdmin(partidaId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" as const };
+  if (!user) return ERR("No autenticado");
 
   const { data: partida } = await supabase
     .from("partidas")
     .select("id, organizador_id, cupo_max, estado, visibilidad")
     .eq("id", partidaId)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" as const };
+  if (!partida) return ERR("Partida no encontrada");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -46,7 +52,7 @@ async function assertOrganizadorOAdmin(partidaId: string) {
   const isAdmin =
     profile?.role === "admin" || profile?.role === "super_admin";
   const isOrg = partida.organizador_id === user.id;
-  if (!isOrg && !isAdmin) return { error: "No autorizado" as const };
+  if (!isOrg && !isAdmin) return ERR("No autorizado");
 
   return { supabase, user, partida, isAdmin };
 }
@@ -59,15 +65,15 @@ const addGuestSchema = z.object({
 export async function addGuestAction(input: z.infer<typeof addGuestSchema>) {
   const parsed = addGuestSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
 
   const ctx = await assertOrganizadorOAdmin(parsed.data.partidaId);
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, user, partida } = ctx;
 
   if (partida.estado === "cancelada") {
-    return { error: "La partida está cancelada" };
+    return ERR("La partida está cancelada");
   }
 
   // Calcular si entra como confirmado o waitlist según cupo.
@@ -101,7 +107,7 @@ export async function addGuestAction(input: z.infer<typeof addGuestSchema>) {
     precio_entrada: 0,
     precio_alquiler: 0,
   });
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath(`/partidas/${partida.id}`);
   return { ok: true, estado };
@@ -113,18 +119,18 @@ const removeSchema = z.object({
 
 export async function quitarInscripcionAction(input: z.infer<typeof removeSchema>) {
   const parsed = removeSchema.safeParse(input);
-  if (!parsed.success) return { error: "ID inválido" };
+  if (!parsed.success) return ERR("ID inválido");
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   const { data: insc } = await supabase
     .from("inscripciones")
     .select("id, partida_id, user_id, partidas!inner(organizador_id)")
     .eq("id", parsed.data.inscripcionId)
     .maybeSingle();
-  if (!insc) return { error: "Inscripción no encontrada" };
+  if (!insc) return ERR("Inscripción no encontrada");
 
   const partidaInfo = Array.isArray(insc.partidas)
     ? insc.partidas[0]
@@ -153,13 +159,13 @@ export async function quitarInscripcionAction(input: z.infer<typeof removeSchema
   }
 
   if (!isAdmin && !isOrg && !isSelf && !isAgregadoPorMe)
-    return { error: "No autorizado" };
+    return ERR("No autorizado");
 
   const { error } = await supabase
     .from("inscripciones")
     .delete()
     .eq("id", parsed.data.inscripcionId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath(`/partidas/${insc.partida_id}`);
   return { ok: true };
@@ -176,12 +182,12 @@ export async function agregarMiAlquilerAction(
 ) {
   const parsed = alquilerSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   // El user tiene que estar inscripto en la partida (confirmado o waitlist).
   const { data: miInsc } = await supabase
@@ -191,7 +197,7 @@ export async function agregarMiAlquilerAction(
     .eq("user_id", user.id)
     .maybeSingle();
   if (!miInsc) {
-    return { error: "Tenés que estar anotado en la partida para agregar alquileres" };
+    return ERR("Tenés que estar anotado en la partida para agregar alquileres");
   }
 
   const { data: partida } = await supabase
@@ -199,8 +205,8 @@ export async function agregarMiAlquilerAction(
     .select("id, cupo_max, estado")
     .eq("id", parsed.data.partidaId)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" };
-  if (partida.estado === "cancelada") return { error: "La partida está cancelada" };
+  if (!partida) return ERR("Partida no encontrada");
+  if (partida.estado === "cancelada") return ERR("La partida está cancelada");
 
   // Calcular si entra como confirmado o waitlist.
   const { count } = await supabase
@@ -234,7 +240,7 @@ export async function agregarMiAlquilerAction(
     precio_entrada: precios.entrada_byop,
     precio_alquiler: precios.alquiler_marcadora,
   });
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath(`/partidas/${partida.id}`);
   return { ok: true, estado };

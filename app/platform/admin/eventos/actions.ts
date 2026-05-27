@@ -6,10 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { TIPOS_EVENTO } from "@/lib/match-events";
 import { inicioPartida } from "@/lib/partidas";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 async function assertAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" as const };
+  if (!user) return ERR("No autenticado");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -17,7 +23,7 @@ async function assertAdmin() {
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    return { error: "No autorizado" as const };
+    return ERR("No autorizado");
   }
   return { supabase, userId: user.id };
 }
@@ -27,7 +33,7 @@ export async function reasignarEventoAction(
   partidaId: string,
 ) {
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   // Validar que la partida existe
@@ -36,7 +42,7 @@ export async function reasignarEventoAction(
     .select("id")
     .eq("id", partidaId)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" };
+  if (!partida) return ERR("Partida no encontrada");
 
   // Si el evento tenía user_id null (player_number desconocido), no se puede
   // reasignar — esa info ya se perdió. Solo reasignamos si tenía user_id pero
@@ -46,7 +52,7 @@ export async function reasignarEventoAction(
     .select("user_id")
     .eq("id", eventoId)
     .maybeSingle();
-  if (!evento) return { error: "Evento no encontrado" };
+  if (!evento) return ERR("Evento no encontrado");
   if (!evento.user_id) {
     return {
       error:
@@ -62,7 +68,7 @@ export async function reasignarEventoAction(
       reason: null,
     })
     .eq("id", eventoId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/eventos");
   revalidatePath("/ranking");
@@ -72,14 +78,14 @@ export async function reasignarEventoAction(
 
 export async function descartarEventoAction(eventoId: string) {
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { error } = await supabase
     .from("match_events")
     .delete()
     .eq("id", eventoId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/eventos");
   revalidatePath("/ranking");
@@ -105,11 +111,11 @@ export type CargaEventosInput = z.infer<typeof carga>;
 export async function cargarEventosManualesAction(input: CargaEventosInput) {
   const parsed = carga.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
 
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { data: partida } = await supabase
@@ -117,7 +123,7 @@ export async function cargarEventosManualesAction(input: CargaEventosInput) {
     .select("id, fecha, hora_inicio")
     .eq("id", parsed.data.partida_id)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" };
+  if (!partida) return ERR("Partida no encontrada");
 
   // Generamos un evento por cada count > 0. local_event_id sintético con
   // prefijo `manual-` para distinguirlos del feed real.
@@ -153,7 +159,7 @@ export async function cargarEventosManualesAction(input: CargaEventosInput) {
   }
 
   const { error } = await supabase.from("match_events").insert(filas);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/eventos");
   revalidatePath("/ranking");

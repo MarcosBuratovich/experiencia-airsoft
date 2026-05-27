@@ -10,6 +10,14 @@ import {
   type CrearDirectaState,
   type SolicitarPrivadaState,
 } from "../actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
+
+function readErr(state: unknown) {
+  if (!state || typeof state !== "object") return { error: undefined, formErrors: undefined };
+  const s = state as { error?: FriendlyError; formErrors?: Record<string, string[]> };
+  return { error: s.error, formErrors: s.formErrors };
+}
 
 type SlotItem = {
   fecha: string;
@@ -297,9 +305,9 @@ function FormSolicitar({
           <span className="mt-1 block font-mono fluid-xs text-smoke">
             Mínimo 2 · máximo 60.
           </span>
-          {state?.errors?.cupo_estimado?.[0] && (
+          {readErr(state).formErrors?.cupo_estimado?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.cupo_estimado[0]}
+              {readErr(state).formErrors!.cupo_estimado[0]}
             </span>
           )}
         </label>
@@ -319,9 +327,7 @@ function FormSolicitar({
           />
         </label>
 
-        {state?.message && (
-          <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-        )}
+        <ErrorBanner error={readErr(state).error} />
       </div>
 
       <div className="flex items-center justify-end gap-2 flex-wrap p-5 border-t border-rail/40">
@@ -371,7 +377,7 @@ function FormAdminCrear({
     initialDir,
   );
 
-  if (state?.ok) {
+  if (state && "ok" in state && state.ok) {
     onChanged();
     onClose();
   }
@@ -437,9 +443,9 @@ function FormAdminCrear({
             required
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-mono text-bone focus:border-orange outline-none"
           />
-          {state?.errors?.cupo_max?.[0] && (
+          {readErr(state).formErrors?.cupo_max?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.cupo_max[0]}
+              {readErr(state).formErrors!.cupo_max[0]}
             </span>
           )}
         </label>
@@ -468,9 +474,7 @@ function FormAdminCrear({
           />
         </label>
 
-        {state?.message && (
-          <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-        )}
+        <ErrorBanner error={readErr(state).error} />
         {slot.estado === "reservada" && (
           <p className="font-mono fluid-xs text-orange-300">
             Slot reservado — la partida igual se va a crear y bloquear el slot.
@@ -508,7 +512,7 @@ function FormAdminLiberar({
   onChanged: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
 
   const ejecutar = (habilitado: boolean) => {
     setError(null);
@@ -530,9 +534,7 @@ function FormAdminLiberar({
           usuarios pueden pedirlo como privada igual que cualquier otro slot
           libre.
         </p>
-        {error && (
-          <p className="font-mono fluid-xs text-orange-300">{error}</p>
-        )}
+        <ErrorBanner error={error} variant="inline" />
       </div>
       <div className="flex items-center justify-end gap-2 flex-wrap p-5 border-t border-rail/40">
         <button

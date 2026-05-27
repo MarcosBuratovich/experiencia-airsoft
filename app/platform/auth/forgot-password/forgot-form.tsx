@@ -5,6 +5,7 @@ import {
   forgotPasswordAction,
   type ForgotPasswordState,
 } from "../../actions/auth";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const initial: ForgotPasswordState = undefined;
 
@@ -14,11 +15,11 @@ export function ForgotPasswordForm() {
     initial,
   );
 
-  if (state?.ok) {
+  if (state && "ok" in state && state.ok) {
     return (
       <div className="border border-orange/50 bg-orange/10 px-4 py-5 clip-tag">
         <p className="sect-label mb-2 text-orange">Listo</p>
-        <p className="text-bone fluid-sm leading-relaxed">{state.message}</p>
+        <p className="text-bone fluid-sm leading-relaxed">{state.mensaje}</p>
         <p className="mt-4 font-mono fluid-xs text-smoke">
           Si no llega en 5 minutos, revisá la carpeta de spam o pedí otro.
         </p>
@@ -26,8 +27,13 @@ export function ForgotPasswordForm() {
     );
   }
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} />
+
       <label className="block">
         <span className="sect-label mb-1 block">Email</span>
         <input
@@ -37,16 +43,12 @@ export function ForgotPasswordForm() {
           autoComplete="email"
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
         />
-        {state?.errors?.email?.[0] && (
+        {formErrors?.email?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.email[0]}
+            {formErrors.email[0]}
           </span>
         )}
       </label>
-
-      {state?.message && !state.ok && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
 
       <button
         type="submit"

@@ -5,10 +5,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { inicioPartida } from "@/lib/partidas";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 async function chequearAdminYPartida(partidaId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" as const };
+  if (!user) return ERR("No autenticado");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -16,7 +22,7 @@ async function chequearAdminYPartida(partidaId: string) {
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    return { error: "No autorizado" as const };
+    return ERR("No autorizado");
   }
 
   const { data: partida } = await supabase
@@ -24,23 +30,23 @@ async function chequearAdminYPartida(partidaId: string) {
     .select("id, fecha, hora_inicio, estado")
     .eq("id", partidaId)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" as const };
+  if (!partida) return ERR("Partida no encontrada");
 
   return { supabase, partida };
 }
 
 export async function cancelarPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, partida } = ctx;
 
-  if (partida.estado === "cancelada") return { error: "Ya estaba cancelada" };
+  if (partida.estado === "cancelada") return ERR("Ya estaba cancelada");
 
   const { error } = await supabase
     .from("partidas")
     .update({ estado: "cancelada" })
     .eq("id", partidaId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/partidas");
   revalidatePath(`/admin/partidas/${partidaId}/checkin`);
@@ -50,18 +56,18 @@ export async function cancelarPartidaAction(partidaId: string) {
 
 export async function cerrarInscripcionPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, partida } = ctx;
 
   if (partida.estado !== "abierta") {
-    return { error: "La inscripción ya no está abierta" };
+    return ERR("La inscripción ya no está abierta");
   }
 
   const { error } = await supabase
     .from("partidas")
     .update({ estado: "cerrada" })
     .eq("id", partidaId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/partidas");
   revalidatePath(`/admin/partidas/${partidaId}/checkin`);
@@ -71,18 +77,18 @@ export async function cerrarInscripcionPartidaAction(partidaId: string) {
 
 export async function reabrirInscripcionPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, partida } = ctx;
 
   if (partida.estado !== "cerrada") {
-    return { error: "Sólo se puede reabrir una inscripción cerrada" };
+    return ERR("Sólo se puede reabrir una inscripción cerrada");
   }
 
   const { error } = await supabase
     .from("partidas")
     .update({ estado: "abierta" })
     .eq("id", partidaId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/partidas");
   revalidatePath(`/admin/partidas/${partidaId}/checkin`);
@@ -92,17 +98,17 @@ export async function reabrirInscripcionPartidaAction(partidaId: string) {
 
 export async function eliminarPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, partida } = ctx;
 
   // Solo se permite eliminar si la partida todavía no empezó
   const inicio = inicioPartida(partida.fecha, partida.hora_inicio);
   if (Date.now() >= inicio.getTime()) {
-    return { error: "No se puede eliminar una partida que ya empezó" };
+    return ERR("No se puede eliminar una partida que ya empezó");
   }
 
   const { error } = await supabase.from("partidas").delete().eq("id", partidaId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/partidas");
   revalidatePath("/partidas");

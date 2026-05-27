@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cancelarPrivadaAction } from "../privada/actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../_components/error-banner";
 
 type Props = {
   solicitud: {
@@ -32,7 +34,7 @@ const ESTADO_STYLES: Record<string, string> = {
 
 export function MiSolicitudRow({ solicitud: s }: Props) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
@@ -121,7 +123,7 @@ export function MiSolicitudRow({ solicitud: s }: Props) {
           >
             {pending ? "..." : "Cancelar solicitud"}
           </button>
-          {error && <p className="mt-1 font-mono fluid-xs text-orange-300">{error}</p>}
+          <ErrorBanner error={error} variant="inline" className="mt-1" />
         </div>
       )}
     </li>

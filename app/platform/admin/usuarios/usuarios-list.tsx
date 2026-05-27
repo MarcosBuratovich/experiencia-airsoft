@@ -9,6 +9,8 @@ import {
   setPlayerNumberAction,
 } from "./actions";
 import { Select } from "../../components/select";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Usuario = {
   id: string;
@@ -33,7 +35,7 @@ const ROLE_OPTS = [
 
 export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [errorByUser, setErrorByUser] = useState<Record<string, string | null>>(
+  const [errorByUser, setErrorByUser] = useState<Record<string, FriendlyError | null>>(
     {},
   );
   const [, startTransition] = useTransition();
@@ -134,11 +136,7 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
                   onBlur={(e) => savePlayerNumber(u, e.target.value)}
                   className="w-full bg-ink border border-rail/60 px-2 py-2 text-bone font-mono tracking-[.2em] fluid-xs focus:border-orange outline-none"
                 />
-                {errorByUser[u.id] && (
-                  <span className="mt-1 block font-mono fluid-xs text-orange-300">
-                    {errorByUser[u.id]}
-                  </span>
-                )}
+                <ErrorBanner error={errorByUser[u.id]} variant="inline" className="mt-1" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -210,11 +208,7 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
                       onBlur={(e) => savePlayerNumber(u, e.target.value)}
                       className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono tracking-[.2em] fluid-xs focus:border-orange outline-none"
                     />
-                    {errorByUser[u.id] && (
-                      <div className="mt-1 font-mono fluid-xs text-orange-300 max-w-[10rem]">
-                        {errorByUser[u.id]}
-                      </div>
-                    )}
+                    <ErrorBanner error={errorByUser[u.id]} variant="inline" className="mt-1 max-w-[10rem]" />
                   </td>
                   <td className="px-3 py-3 align-top font-mono fluid-xs text-ash">
                     <div>{u.email}</div>

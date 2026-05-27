@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { editarClanAction, type EditarClanState } from "../../actions";
 import { colorLeibleSobreInk, contrasteSobreInk, CONTRAST_MIN } from "@/lib/clanes";
 import { LogoUploader } from "../../nuevo/logo-uploader";
+import { ErrorBanner } from "../../../../_components/error-banner";
 
 const initial: EditarClanState = undefined;
 
@@ -62,14 +63,18 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
   ];
   const allReqsMet = requisitos.every((r) => r.ok);
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   // Cuando el server responde ok, volvemos a la vista del clan
-  if (state?.ok) {
+  if (state && "ok" in state && state.ok) {
     router.push(`/clanes/${clan.slug}`);
     router.refresh();
   }
 
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} formErrors={formErrors} />
       <input type="hidden" name="id" value={clan.id} />
 
       <label className="block">
@@ -80,9 +85,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
           onChange={(e) => setNombre(e.target.value)}
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
         />
-        {state?.errors?.nombre?.[0] && (
+        {formErrors?.nombre?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.nombre[0]}
+            {formErrors!.nombre[0]}
           </span>
         )}
       </label>
@@ -116,9 +121,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
               {aliasN}/{ALIAS_MAX}
             </span>
           </div>
-          {state?.errors?.alias?.[0] && (
+          {formErrors?.alias?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.alias[0]}
+              {formErrors!.alias[0]}
             </span>
           )}
         </label>
@@ -175,9 +180,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
           onChange={(e) => setDescripcion(e.target.value)}
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition resize-y"
         />
-        {state?.errors?.descripcion?.[0] && (
+        {formErrors?.descripcion?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.descripcion[0]}
+            {formErrors!.descripcion[0]}
           </span>
         )}
       </label>
@@ -201,9 +206,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
             placeholder="https://www.youtube.com/@miclan"
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.youtube_url?.[0] && (
+          {formErrors?.youtube_url?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.youtube_url[0]}
+              {formErrors!.youtube_url[0]}
             </span>
           )}
         </label>
@@ -219,9 +224,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
             placeholder="https://www.instagram.com/miclan"
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.instagram_url?.[0] && (
+          {formErrors?.instagram_url?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.instagram_url[0]}
+              {formErrors!.instagram_url[0]}
             </span>
           )}
         </label>
@@ -256,9 +261,9 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
           </span>
           <span className="text-bone font-sans">Juan Perez</span>
         </div>
-        {state?.errors?.color_hex?.[0] && (
+        {formErrors?.color_hex?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.color_hex[0]}
+            {formErrors!.color_hex[0]}
           </span>
         )}
       </label>
@@ -270,16 +275,12 @@ export function EditarClanForm({ clan }: { clan: ClanData }) {
           pathHint={clan.slug}
           onUrlChange={setLogoUrl}
         />
-        {state?.errors?.logo_url?.[0] && (
+        {formErrors?.logo_url?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.logo_url[0]}
+            {formErrors!.logo_url[0]}
           </span>
         )}
       </div>
-
-      {state?.message && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
 
       <div
         className={`border ${

@@ -10,6 +10,11 @@ import {
 } from "@/lib/precios";
 import { inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
 
 export type AnotarmeInput = {
   tipo_jugador: TipoJugador;
@@ -19,10 +24,10 @@ export type AnotarmeInput = {
 export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   if (input.tipo_jugador !== "alquiler" && input.tipo_jugador !== "byop") {
-    return { error: "Elegí alquiler o BYOP" };
+    return ERR("Elegí alquiler o BYOP");
   }
 
   const { data: partida } = await supabase
@@ -30,7 +35,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     .select("cupo_max, estado, fecha, hora_inicio, duracion_min")
     .eq("id", partidaId)
     .maybeSingle();
-  if (!partida) return { error: "Partida no encontrada" };
+  if (!partida) return ERR("Partida no encontrada");
 
   if (
     !inscripcionAbierta({
@@ -40,7 +45,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
       estado: partida.estado,
     })
   ) {
-    return { error: "La inscripción ya está cerrada" };
+    return ERR("La inscripción ya está cerrada");
   }
 
   const { data: profile } = await supabase
@@ -48,7 +53,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     .select("socio, socio_desde, cuota_mensual")
     .eq("id", user.id)
     .maybeSingle();
-  if (!profile) return { error: "Perfil no encontrado" };
+  if (!profile) return ERR("Perfil no encontrado");
 
   const tipo_jugador = input.tipo_jugador;
 
@@ -112,7 +117,10 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     precio_alquiler: alquiler,
     // recargas se asignan despues por el admin durante el check-in
   });
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[partidas actions] supabase falló:", error);
+    return ERR(error);
+  }
 
   revalidatePath(`/partidas/${partidaId}`);
   revalidatePath("/partidas");
@@ -122,14 +130,17 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
 export async function desanotarmeAction(partidaId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   const { error } = await supabase
     .from("inscripciones")
     .delete()
     .eq("partida_id", partidaId)
     .eq("user_id", user.id);
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[partidas actions] supabase falló:", error);
+    return ERR(error);
+  }
 
   revalidatePath(`/partidas/${partidaId}`);
   revalidatePath("/partidas");

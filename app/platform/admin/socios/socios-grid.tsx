@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { registrarPagoAction, borrarPagoAction } from "./actions";
 import { Select } from "../../components/select";
 import { labelPeriodoCorto } from "@/lib/socios";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const METODO_OPTS = [
   { value: "efectivo", label: "Efectivo" },
@@ -170,7 +172,7 @@ function RegistrarPagoModal({
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [metodo, setMetodo] = useState<"efectivo" | "transferencia">("efectivo");
 
   return (
@@ -195,7 +197,7 @@ function RegistrarPagoModal({
                 (fd.get("fecha_pago") as string) ||
                 new Date().toISOString().slice(0, 10),
             });
-            if (r.error) setError(r.error);
+            if ("error" in r) setError(r.error);
             else onDone();
           });
         }}
@@ -233,7 +235,7 @@ function RegistrarPagoModal({
           />
         </label>
 
-        {error && <p className="mb-3 font-mono fluid-xs text-orange-300">{error}</p>}
+        <ErrorBanner error={error} variant="inline" className="mb-3" />
 
         <div className="flex gap-2">
           <button

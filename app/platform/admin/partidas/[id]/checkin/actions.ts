@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { calcularPrecioRecargas, getPreciosConfig } from "@/lib/precios";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 type Checkin = {
   presente: boolean;
   pago_estado: string | null;
@@ -14,7 +20,7 @@ type Checkin = {
 export async function upsertCheckinAction(inscripcionId: string, payload: Checkin) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   const { error } = await supabase.from("checkins").upsert(
     {
@@ -29,7 +35,7 @@ export async function upsertCheckinAction(inscripcionId: string, payload: Checki
     { onConflict: "inscripcion_id" },
   );
 
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath(`/admin/partidas`);
   return { ok: true };
@@ -47,7 +53,7 @@ export async function actualizarRecargasInscripcionAction(
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   // Validar admin
   const { data: profile } = await supabase
@@ -56,7 +62,7 @@ export async function actualizarRecargasInscripcionAction(
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    return { error: "No autorizado" };
+    return ERR("No autorizado");
   }
 
   // Validar y normalizar (0..20)
@@ -76,9 +82,9 @@ export async function actualizarRecargasInscripcionAction(
     .select("id, tipo_jugador")
     .eq("id", inscripcionId)
     .maybeSingle();
-  if (!insc) return { error: "Inscripción no encontrada" };
+  if (!insc) return ERR("Inscripción no encontrada");
   if (insc.tipo_jugador !== "alquiler") {
-    return { error: "Solo se pueden cargar recargas a alquileres" };
+    return ERR("Solo se pueden cargar recargas a alquileres");
   }
 
   // Calcular precio_recargas con los precios vigentes
@@ -97,7 +103,7 @@ export async function actualizarRecargasInscripcionAction(
       precio_recargas,
     })
     .eq("id", inscripcionId);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath(`/admin/partidas`);
   return { ok: true, precio_recargas };

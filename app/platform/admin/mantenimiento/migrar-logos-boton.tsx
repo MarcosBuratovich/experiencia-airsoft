@@ -5,6 +5,7 @@ import {
   migrarLogosPendientesAction,
   type MigrarLogosResult,
 } from "../../clanes/actions";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 export function MigrarLogosBoton() {
   const [pending, startTransition] = useTransition();
@@ -30,9 +31,7 @@ export function MigrarLogosBoton() {
       </button>
 
       {result && "error" in result && (
-        <p className="mt-3 font-mono fluid-xs text-orange-300">
-          Error: {result.error}
-        </p>
+        <ErrorBanner error={result.error} className="mt-3" />
       )}
 
       {result && "ok" in result && (

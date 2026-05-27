@@ -6,6 +6,8 @@ import {
   agregarMiAlquilerAction,
   quitarInscripcionAction,
 } from "./organizador-actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Alquiler = { id: string; nombre: string; estado: string };
 
@@ -18,7 +20,7 @@ export function MisAlquileresPanel({
 }) {
   const router = useRouter();
   const [nombre, setNombre] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [delPending, startDelete] = useTransition();
@@ -26,7 +28,7 @@ export function MisAlquileresPanel({
   const agregar = () => {
     const v = nombre.trim();
     if (v.length < 2) {
-      setError("Mínimo 2 caracteres");
+      setError({ titulo: "Mínimo 2 caracteres", mostrarSoporte: false });
       return;
     }
     setError(null);
@@ -88,9 +90,7 @@ export function MisAlquileresPanel({
         </button>
       </div>
 
-      {error && (
-        <p className="mb-3 font-mono fluid-xs text-orange-300">{error}</p>
-      )}
+      <ErrorBanner error={error} variant="inline" className="mb-3" />
 
       {alquileres.length > 0 ? (
         <ul className="space-y-1">

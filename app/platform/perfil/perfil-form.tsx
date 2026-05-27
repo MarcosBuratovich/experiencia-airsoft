@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { actualizarPerfilAction, type ActualizarPerfilState } from "./actions";
 import { PhoneInput } from "../components/phone-input";
+import { ErrorBanner } from "../../_components/error-banner";
 
 const initial: ActualizarPerfilState = undefined;
 
@@ -40,8 +41,13 @@ export function PerfilForm({
   const [alias, setAlias] = useState(initialAlias ?? "");
   const aliasN = aliasLen(alias);
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+  const ok = state && "ok" in state && state.ok;
+
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} />
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="sect-label mb-1 block">Nombre</span>
@@ -53,9 +59,9 @@ export function PerfilForm({
             required
             className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.nombre?.[0] && (
+          {formErrors?.nombre?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.nombre[0]}
+              {formErrors!.nombre[0]}
             </span>
           )}
         </label>
@@ -69,9 +75,9 @@ export function PerfilForm({
             required
             className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.apellido?.[0] && (
+          {formErrors?.apellido?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.apellido[0]}
+              {formErrors!.apellido[0]}
             </span>
           )}
         </label>
@@ -102,9 +108,9 @@ export function PerfilForm({
           Si lo dejás vacío aparece tu nombre y apellido. Los admins igual ven
           tu nombre real para el check-in.
         </span>
-        {state?.errors?.alias?.[0] && (
+        {formErrors?.alias?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.alias[0]}
+            {formErrors!.alias[0]}
           </span>
         )}
       </label>
@@ -115,9 +121,9 @@ export function PerfilForm({
         <span className="mt-1 block font-mono fluid-xs text-smoke">
           Elegí tu país y escribí el número sin código. Lo formateamos automático.
         </span>
-        {state?.errors?.celular?.[0] && (
+        {formErrors?.celular?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.celular[0]}
+            {formErrors!.celular[0]}
           </span>
         )}
       </label>
@@ -138,17 +144,14 @@ export function PerfilForm({
           Único entre todos los jugadores. Lo usa el sistema de cancha para
           registrar tus stats en cada partida.
         </span>
-        {state?.errors?.player_number?.[0] && (
+        {formErrors?.player_number?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.player_number[0]}
+            {formErrors!.player_number[0]}
           </span>
         )}
       </label>
 
-      {state?.message && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
-      {state?.ok && (
+      {ok && (
         <p className="font-mono fluid-xs text-green-400 uppercase tracking-[.25em]">
           Guardado
         </p>

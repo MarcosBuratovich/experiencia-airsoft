@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { crearClanAction, type CrearClanState } from "../actions";
 import { colorLeibleSobreInk, contrasteSobreInk, CONTRAST_MIN } from "@/lib/clanes";
 import { LogoUploader } from "./logo-uploader";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const initial: CrearClanState = undefined;
 
@@ -27,6 +28,9 @@ export function NuevoClanForm() {
   const [logoUrl, setLogoUrl] = useState("");
   const [displayMode, setDisplayMode] = useState<"alias" | "logo">("alias");
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   const aliasN = aliasLen(alias);
   const contraste = useMemo(() => contrasteSobreInk(color), [color]);
   const pasaContraste = contraste >= CONTRAST_MIN;
@@ -46,18 +50,7 @@ export function NuevoClanForm() {
   ];
   const allReqsMet = requisitos.every((r) => r.ok);
 
-  // Resumen de errores para banner. Cuando el server devuelve errores
-  // de campo, queremos que el usuario los vea SI o SI (no se pierda
-  // mientras scrollea).
-  const errorMessages = useMemo(() => {
-    const msgs: { field: string; msg: string }[] = [];
-    if (!state?.errors) return msgs;
-    for (const [field, errs] of Object.entries(state.errors)) {
-      if (errs && errs.length) msgs.push({ field, msg: errs[0] });
-    }
-    return msgs;
-  }, [state?.errors]);
-  const hasErrors = errorMessages.length > 0 || !!state?.message;
+  const hasErrors = !!error || !!formErrors;
 
   // Cuando aparecen errores nuevos, scrollear arriba para que el banner
   // sea lo primero que se ve.
@@ -69,28 +62,7 @@ export function NuevoClanForm() {
 
   return (
     <form action={action} className="space-y-4">
-      {hasErrors && (
-        <div className="border border-orange-300/60 bg-orange-300/10 clip-notch p-4">
-          <p className="sect-label text-orange-300 mb-2">// Revisá esto</p>
-          {state?.message && (
-            <p className="font-sans fluid-sm text-orange-300 mb-2">
-              {state.message}
-            </p>
-          )}
-          {errorMessages.length > 0 && (
-            <ul className="space-y-1 font-mono fluid-xs text-orange-300">
-              {errorMessages.map((e) => (
-                <li key={e.field}>
-                  <span className="uppercase tracking-[.2em] mr-2">
-                    {e.field}:
-                  </span>
-                  <span className="normal-case tracking-normal">{e.msg}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <ErrorBanner error={error} formErrors={formErrors} />
       <label className="block">
         <span className="sect-label mb-1 block">Nombre del clan</span>
         <input
@@ -101,9 +73,9 @@ export function NuevoClanForm() {
           placeholder="Ej: Lobos de Acero"
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
         />
-        {state?.errors?.nombre?.[0] && (
+        {formErrors?.nombre?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.nombre[0]}
+            {formErrors!.nombre[0]}
           </span>
         )}
       </label>
@@ -137,9 +109,9 @@ export function NuevoClanForm() {
               {aliasN}/{ALIAS_MAX}
             </span>
           </div>
-          {state?.errors?.alias?.[0] && (
+          {formErrors?.alias?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.alias[0]}
+              {formErrors!.alias[0]}
             </span>
           )}
         </label>
@@ -209,9 +181,9 @@ export function NuevoClanForm() {
           placeholder="Qué representa el clan, cómo juega, etc."
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition resize-y"
         />
-        {state?.errors?.descripcion?.[0] && (
+        {formErrors?.descripcion?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.descripcion[0]}
+            {formErrors!.descripcion[0]}
           </span>
         )}
       </label>
@@ -233,9 +205,9 @@ export function NuevoClanForm() {
             placeholder="https://www.youtube.com/@miclan"
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.youtube_url?.[0] && (
+          {formErrors?.youtube_url?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.youtube_url[0]}
+              {formErrors!.youtube_url[0]}
             </span>
           )}
         </label>
@@ -249,9 +221,9 @@ export function NuevoClanForm() {
             placeholder="https://www.instagram.com/miclan"
             className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-sans text-bone focus:border-orange outline-none transition"
           />
-          {state?.errors?.instagram_url?.[0] && (
+          {formErrors?.instagram_url?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.instagram_url[0]}
+              {formErrors!.instagram_url[0]}
             </span>
           )}
         </label>
@@ -293,9 +265,9 @@ export function NuevoClanForm() {
           oscuro, el chip va a caer a beige en producción y vas a perder el
           color.
         </p>
-        {state?.errors?.color_hex?.[0] && (
+        {formErrors?.color_hex?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.color_hex[0]}
+            {formErrors!.color_hex[0]}
           </span>
         )}
       </label>
@@ -305,16 +277,12 @@ export function NuevoClanForm() {
           Logo (opcional · necesario si display = Logo circular)
         </span>
         <LogoUploader onUrlChange={setLogoUrl} />
-        {state?.errors?.logo_url?.[0] && (
+        {formErrors?.logo_url?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.logo_url[0]}
+            {formErrors!.logo_url[0]}
           </span>
         )}
       </div>
-
-      {state?.message && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
 
       {/* Checklist de requisitos — el usuario ve exactamente qué le
           falta. El submit queda disabled hasta que todo esté ✓. */}

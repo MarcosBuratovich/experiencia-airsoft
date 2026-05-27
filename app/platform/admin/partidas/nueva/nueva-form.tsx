@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { crearPartidaAction, type CrearPartidaState } from "./actions";
 import { Select } from "../../../components/select";
+import { ErrorBanner } from "../../../../_components/error-banner";
 
 const initial: CrearPartidaState = undefined;
 
@@ -22,11 +23,16 @@ export function NuevaPartidaForm() {
   const [modalidad, setModalidad] = useState("dinamica");
   const [visibilidad, setVisibilidad] = useState("publica");
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} formErrors={formErrors} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Fecha" name="fecha" type="date" error={state?.errors?.fecha} />
-        <Field label="Hora" name="hora_inicio" type="time" error={state?.errors?.hora_inicio} />
+        <Field label="Fecha" name="fecha" type="date" error={formErrors?.fecha} />
+        <Field label="Hora" name="hora_inicio" type="time" error={formErrors?.hora_inicio} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block">
@@ -37,9 +43,9 @@ export function NuevaPartidaForm() {
             onChange={setModalidad}
             options={MODALIDAD_OPTS}
           />
-          {state?.errors?.modalidad?.[0] && (
+          {formErrors?.modalidad?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.modalidad[0]}
+              {formErrors.modalidad[0]}
             </span>
           )}
         </label>
@@ -51,9 +57,9 @@ export function NuevaPartidaForm() {
             onChange={setVisibilidad}
             options={VISIBILIDAD_OPTS}
           />
-          {state?.errors?.visibilidad?.[0] && (
+          {formErrors?.visibilidad?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
-              {state.errors.visibilidad[0]}
+              {formErrors.visibilidad[0]}
             </span>
           )}
         </label>
@@ -64,14 +70,14 @@ export function NuevaPartidaForm() {
           name="cupo_max"
           type="number"
           defaultValue="20"
-          error={state?.errors?.cupo_max}
+          error={formErrors?.cupo_max}
         />
         <Field
           label="Duración (min)"
           name="duracion_min"
           type="number"
           defaultValue="180"
-          error={state?.errors?.duracion_min}
+          error={formErrors?.duracion_min}
         />
       </div>
       <label className="block">
@@ -88,8 +94,6 @@ export function NuevaPartidaForm() {
         <span className="text-orange">/admin/precios</span>. El título usa la
         modalidad.
       </p>
-
-      {state?.message && <p className="font-mono fluid-xs text-orange-300">{state.message}</p>}
 
       <button
         type="submit"

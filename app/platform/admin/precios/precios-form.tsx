@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updatePrecioAction } from "./actions";
 import type { PreciosKey } from "@/lib/precios";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Item = {
   key: PreciosKey;
@@ -39,7 +41,7 @@ export function PreciosForm({ items }: { items: Item[] }) {
 
 function PrecioRow({ item }: { item: Item }) {
   const [valor, setValor] = useState<string>(String(item.valor));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -50,14 +52,14 @@ function PrecioRow({ item }: { item: Item }) {
 
   function onSave() {
     if (invalid) {
-      setError("Ingresá un número entero ≥ 0");
+      setError({ titulo: "Ingresá un número entero ≥ 0", mostrarSoporte: false });
       return;
     }
     setError(null);
     startTransition(async () => {
       const res = await updatePrecioAction({ key: item.key, valor: num });
       if ("error" in res) {
-        setError(res.error);
+        setError(typeof res.error === 'string' ? { titulo: res.error, mostrarSoporte: false } : res.error);
       } else {
         setSavedAt(new Date());
         router.refresh();
@@ -96,9 +98,7 @@ function PrecioRow({ item }: { item: Item }) {
           {pending ? "..." : "Guardar"}
         </button>
       </div>
-      {error && (
-        <p className="md:ml-3 font-mono fluid-xs text-orange-300">{error}</p>
-      )}
+      <ErrorBanner error={error} variant="inline" className="md:ml-3" />
       {savedAt && !error && !pending && !dirty && (
         <p className="md:ml-3 font-mono fluid-xs text-green-400">Guardado</p>
       )}

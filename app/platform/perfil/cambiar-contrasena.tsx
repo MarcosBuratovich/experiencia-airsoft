@@ -5,6 +5,7 @@ import {
   cambiarContrasenaAction,
   type CambiarContrasenaState,
 } from "./actions";
+import { ErrorBanner } from "../../_components/error-banner";
 
 const initial: CambiarContrasenaState = undefined;
 
@@ -37,8 +38,11 @@ export function CambiarContrasenaSection() {
     checks.length && checks.uppercase && checks.lowercase && checks.number;
   const mismatch = confirmPw.length > 0 && newPw !== confirmPw;
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   // Cuando el server confirma ok, colapsamos el form.
-  if (state?.ok && open) {
+  if ((state && "ok" in state && state.ok) && open) {
     setOpen(false);
     setNewPw("");
     setConfirmPw("");
@@ -59,7 +63,7 @@ export function CambiarContrasenaSection() {
         )}
       </div>
 
-      {state?.ok && !open && (
+      {(state && "ok" in state && state.ok) && !open && (
         <p className="font-mono fluid-xs text-green-400 uppercase tracking-[.25em]">
           ✓ Contraseña actualizada
         </p>
@@ -79,9 +83,9 @@ export function CambiarContrasenaSection() {
               required
               className="w-full bg-ink border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
             />
-            {state?.errors?.currentPassword?.[0] && (
+            {formErrors?.currentPassword?.[0] && (
               <span className="mt-1 block font-mono fluid-xs text-orange-300">
-                {state.errors.currentPassword[0]}
+                {formErrors!.currentPassword[0]}
               </span>
             )}
           </label>
@@ -103,9 +107,9 @@ export function CambiarContrasenaSection() {
               <PwCheck ok={checks.lowercase} label="Una minúscula" />
               <PwCheck ok={checks.number} label="Un número" />
             </ul>
-            {state?.errors?.newPassword?.[0] && (
+            {formErrors?.newPassword?.[0] && (
               <span className="mt-1 block font-mono fluid-xs text-orange-300">
-                {state.errors.newPassword[0]}
+                {formErrors!.newPassword[0]}
               </span>
             )}
           </label>
@@ -128,16 +132,14 @@ export function CambiarContrasenaSection() {
                 Las contraseñas no coinciden
               </span>
             )}
-            {state?.errors?.confirmPassword?.[0] && !mismatch && (
+            {formErrors?.confirmPassword?.[0] && !mismatch && (
               <span className="mt-1 block font-mono fluid-xs text-orange-300">
-                {state.errors.confirmPassword[0]}
+                {formErrors!.confirmPassword[0]}
               </span>
             )}
           </label>
 
-          {state?.message && (
-            <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-          )}
+          <ErrorBanner error={error} />
 
           <div className="flex items-center justify-end gap-2">
             <button

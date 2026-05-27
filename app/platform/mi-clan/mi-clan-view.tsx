@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../_components/error-banner";
 import {
   aprobarSolicitudAction,
   rechazarSolicitudAction,
@@ -41,7 +43,7 @@ type Props = {
 };
 
 export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, solicitudes }: Props) {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const hayPendientes = soyCapitan && solicitudes.length > 0;
 
   return (
@@ -110,11 +112,7 @@ export function MiClanView({ clan, userId, soyCapitan, miembros, capitanId, soli
           </p>
         )}
 
-        {error && (
-          <div className="border border-orange/40 bg-orange/5 clip-notch p-3">
-            <p className="font-mono fluid-xs text-orange-300">{error}</p>
-          </div>
-        )}
+        <ErrorBanner error={error} />
 
         {hayPendientes && (
           <section>
@@ -165,7 +163,7 @@ function SolicitudCapitanRow({
   setError,
 }: {
   solicitud: Solicitud;
-  setError: (e: string | null) => void;
+  setError: (e: FriendlyError | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [respuesta, setRespuesta] = useState("");
@@ -257,7 +255,7 @@ function MiembroRow({
   esCapitan: boolean;
   soyCapitan: boolean;
   esYo: boolean;
-  setError: (e: string | null) => void;
+  setError: (e: FriendlyError | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -324,7 +322,7 @@ function SalirClanButton({
   setError,
 }: {
   clanId: string;
-  setError: (e: string | null) => void;
+  setError: (e: FriendlyError | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -353,7 +351,7 @@ function EliminarClanButton({
   setError,
 }: {
   clanId: string;
-  setError: (e: string | null) => void;
+  setError: (e: FriendlyError | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();

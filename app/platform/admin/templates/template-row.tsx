@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { actualizarTemplateAction, eliminarTemplateAction } from "./actions";
 import { Select } from "../../components/select";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const MODALIDAD_OPTS = [
   { value: "dinamica", label: "Dinámica" },
@@ -29,7 +31,7 @@ export function TemplateRow({ template }: { template: Template }) {
   const [modalidad, setModalidad] = useState(template.modalidad);
   const [cupo, setCupo] = useState(String(template.cupo_max));
   const [activo, setActivo] = useState(template.activo);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -56,7 +58,7 @@ export function TemplateRow({ template }: { template: Template }) {
         activo,
       });
       if ("error" in res && res.error) {
-        setError(res.error);
+        setError(typeof res.error === 'string' ? { titulo: res.error, mostrarSoporte: false } : res.error);
       } else {
         setSaved(true);
         router.refresh();
@@ -69,7 +71,7 @@ export function TemplateRow({ template }: { template: Template }) {
     startDelete(async () => {
       const res = await eliminarTemplateAction({ id: template.id });
       if ("error" in res && res.error) {
-        setError(res.error);
+        setError(typeof res.error === 'string' ? { titulo: res.error, mostrarSoporte: false } : res.error);
         setConfirmingDelete(false);
       } else {
         router.refresh();
@@ -176,7 +178,7 @@ export function TemplateRow({ template }: { template: Template }) {
             Eliminar
           </button>
         )}
-        {error && <p className="font-mono fluid-xs text-orange-300">{error}</p>}
+        <ErrorBanner error={error} variant="inline" />
         {saved && !dirty && !pending && !error && (
           <p className="font-mono fluid-xs text-green-400 uppercase tracking-[.2em]">Guardado</p>
         )}

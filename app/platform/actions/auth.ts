@@ -5,6 +5,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { numeroDisponible } from "@/lib/player-number";
+import {
+  actionError,
+  actionFieldErrors,
+  friendlyError,
+  type ActionErrorState,
+} from "@/lib/errors";
 
 const signupSchema = z
   .object({
@@ -30,10 +36,7 @@ const signupSchema = z
     path: ["confirmPassword"],
   });
 
-export type SignupState = {
-  errors?: Partial<Record<keyof z.infer<typeof signupSchema>, string[]>>;
-  message?: string;
-} | undefined;
+export type SignupState = ActionErrorState | { ok: true } | undefined;
 
 export async function signupAction(_prev: SignupState, formData: FormData): Promise<SignupState> {
   const parsed = signupSchema.safeParse({
@@ -48,21 +51,18 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
   });
 
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const { nombre, apellido, dni, celular, email, password, player_number } =
     parsed.data;
   const supabase = await createClient();
 
-  // Validar unicidad del player_number antes de crear el auth user.
-  // Hay un unique index en la DB que da última palabra, pero este check
-  // devuelve un error de campo prolijo en el form en vez de un 500.
   const disponible = await numeroDisponible(supabase, player_number);
   if (!disponible) {
-    return {
-      errors: { player_number: ["Ese número ya está en uso. Elegí otro"] },
-    };
+    return actionFieldErrors({
+      player_number: ["Ese número ya está en uso. Elegí otro"],
+    });
   }
 
   const appUrl =
@@ -73,25 +73,13 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
     password,
     options: {
       data: { nombre, apellido, dni, celular, player_number },
-      // Supabase manda este `next` al webhook como redirect_to.
-      // El hook lo usa para construir el link del email -> /auth/callback
-      // verifica el token y redirige aca despues.
       emailRedirectTo: `${appUrl}/partidas`,
     },
   });
 
   if (error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes("already") || error.code === "user_already_exists") {
-      return { message: "Ese email ya está registrado. Iniciá sesión." };
-    }
-    if (msg.includes("rate limit") || msg.includes("for security purposes")) {
-      return {
-        message:
-          "Estamos enviando muchos emails ahora. Esperá unos minutos y volvé a intentar.",
-      };
-    }
-    return { message: error.message };
+    console.error("[signupAction] supabase signUp falló:", error);
+    return actionError(error);
   }
 
   redirect("/login?signup=ok");
@@ -102,10 +90,7 @@ const loginSchema = z.object({
   password: z.string().min(1, "Obligatoria"),
 });
 
-export type LoginState = {
-  errors?: Partial<Record<keyof z.infer<typeof loginSchema>, string[]>>;
-  message?: string;
-} | undefined;
+export type LoginState = ActionErrorState | { ok: true } | undefined;
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
@@ -114,16 +99,15 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   });
 
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
-    return { message: "Email o contraseña incorrectos." };
+    return actionError(error);
   }
 
-  // Invalida el cache del layout para que el nav re-rendee con la sesion nueva
   revalidatePath("/", "layout");
   redirect("/partidas");
 }
@@ -143,11 +127,8 @@ const forgotSchema = z.object({
 });
 
 export type ForgotPasswordState =
-  | {
-      errors?: Partial<Record<keyof z.infer<typeof forgotSchema>, string[]>>;
-      ok?: boolean;
-      message?: string;
-    }
+  | ActionErrorState
+  | { ok: true; mensaje: string }
   | undefined;
 
 export async function forgotPasswordAction(
@@ -156,16 +137,13 @@ export async function forgotPasswordAction(
 ): Promise<ForgotPasswordState> {
   const parsed = forgotSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://app.experienciaairsoft.com";
 
   const supabase = await createClient();
-  // No revelamos si el email existe o no — para "user not found" devolvemos
-  // ok igual. Pero si hay rate limit u otro error técnico, sí mostramos
-  // (no leakea info de usuario, ayuda a entender por qué no llega el mail).
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
     { redirectTo: `${appUrl}/auth/reset-password` },
@@ -173,21 +151,16 @@ export async function forgotPasswordAction(
 
   if (error) {
     const msg = error.message.toLowerCase();
-    if (msg.includes("rate limit") || msg.includes("for security purposes")) {
-      return {
-        message:
-          "Estamos enviando muchos emails ahora. Esperá unos minutos y volvé a intentar.",
-      };
-    }
-    // Otros errores no de "user not found" los mostramos también.
+    // No leakeamos si el email existe — para "not found" devolvemos ok.
     if (!msg.includes("not found")) {
-      return { message: error.message };
+      console.error("[forgotPasswordAction] supabase falló:", error);
+      return actionError(error);
     }
   }
 
   return {
     ok: true,
-    message:
+    mensaje:
       "Si el email existe en el sistema, te mandamos un link para resetear la contraseña. Revisá tu inbox (y spam).",
   };
 }
@@ -207,12 +180,7 @@ const resetSchema = z
     path: ["confirmPassword"],
   });
 
-export type ResetPasswordState =
-  | {
-      errors?: Partial<Record<"password" | "confirmPassword", string[]>>;
-      message?: string;
-    }
-  | undefined;
+export type ResetPasswordState = ActionErrorState | { ok: true } | undefined;
 
 export async function resetPasswordAction(
   _prev: ResetPasswordState,
@@ -223,15 +191,18 @@ export async function resetPasswordAction(
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {
     return {
-      message:
-        "El link de reset expiró o no es válido. Pedí uno nuevo desde el login.",
+      error: {
+        titulo: "El link de reset expiró o no es válido",
+        detalle: "Pedí uno nuevo desde la pantalla de recuperar contraseña.",
+        mostrarSoporte: false,
+      },
     };
   }
 
@@ -239,7 +210,8 @@ export async function resetPasswordAction(
     password: parsed.data.password,
   });
   if (error) {
-    return { message: error.message };
+    console.error("[resetPasswordAction] updateUser falló:", error);
+    return { error: friendlyError(error) };
   }
 
   revalidatePath("/", "layout");

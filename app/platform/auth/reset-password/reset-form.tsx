@@ -5,14 +5,19 @@ import {
   resetPasswordAction,
   type ResetPasswordState,
 } from "../../actions/auth";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 const initial: ResetPasswordState = undefined;
 
 export function ResetPasswordForm() {
   const [state, action, pending] = useActionState(resetPasswordAction, initial);
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
 
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} />
+
       <label className="block">
         <span className="sect-label mb-1 block">Nueva contraseña</span>
         <input
@@ -23,9 +28,9 @@ export function ResetPasswordForm() {
           autoComplete="new-password"
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
         />
-        {state?.errors?.password?.[0] && (
+        {formErrors?.password?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.password[0]}
+            {formErrors.password[0]}
           </span>
         )}
         <span className="mt-1 block font-mono fluid-xs text-smoke">
@@ -43,16 +48,12 @@ export function ResetPasswordForm() {
           autoComplete="new-password"
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
         />
-        {state?.errors?.confirmPassword?.[0] && (
+        {formErrors?.confirmPassword?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.confirmPassword[0]}
+            {formErrors.confirmPassword[0]}
           </span>
         )}
       </label>
-
-      {state?.message && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
 
       <button
         type="submit"

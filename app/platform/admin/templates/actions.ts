@@ -11,10 +11,16 @@ import {
 } from "@/lib/semana";
 import type { PartidaPreviewItem, SemanaSel } from "./types";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 async function assertAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" as const };
+  if (!user) return ERR("No autenticado");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -22,7 +28,7 @@ async function assertAdmin() {
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "admin" && profile?.role !== "super_admin") {
-    return { error: "No autorizado" as const };
+    return ERR("No autorizado");
   }
   return { supabase, userId: user.id };
 }
@@ -33,14 +39,14 @@ function normalizarHora(h: string): string {
 
 export async function getPreviewSemanaAction({ semana }: { semana: SemanaSel }) {
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { data: templates, error: tplErr } = await supabase
     .from("partida_templates")
     .select("id, dia_semana, hora_inicio, duracion_min, modalidad, cupo_max")
     .eq("activo", true);
-  if (tplErr) return { error: tplErr.message };
+  if (tplErr) return ERR(tplErr);
 
   const fechas =
     semana === "actual" ? fechasSemanaActualDesdeHoy() : fechasSemanaProxima();
@@ -70,7 +76,7 @@ export async function getPreviewSemanaAction({ semana }: { semana: SemanaSel }) 
     .from("partidas")
     .select("fecha, hora_inicio, modalidad")
     .in("fecha", fechasUnicas);
-  if (existErr) return { error: existErr.message };
+  if (existErr) return ERR(existErr);
 
   const existSet = new Set(
     (existentes ?? []).map(
@@ -102,10 +108,10 @@ export async function generarPartidasSeleccionadasAction(
 ) {
   const parsed = generarSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase, userId } = ctx;
 
   const tplIds = [...new Set(parsed.data.items.map((i) => i.templateId))];
@@ -113,7 +119,7 @@ export async function generarPartidasSeleccionadasAction(
     .from("partida_templates")
     .select("id, hora_inicio, duracion_min, modalidad, cupo_max")
     .in("id", tplIds);
-  if (tplErr) return { error: tplErr.message };
+  if (tplErr) return ERR(tplErr);
   const tplById = new Map((templates ?? []).map((t) => [t.id, t]));
 
   let creadas = 0;
@@ -150,7 +156,7 @@ export async function generarPartidasSeleccionadasAction(
       precio: 0,
       creado_por: userId,
     });
-    if (insErr) return { error: insErr.message, creadas, omitidas };
+    if (insErr) return { ...ERR(insErr), creadas, omitidas };
     creadas++;
   }
 
@@ -171,10 +177,10 @@ const updateSchema = z.object({
 export async function actualizarTemplateAction(input: z.infer<typeof updateSchema>) {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { error } = await supabase
@@ -187,7 +193,7 @@ export async function actualizarTemplateAction(input: z.infer<typeof updateSchem
       activo: parsed.data.activo,
     })
     .eq("id", parsed.data.id);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/templates");
   return { ok: true };
@@ -204,10 +210,10 @@ const createSchema = z.object({
 export async function crearTemplateAction(input: z.infer<typeof createSchema>) {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { error } = await supabase.from("partida_templates").insert({
@@ -218,7 +224,7 @@ export async function crearTemplateAction(input: z.infer<typeof createSchema>) {
     cupo_max: parsed.data.cupo_max,
     activo: true,
   });
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/templates");
   return { ok: true };
@@ -226,17 +232,17 @@ export async function crearTemplateAction(input: z.infer<typeof createSchema>) {
 
 export async function eliminarTemplateAction(input: { id: string }) {
   const parsed = z.object({ id: z.uuid() }).safeParse(input);
-  if (!parsed.success) return { error: "ID inválido" };
+  if (!parsed.success) return ERR("ID inválido");
 
   const ctx = await assertAdmin();
-  if ("error" in ctx) return { error: ctx.error };
+  if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
   const { error } = await supabase
     .from("partida_templates")
     .delete()
     .eq("id", parsed.data.id);
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/templates");
   return { ok: true };

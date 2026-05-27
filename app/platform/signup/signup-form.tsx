@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { signupAction, type SignupState } from "../actions/auth";
 import { PhoneInput } from "../components/phone-input";
+import { ErrorBanner } from "../../_components/error-banner";
 
 const initial: SignupState = undefined;
 
@@ -32,13 +33,18 @@ export function SignupForm() {
   const confirmMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
 
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
+
   return (
     <form action={action} className="space-y-4">
+      <ErrorBanner error={error} />
+
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Nombre" name="nombre" error={state?.errors?.nombre} />
-        <Field label="Apellido" name="apellido" error={state?.errors?.apellido} />
+        <Field label="Nombre" name="nombre" error={formErrors?.nombre} />
+        <Field label="Apellido" name="apellido" error={formErrors?.apellido} />
       </div>
-      <Field label="DNI" name="dni" inputMode="numeric" error={state?.errors?.dni} />
+      <Field label="DNI" name="dni" inputMode="numeric" error={formErrors?.dni} />
 
       <label className="block">
         <span className="sect-label mb-1 block">Celular</span>
@@ -47,14 +53,14 @@ export function SignupForm() {
           Elegí tu país y escribí el número sin código (ej. 11 1234 5678).
           Lo formateamos automático.
         </span>
-        {state?.errors?.celular?.[0] && (
+        {formErrors?.celular?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.celular[0]}
+            {formErrors.celular[0]}
           </span>
         )}
       </label>
 
-      <Field label="Email" name="email" type="email" error={state?.errors?.email} />
+      <Field label="Email" name="email" type="email" error={formErrors?.email} />
 
       <label className="block">
         <span className="sect-label mb-1 block">Contraseña</span>
@@ -74,9 +80,9 @@ export function SignupForm() {
           <PwCheck ok={checks.lowercase} label="Una minúscula" />
           <PwCheck ok={checks.number} label="Un número" />
         </ul>
-        {state?.errors?.password?.[0] && (
+        {formErrors?.password?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.password[0]}
+            {formErrors.password[0]}
           </span>
         )}
       </label>
@@ -99,9 +105,9 @@ export function SignupForm() {
             Las contraseñas no coinciden
           </span>
         )}
-        {state?.errors?.confirmPassword?.[0] && !confirmMismatch && (
+        {formErrors?.confirmPassword?.[0] && !confirmMismatch && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.confirmPassword[0]}
+            {formErrors.confirmPassword[0]}
           </span>
         )}
       </label>
@@ -120,16 +126,12 @@ export function SignupForm() {
         <span className="mt-1 block font-mono fluid-xs text-smoke">
           Es tu identificador en cancha. Único, no se puede repetir. Elegí algo memorable.
         </span>
-        {state?.errors?.player_number?.[0] && (
+        {formErrors?.player_number?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
-            {state.errors.player_number[0]}
+            {formErrors.player_number[0]}
           </span>
         )}
       </label>
-
-      {state?.message && (
-        <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-      )}
 
       <button
         type="submit"

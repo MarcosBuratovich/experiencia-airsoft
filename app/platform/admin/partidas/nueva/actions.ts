@@ -6,6 +6,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { modalidadLabel } from "@/lib/format";
 
+import {
+  actionError,
+  actionFieldErrors,
+  type ActionErrorState,
+} from "@/lib/errors";
+
 const schema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
   hora_inicio: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
@@ -16,10 +22,7 @@ const schema = z.object({
   notas: z.string().trim().optional(),
 });
 
-export type CrearPartidaState = {
-  errors?: Partial<Record<keyof z.infer<typeof schema>, string[]>>;
-  message?: string;
-} | undefined;
+export type CrearPartidaState = ActionErrorState | undefined;
 
 export async function crearPartidaAction(_prev: CrearPartidaState, formData: FormData): Promise<CrearPartidaState> {
   const parsed = schema.safeParse({
@@ -33,12 +36,12 @@ export async function crearPartidaAction(_prev: CrearPartidaState, formData: For
   });
 
   if (!parsed.success) {
-    return { errors: z.flattenError(parsed.error).fieldErrors };
+    return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { message: "No autenticado" };
+  if (!user) return actionError("No autenticado");
 
   const v = parsed.data;
   const private_token = v.visibilidad === "privada" ? randomBytes(16).toString("hex") : null;
@@ -57,7 +60,10 @@ export async function crearPartidaAction(_prev: CrearPartidaState, formData: For
     creado_por: user.id,
   });
 
-  if (error) return { message: error.message };
+  if (error) {
+    console.error("[crearPartidaAction] insert falló:", error);
+    return actionError(error);
+  }
 
   redirect("/admin/partidas");
 }

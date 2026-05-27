@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { aprobarPrivadaAction, rechazarPrivadaAction } from "../../privada/actions";
+import type { FriendlyError } from "@/lib/errors";
+import { ErrorBanner } from "../../../_components/error-banner";
 
 type Props = {
   solicitud: {
@@ -33,7 +35,7 @@ const ESTADO_STYLES: Record<string, string> = {
 
 export function SolicitudAdminCard({ solicitud: s }: Props) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [respuesta, setRespuesta] = useState("");
   const [mostrarForm, setMostrarForm] = useState<"aprobar" | "rechazar" | null>(null);
   const [copied, setCopied] = useState(false);
@@ -199,7 +201,7 @@ export function SolicitudAdminCard({ solicitud: s }: Props) {
               </button>
             </div>
           )}
-          {error && <p className="mt-2 font-mono fluid-xs text-orange-300">{error}</p>}
+          <ErrorBanner error={error} variant="inline" className="mt-2" />
         </div>
       )}
     </li>

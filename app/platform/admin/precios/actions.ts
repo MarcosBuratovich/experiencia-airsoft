@@ -5,24 +5,30 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { PRECIOS_KEYS_ORDER, type PreciosKey } from "@/lib/precios";
 
+import { friendlyError, type FriendlyError } from "@/lib/errors";
+
+const ERR = (input: unknown): { error: FriendlyError } => ({
+  error: friendlyError(input),
+});
+
 const updateSchema = z.object({
   key: z.enum(PRECIOS_KEYS_ORDER as [PreciosKey, ...PreciosKey[]]),
   valor: z.number().int().min(0, "El precio debe ser >= 0"),
 });
 
-export type UpdatePrecioResult = { ok: true } | { error: string };
+export type UpdatePrecioResult = { ok: true } | { error: FriendlyError };
 
 export async function updatePrecioAction(
   input: { key: string; valor: number },
 ): Promise<UpdatePrecioResult> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
   }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "No autenticado" };
+  if (!user) return ERR("No autenticado");
 
   // defensa en profundidad: solo super_admin puede escribir (RLS lo valida también)
   const { data: profile } = await supabase
@@ -31,7 +37,7 @@ export async function updatePrecioAction(
     .eq("id", user.id)
     .maybeSingle();
   if (profile?.role !== "super_admin") {
-    return { error: "Solo super_admin puede editar precios" };
+    return ERR("Solo super_admin puede editar precios");
   }
 
   const { error } = await supabase
@@ -43,7 +49,7 @@ export async function updatePrecioAction(
     })
     .eq("key", parsed.data.key);
 
-  if (error) return { error: error.message };
+  if (error) return ERR(error);
 
   revalidatePath("/admin/precios");
   return { ok: true };

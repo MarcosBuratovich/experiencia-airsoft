@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { borrarCuentaAction, type BorrarCuentaState } from "./actions";
+import { ErrorBanner } from "../../_components/error-banner";
 
 const initial: BorrarCuentaState = undefined;
 
@@ -9,6 +10,9 @@ export function BorrarCuentaSection({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState("");
   const [state, action, pending] = useActionState(borrarCuentaAction, initial);
+
+  const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
+  const error = state && "error" in state ? state.error : undefined;
 
   const canSubmit =
     confirmEmail.trim().toLowerCase() === email.toLowerCase();
@@ -54,16 +58,14 @@ export function BorrarCuentaSection({ email }: { email: string }) {
               placeholder={email}
               className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-mono text-bone focus:border-orange outline-none transition"
             />
-            {state?.errors?.confirmEmail?.[0] && (
+            {formErrors?.confirmEmail?.[0] && (
               <span className="mt-1 block font-mono fluid-xs text-orange-300">
-                {state.errors.confirmEmail[0]}
+                {formErrors!.confirmEmail[0]}
               </span>
             )}
           </label>
 
-          {state?.message && (
-            <p className="font-mono fluid-xs text-orange-300">{state.message}</p>
-          )}
+          <ErrorBanner error={error} />
 
           <div className="flex items-center justify-end gap-2 flex-wrap">
             <button
