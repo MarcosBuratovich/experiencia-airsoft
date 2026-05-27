@@ -244,6 +244,55 @@ html.js-reveal .reveal.in {
   animation: pulseDot 1.8s infinite;
 }
 
+/* glitch effect — flair de profile. Sutil: la mayor parte del tiempo
+ * texto normal con dos sombras chiquitas (rojo/cian) tipo separación
+ * RGB. Cada ~3 segundos un pulso de ~200ms de jitter más fuerte. */
+@keyframes textGlitch {
+  0%,
+  92%,
+  100% {
+    text-shadow:
+      0.5px 0 0 rgba(255, 107, 26, 0.6),
+      -0.5px 0 0 rgba(0, 220, 220, 0.6);
+    transform: translate(0, 0);
+  }
+  93% {
+    text-shadow:
+      2px 0 0 rgba(255, 107, 26, 0.85),
+      -2px 0 0 rgba(0, 220, 220, 0.85);
+    transform: translate(1px, 0);
+  }
+  94% {
+    text-shadow:
+      -2px 0 0 rgba(255, 107, 26, 0.85),
+      2px 0 0 rgba(0, 220, 220, 0.85);
+    transform: translate(-1px, 0);
+  }
+  95% {
+    text-shadow:
+      1px 0 0 rgba(255, 107, 26, 0.85),
+      -1px 0 0 rgba(0, 220, 220, 0.85);
+    transform: translate(0, 1px);
+  }
+  96% {
+    text-shadow:
+      -1px 0 0 rgba(255, 107, 26, 0.85),
+      1px 0 0 rgba(0, 220, 220, 0.85);
+    transform: translate(0, -1px);
+  }
+}
+.text-glitch {
+  animation: textGlitch 3.2s infinite;
+  /* will-change para que el browser optimice — solo en el subset que
+   * tiene la clase. */
+  will-change: transform, text-shadow;
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-glitch {
+    animation: none;
+  }
+}
+
 /* focus ring */
 a:focus-visible,
 button:focus-visible {

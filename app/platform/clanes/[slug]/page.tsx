@@ -33,7 +33,7 @@ export default async function ClanDetail({
   const { data: miembrosData } = memberIds.length
     ? await supabase
         .from("profiles_publicos")
-        .select("id, nombre, apellido, alias")
+        .select("id, nombre, apellido, alias, flair")
         .in("id", memberIds)
     : {
         data: [] as {
@@ -41,6 +41,7 @@ export default async function ClanDetail({
           nombre: string;
           apellido: string;
           alias: string | null;
+          flair: string | null;
         }[],
       };
   // Mostramos alias si está seteado; sino "Nombre A." (con inicial del
@@ -51,6 +52,7 @@ export default async function ClanDetail({
       display:
         p.alias?.trim() ||
         `${p.nombre} ${p.apellido?.[0] ?? ""}.`.trim(),
+      flair: p.flair,
     }))
     .sort((a, b) => a.display.localeCompare(b.display));
 
@@ -192,7 +194,9 @@ export default async function ClanDetail({
               key={m.id}
               className="border-b border-rail/40 py-1.5 flex items-center gap-2"
             >
-              <span>{m.display}</span>
+              <span className={m.flair === "glitch" ? "text-glitch" : undefined}>
+                {m.display}
+              </span>
               {m.id === clan.capitan_id && (
                 <span className="px-1.5 py-0.5 bg-orange text-ink fluid-xs tracking-[.15em]">
                   Capitán

@@ -71,9 +71,17 @@ export default async function PartidaDetail({
   const { data: pubProfiles } = allProfileIds.length
     ? await supabase
         .from("profiles_publicos")
-        .select("id, nombre, apellido, alias")
+        .select("id, nombre, apellido, alias, flair")
         .in("id", allProfileIds)
-    : { data: [] as { id: string; nombre: string; apellido: string; alias: string | null }[] };
+    : {
+        data: [] as {
+          id: string;
+          nombre: string;
+          apellido: string;
+          alias: string | null;
+          flair: string | null;
+        }[],
+      };
   const profileById = new Map(
     (pubProfiles ?? []).map((p) => [p.id, p] as const),
   );
@@ -240,6 +248,7 @@ export default async function PartidaDetail({
                   clanes={clanesPorUser.get(i.user_id) ?? []}
                   size="xs"
                   nameClassName="text-ash"
+                  flair={perfil?.flair}
                 />
                 {i.guest_nombre && addedByLabel && (
                   <span className="text-smoke normal-case tracking-normal font-sans">
@@ -280,6 +289,7 @@ export default async function PartidaDetail({
                       clanes={clanesPorUser.get(i.user_id) ?? []}
                       size="xs"
                       nameClassName="text-smoke"
+                      flair={perfil?.flair}
                     />
                     {i.guest_nombre && addedByLabel && (
                       <span className="text-smoke normal-case tracking-normal font-sans">

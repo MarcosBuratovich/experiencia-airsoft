@@ -22,7 +22,7 @@ type Clan = {
   logo_url: string | null;
 };
 
-type Miembro = { id: string; nombre: string };
+type Miembro = { id: string; nombre: string; flair: string | null };
 
 type Solicitud = {
   id: string;
@@ -285,7 +285,10 @@ function MiembroRow({
   return (
     <li className="border-b border-rail/40 py-2 flex items-center gap-2 flex-wrap">
       <span className="text-bone flex-1 min-w-0 truncate">
-        {miembro.nombre} {esYo && <span className="text-smoke">(vos)</span>}
+        <span className={miembro.flair === "glitch" ? "text-glitch" : undefined}>
+          {miembro.nombre}
+        </span>{" "}
+        {esYo && <span className="text-smoke">(vos)</span>}
       </span>
       {esCapitan && (
         <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">

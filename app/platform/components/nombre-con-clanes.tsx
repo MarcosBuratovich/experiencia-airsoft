@@ -20,19 +20,23 @@ export function NombreConClanes({
   clanes,
   size = "sm",
   nameClassName,
+  flair,
 }: {
   nombre: string;
   clanes: ClanChip[];
   size?: Size;
   /** Override del estilo del nombre (por ej. text-smoke en filas pasadas). */
   nameClassName?: string;
+  /** Efecto visual opcional aplicado al nombre. Solo "glitch" hoy. */
+  flair?: string | null;
 }) {
+  const cls = `${nameClassName ?? "text-bone"} ${flair === "glitch" ? "text-glitch" : ""}`.trim();
   return (
     <span className="inline-flex items-center gap-1.5 flex-wrap">
       {clanes.map((c) => (
         <ClanBadge key={c.id} clan={c} size={size} />
       ))}
-      <span className={nameClassName ?? "text-bone"}>{nombre}</span>
+      <span className={cls}>{nombre}</span>
     </span>
   );
 }

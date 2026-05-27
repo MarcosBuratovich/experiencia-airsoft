@@ -8,6 +8,7 @@ type Fila = {
   id: string;
   nombre: string;
   clanes: ClanChip[];
+  flair?: string | null;
   dni: string;
   celular: string;
   socio: boolean;
@@ -87,7 +88,7 @@ export function InscriptosPreview({ filas }: { filas: Fila[] }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <NombreConClanes nombre={f.nombre} clanes={f.clanes} />
+                    <NombreConClanes nombre={f.nombre} clanes={f.clanes} flair={f.flair} />
                     {f.socio && (
                       <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
                         Socio

@@ -23,6 +23,7 @@ type Inscripcion = {
   id: string;
   nombre: string;
   clanes: ClanChip[];
+  flair?: string | null;
   dni: string;
   celular: string;
   socio: boolean;
@@ -505,7 +506,7 @@ function RecargaCounter({
 function JugadorBadges({ r }: { r: Inscripcion }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <NombreConClanes nombre={r.nombre} clanes={r.clanes} />
+      <NombreConClanes nombre={r.nombre} clanes={r.clanes} flair={r.flair} />
       {r.socio && (
         <span className="px-1.5 py-0.5 bg-orange text-ink font-mono fluid-xs uppercase tracking-[.15em]">
           Socio
