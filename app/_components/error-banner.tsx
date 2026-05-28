@@ -108,7 +108,9 @@ function SoporteLink({ inline = false }: { inline?: boolean }) {
           : "inline-flex items-center gap-1.5 text-bone bg-orange/15 border border-orange/40 px-2.5 py-1 clip-tag uppercase tracking-wider hover:bg-orange/30 transition"
       }
     >
-      {inline ? "Escribime por WhatsApp" : `Escribime por WhatsApp ${SOPORTE_WHATSAPP_NUMBER} →`}
+      {inline
+        ? "soporte técnico"
+        : `Soporte técnico · WhatsApp ${SOPORTE_WHATSAPP_NUMBER} →`}
     </a>
   );
 }

@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  SOPORTE_WHATSAPP_NUMBER,
-  SOPORTE_WHATSAPP_URL,
-} from "@/app/_components/site-constants";
+import { ContactosWhatsapp } from "@/app/_components/contactos-whatsapp";
 import { PlatformNav } from "./platform-nav";
 
 export const metadata: Metadata = {
@@ -70,16 +67,11 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       <main className="flex-1 fluid-gutter-x py-6 sm:py-10">{children}</main>
 
       <footer className="mt-auto border-t border-rail/40 bg-carbon/40">
-        <div className="fluid-gutter-x py-5 flex items-center justify-between flex-wrap gap-3 font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
-          <span>© Experiencia Airsoft</span>
-          <a
-            href={SOPORTE_WHATSAPP_URL}
-            target="_blank"
-            rel="noopener"
-            className="hover:text-orange transition"
-          >
-            ¿Algo no anda? Soporte WhatsApp {SOPORTE_WHATSAPP_NUMBER}
-          </a>
+        <div className="fluid-gutter-x py-5 flex items-start justify-between flex-wrap gap-4">
+          <span className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
+            © Experiencia Airsoft
+          </span>
+          <ContactosWhatsapp variant="minimal" />
         </div>
       </footer>
     </div>

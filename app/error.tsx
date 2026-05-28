@@ -6,6 +6,8 @@ import { friendlyError } from "@/lib/errors";
 import {
   SOPORTE_WHATSAPP_NUMBER,
   SOPORTE_WHATSAPP_URL,
+  WHATSAPP_NUMBER,
+  WHATSAPP_URL,
 } from "./_components/site-constants";
 
 export default function Error({
@@ -53,15 +55,28 @@ export default function Error({
         </div>
 
         <div className="mt-12 pt-8 border-t border-bone/10">
-          <p className="sect-label mb-3">// ¿Sigue pasando?</p>
+          <p className="sect-label mb-3">// ¿Querés reservar o consultar?</p>
           <a
-            href={SOPORTE_WHATSAPP_URL}
+            href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-orange hover:text-bone underline font-mono fluid-sm uppercase tracking-[.18em]"
           >
-            Escribime por WhatsApp {SOPORTE_WHATSAPP_NUMBER} →
+            WhatsApp {WHATSAPP_NUMBER} →
           </a>
+
+          <p className="mt-6 font-mono fluid-xs text-smoke">
+            ¿Es un problema técnico que sigue pasando? Soporte:{" "}
+            <a
+              href={SOPORTE_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-orange underline whitespace-nowrap"
+            >
+              {SOPORTE_WHATSAPP_NUMBER}
+            </a>
+          </p>
+
           {error.digest && (
             <p className="mt-3 font-mono fluid-xs text-smoke">
               Código de error: {error.digest}

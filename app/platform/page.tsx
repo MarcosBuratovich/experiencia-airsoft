@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  SOPORTE_WHATSAPP_NUMBER,
-  SOPORTE_WHATSAPP_URL,
-} from "@/app/_components/site-constants";
+import { ContactosWhatsapp } from "@/app/_components/contactos-whatsapp";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { estadoEfectivo } from "@/lib/partidas";
 
@@ -254,21 +251,7 @@ export default async function PlatformHome() {
           </Link>
         )}
 
-        <section className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
-          <p className="sect-label mb-2">// Soporte técnico</p>
-          <p className="font-sans fluid-sm text-ash leading-relaxed">
-            ¿Algo no anda o no entendés cómo seguir? Escribime por WhatsApp,
-            te respondo yo:
-          </p>
-          <a
-            href={SOPORTE_WHATSAPP_URL}
-            target="_blank"
-            rel="noopener"
-            className="mt-3 inline-flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.22em] text-orange hover:underline"
-          >
-            → {SOPORTE_WHATSAPP_NUMBER}
-          </a>
-        </section>
+        <ContactosWhatsapp />
       </div>
     </>
   );
@@ -415,20 +398,7 @@ function LandingAnonima() {
         </p>
       </section>
 
-      <section className="border border-rail/60 bg-carbon clip-notch p-4 sm:p-5">
-        <p className="sect-label mb-2">// Soporte técnico</p>
-        <p className="font-sans fluid-sm text-ash leading-relaxed">
-          ¿Algo no anda? Escribime por WhatsApp:
-        </p>
-        <a
-          href={SOPORTE_WHATSAPP_URL}
-          target="_blank"
-          rel="noopener"
-          className="mt-3 inline-flex items-center gap-2 font-mono fluid-xs uppercase tracking-[.22em] text-orange hover:underline"
-        >
-          → {SOPORTE_WHATSAPP_NUMBER}
-        </a>
-      </section>
+      <ContactosWhatsapp />
     </div>
   );
 }

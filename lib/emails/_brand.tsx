@@ -40,6 +40,7 @@ const SITE_URL = "https://www.experienciaairsoft.com";
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://app.experienciaairsoft.com";
 const LOGO_URL = `${SITE_URL}/icon.png`;
+const WHATSAPP_NUMBER = "+54 9 11 3868-9783";
 const WHATSAPP_URL = "https://wa.me/5491138689783";
 const INSTAGRAM_URL = "https://www.instagram.com/experienciaairsoft/";
 const SOPORTE_WHATSAPP_NUMBER = "+54 9 11 6665-2698";
@@ -203,9 +204,15 @@ export function EmailLayout({
 
           <Section style={footer}>
             <Text style={{ ...muted, marginTop: 0, color: BRAND.bone }}>
-              ¿Algo no anda? Soporte técnico:{" "}
+              <strong>Reservar o consultar:</strong>{" "}
+              <Link href={WHATSAPP_URL} style={footerLink}>
+                WhatsApp {WHATSAPP_NUMBER}
+              </Link>
+            </Text>
+            <Text style={{ ...muted, marginTop: 4, fontSize: 12 }}>
+              ¿Problema técnico con la app o con este mail? Soporte:{" "}
               <Link href={SOPORTE_WHATSAPP_URL} style={footerLink}>
-                WhatsApp {SOPORTE_WHATSAPP_NUMBER}
+                {SOPORTE_WHATSAPP_NUMBER}
               </Link>
             </Text>
             <Text style={{ ...muted, marginTop: 16 }}>
