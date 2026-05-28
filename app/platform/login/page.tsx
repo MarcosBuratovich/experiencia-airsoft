@@ -38,7 +38,7 @@ export default async function LoginPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/partidas");
+  if (user) redirect("/");
 
   const { signup, error, reset, deleted } = await searchParams;
 

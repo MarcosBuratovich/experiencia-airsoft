@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 export default async function SignupPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/partidas");
+  if (user) redirect("/");
 
   return (
     <div className="max-w-md mx-auto">

@@ -73,7 +73,7 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
     password,
     options: {
       data: { nombre, apellido, dni, celular, player_number },
-      emailRedirectTo: `${appUrl}/partidas`,
+      emailRedirectTo: `${appUrl}/`,
     },
   });
 
@@ -109,7 +109,9 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   }
 
   revalidatePath("/", "layout");
-  redirect("/partidas");
+  // Después de login mostramos el dashboard con los CTAs grandes.
+  // Si querían anotarse a una partida, llegan en 1 click desde ahí.
+  redirect("/");
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -215,5 +217,5 @@ export async function resetPasswordAction(
   }
 
   revalidatePath("/", "layout");
-  redirect("/partidas?reset=ok");
+  redirect("/?reset=ok");
 }

@@ -11,7 +11,7 @@ export default async function ForgotPasswordPage() {
   // Si ya tiene sesion, no tiene sentido el flow.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/partidas");
+  if (user) redirect("/");
 
   return (
     <div className="max-w-md mx-auto">
