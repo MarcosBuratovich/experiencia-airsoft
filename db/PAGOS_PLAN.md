@@ -1,9 +1,12 @@
-# Plan de pagos — Experiencia Airsoft
+# Plan de pagos — Experiencia Airsoft (técnico)
 
 > Documento de planning. NO se implementa nada todavía. El objetivo es
 > dejar los flujos cerrados antes de tocar código o integrar a Nave.
+>
+> Doc gemelo para el dueño: `PAGOS_FLUJOS_CLIENTE.md` (lenguaje no
+> técnico, foco en plata y flujos).
 
-Última actualización: 2026-05-28
+Última actualización: 2026-05-28 — incorporadas confirmaciones del dueño
 
 ---
 
@@ -17,7 +20,7 @@
 | Facturación AFIP | **No en v1**. Recibo simple por mail. AFIP queda para v2 |
 | Pagador del alquiler | **Host paga todo** — un solo cargo por todos sus guests |
 | Seña privada | **Monto fijo por persona** (default $5.000 × cantidad estimada) |
-| Interés por mora cuota | **Recargo fijo 10%** después del día 10 del mes |
+| Interés por mora cuota | **Recargo fijo 10%** después del día 8 del mes |
 | Refund inscripción pública | 24h+ antes: refund 100%; <24h: crédito a favor 3 meses |
 | Refund seña privada | No reembolsable |
 | Refund cuota socio | No reembolsable (mes en curso) |
@@ -26,7 +29,7 @@
 ### Defaults configurables (van en tabla `pagos_config`)
 
 ```
-CUOTA_VENCIMIENTO_DIA       = 10        // día del mes después del cual aplica recargo
+CUOTA_VENCIMIENTO_DIA       = 8         // día del mes después del cual aplica recargo
 CUOTA_RECARGO_MORA_PCT      = 10        // % flat de recargo si pagás tarde
 PRIVADA_SENA_POR_PERSONA    = 5000      // ARS por persona estimada
 LOCAL_DESCUENTO_PCT         = 10        // % off pagando en local
@@ -36,6 +39,32 @@ CANCELACION_VENTANA_HORAS   = 24        // antes de la partida = refund full; de
 
 Estos valores quedan en DB para que el super_admin los pueda cambiar desde
 `/admin/precios` sin redeploy.
+
+### Confirmaciones del dueño (2026-05-28)
+
+Sobre los pendientes de §11 del doc original:
+
+1. **Host cancela su inscripción → los guests pueden quedar inscriptos**.
+   No se cancelan en cascada. Si el host se va pero los guests
+   quieren venir, siguen anotados (cada inscripción guest sobrevive
+   independiente de la del host).
+
+2. **Cuota socio = siempre el mismo precio** para el socio que la pactó.
+   Si subimos precios en `precios_config`, los socios existentes con
+   subscription activa siguen pagando el monto viejo (locked en
+   `subscriptions.amount`). Para subirles, hay que cancelar la sub y
+   pedirles re-adherir.
+
+3. **Seña privada = $5.000 por persona** confirmado para v1. Sigue
+   editable desde `pagos_config`.
+
+4. **Día de vencimiento cuota = día 8** (no día 10 como propuse).
+
+5. **Alquileres pendientes de pago no vencen NUNCA si el host eligió
+   "pagar en local"**. Esto se cubre en §4.3 — el host puede tener un
+   guest anotado semanas sin pagar, llega el día y paga al check-in.
+   El cupo queda bloqueado todo ese tiempo (consistente con la decisión
+   "Bloquea cupo sin expiración" del §1).
 
 ---
 
@@ -405,24 +434,24 @@ Cuando el user NO tiene subscription activa:
 
 **Recargo por mora (10% flat)**:
 - Hoy = día X del mes Y
-- Si pagás cuota del mes Y entre día 1 y día 10: monto = `cuota_mensual`
-- Si pagás del 11 en adelante: monto = `cuota_mensual * 1.10`
+- Si pagás cuota del mes Y entre día 1 y día 8: monto = `cuota_mensual`
+- Si pagás del día 9 en adelante: monto = `cuota_mensual * 1.10`
 - Si pagás cuotas atrasadas (meses anteriores): cada una con recargo
   10% (ya están vencidas)
 
 **Pago en local de cuota**:
 - Admin abre `/admin/socios`, ya existe la grilla de pagos
 - Al marcar pagado en efectivo/transferencia el día X:
-  - Si está dentro del mes vigente y antes del día 10: monto base × 0.90
+  - Si está dentro del mes vigente y antes del día 8: monto base × 0.90
   - Si está vencida: (monto base + 10% mora) × 0.90
   - Crea `payment` con `provider='cash'` o `'transfer'`,
     `created_by=admin_id`, `discount_reason='pago_local_10'`
 
 #### 4.1.3 Mensajes y recordatorios
 
-- **Día 1 del mes**: email "Cuota de mayo disponible · $10.000 hasta el día 10".
-- **Día 8**: si no pagó y no tiene sub activa → email recordatorio "Falta 2 días para que aplique el recargo".
-- **Día 11**: si no pagó → email "Cuota vencida, ahora son $11.000".
+- **Día 1 del mes**: email "Cuota de mayo disponible · $10.000 hasta el día 8".
+- **Día 6**: si no pagó y no tiene sub activa → email recordatorio "Faltan 2 días para que aplique el recargo".
+- **Día 9**: si no pagó → email "Cuota vencida, ahora son $11.000".
 - **Día 20**: último recordatorio.
 - **Día 1 del mes siguiente**: si sigue sin pagar, queda "deudor 1 mes".
 
@@ -508,6 +537,12 @@ Flujo:
 
 **Comportamiento del cupo**: el guest cuenta al cupo desde que el host lo
 agrega. El payment queda pendiente, pero el lugar está reservado.
+
+**Importante — no vence**: si el host elige "pagar en local", la
+inscripción del guest puede quedar pendiente durante días o semanas
+sin caerse. El cupo sigue bloqueado hasta que el host la cancela
+explícitamente o llega el día y se cobra al check-in. No hay job que
+expire alquileres impagos.
 
 ```
 [Host inscripto en partida abre /partidas/[id]]
@@ -835,12 +870,19 @@ Después del botón "Anotarme":
    pero antes del confirm del provider: aceptamos el pago, lo asociamos
    al período, y la sub queda cancelada igual (no se cobra el próximo).
 
-5. **Guest pagado, host cancela toda su inscripción**: 
-   - Si pagó online y >=24h antes: refund al host de todos los guests.
-   - Si pagó online y <24h: crédito al host por el total.
-   - Cuestión: ¿el guest sigue inscripto si el host cancela? Probable que
-     NO — si el host se va, los guests se van con él. Las inscripciones
-     se borran. **Pendiente confirmar con dueño.**
+5. **Guest pagado, host cancela toda su inscripción**:
+   - Los guests **NO se cancelan en cascada** (confirmación del dueño
+     2026-05-28). Cada inscripción guest sobrevive independiente.
+   - Para los pagos: si el host pagó online por el lote y se va, no
+     pierde plata — los guests usan ese pago, el cargo queda asociado
+     al lote, no al host. La columna `agregado_por` queda histórica.
+   - Si el host quiere refund, tiene que cancelar guest por guest
+     (que es lo mismo que cualquier cancelación individual: >=24h refund,
+     <24h crédito).
+   - Caso raro: si el host pagó y le ofrece a un guest el lugar pero
+     el guest no aparece, el host pierde la plata de ese guest
+     (no hay refund de "no-show"). Esto está en línea con cualquier
+     entrada no-show.
 
 6. **Cuota pagada via sub y manual el mismo mes**: race condition entre
    webhook de Nave (sub cobra el día 1) y user que paga manual el día 1.
@@ -852,10 +894,12 @@ Después del botón "Anotarme":
    automático a todos. Job en background, notifica por mail.
 
 8. **Cambio de cuota mensual mientras hay sub activa**: el monto está
-   "locked" en `subscriptions.amount` al adherir. Si el admin sube el
-   precio en `precios_config`, los socios con sub vieja siguen pagando
-   el monto viejo hasta que cancelen y vuelvan a adherir. **Pendiente
-   confirmar política.**
+   "locked" en `subscriptions.amount` al adherir (confirmación del
+   dueño 2026-05-28). Si el admin sube el precio en `precios_config`,
+   los socios con sub vieja siguen pagando el monto viejo hasta que
+   cancelen y vuelvan a adherir. Misma regla para los socios que pagan
+   manual: la cuota se calcula con el precio vigente al momento del
+   cobro (no se pueden cobrar meses retroactivos al precio nuevo).
 
 9. **Crédito mayor que el monto a pagar**: se consume solo el monto
    necesario. El resto queda como `creditos` con `amount` reducido
@@ -946,49 +990,73 @@ reales.
 
 ---
 
-## 11. Pendientes a confirmar con el dueño
+## 11. Lo que sabemos y NO sabemos de Nave (al 2026-05-28)
 
-Antes de empezar la fase A, dejo estos puntos abiertos para confirmar:
+La documentación pública de Nave es muy limitada — el portal de devs
+(`navenegocios.ar/home/developers`) es una SPA que requiere estar
+logueado como comerciante. El blog y la landing no exponen detalle
+técnico. Solo conseguimos pistas del PDF "Instructivo API tienda online
+Nave" (vía Scribd, fragmentos limitados).
 
-1. **Edge case §9.5**: Si el host cancela su inscripción, ¿los guests
-   que él agregó se cancelan automáticamente o quedan inscriptos
-   "huérfanos"? Default propuesto: se cancelan con él (los guests
-   "vienen con" el host).
+### Lo que sabemos (parcial)
 
-2. **Edge case §9.8**: Si subimos el precio de la cuota socio,
-   ¿los que ya tienen sub activa siguen pagando el viejo precio?
-   Default propuesto: sí, el monto está locked. Para subirles, hay que
-   notificarles y pedirles que re-adhieran.
+- Autenticación con **bearer token**.
+- Soporta **callback URL** (= webhook) para notificación de pago.
+- Soporta **código QR** como método de pago.
+- Menciona **WebSockets** (probable para updates de estado en tiempo
+  real durante el flow de pago).
+- Otorgan **credenciales por panel de comerciante** (no auto-servicio
+  ni dev portal abierto).
 
-3. **Monto exacto de la seña por persona**: el default es $5.000.
-   ¿Confirmás o cambiás?
+### Lo que necesitamos pedirle directamente a Nave
 
-4. **Día de vencimiento de cuota**: default día 10. ¿Confirmás?
+Sin estas respuestas no podemos pasar de Fase A (scaffolding) a
+Fase B (integración real). Sugiero contactar a comercial/soporte de
+Nave con esta lista:
 
-5. **¿La cuota socio aplica también 10% off pagando en local?**
-   Asumido: sí. (Es coherente con la regla "cualquier pago local
-   tiene 10% off".)
+1. **URL base de la API** (probablemente algo como `api.navenegocios.ar/v1`).
+2. **Endpoint y body para crear una intención de pago** (link de pago
+   único). Schema completo del request y response.
+3. **Formato del webhook de notificación**: payload exacto, headers,
+   cómo se firma (HMAC SHA256? con qué secret?).
+4. **¿Soporta pagos recurrentes / preapproval / subscriptions?** Si sí:
+   - Endpoint para adherir tarjeta
+   - Endpoint para listar / cancelar / pausar suscripción
+   - Cómo notifica los cobros recurrentes (mismo webhook?)
+   - Política de reintentos si la tarjeta es rechazada
+5. **Refunds**: endpoint, soporta parciales o solo totales, tiempo de
+   acreditación.
+6. **Sandbox / test environment**: existe? URL aparte? Tarjetas de prueba?
+7. **Tipos de tarjeta aceptados**: crédito, débito, prepagas.
+8. **Comisión por transacción**: % y/o monto fijo.
+9. **Monto mínimo y máximo por transacción**.
+10. **SDK oficial** (Node.js si existe, sino REST puro).
+11. **¿La firma de webhooks se valida cómo?** (clave secreta separada del
+    bearer token, HMAC, SHA, base64, etc.)
+12. **Idempotencia en su API**: aceptan `Idempotency-Key` header o
+    similar para evitar doble cobro si reintentamos un request?
+13. **Encadenamiento de pagos**: ¿podemos hacer un pago "split" o
+    referenciar uno previo? (Para señas + saldo de la misma privada.)
+14. **Tiempo de vida del link de pago** (TTL) — si lo podemos
+    configurar o es fijo.
 
-6. **Notificaciones de pago al admin**: ¿querés que cada pago exitoso
-   te llegue por email? ¿Solo los grandes (>$X)? ¿Solo refunds?
+Mientras no tengamos esto, la implementación queda con `manual.ts`
+funcional (admin marca cobros cash) y `nave.ts` con stubs que
+documentan dónde irá cada endpoint.
 
-7. **Modo "ver toda la plata pendiente"**: ¿querés un dashboard en
-   `/admin` con "te deben $X" agregado de todos los `payment_status=
-   pendiente`? Default: sí, parte de Fase H.
+### Decisiones que tomamos sin esperar a Nave
 
-8. **Manejo de invitados sin cuenta cuando ya pagaron**: si llega el
-   día y el guest no tiene cuenta (vino con el host), ¿se le hace
-   check-in bajo el nombre del host? Default: sí, el check-in es por
-   inscripción no por user.
+Estas las cerramos para no bloquearnos:
 
-9. **Subscripción adherida con tarjeta de débito vs crédito**: Nave
-   probablemente soporte ambas. ¿Querés permitir las dos o solo
-   crédito? Default: ambas, mejor cobertura.
-
-10. **Si Nave rechaza la suscripción 3 veces**: ¿el user pierde el
-    status de socio inmediatamente o le damos un mes de gracia?
-    Default: 1 mes de gracia con email "tu cuota lleva X días vencida,
-    pagá manual o vas a perder el beneficio".
+- **Si Nave NO soporta subscriptions**: caemos a manual recurring forzado
+  (el user paga manual mes a mes, pero la app le recuerda y le manda
+  el link automáticamente cada día 1). Sigue cumpliendo la decisión §1
+  "las dos opciones" porque mantenemos el modo manual y el "adherir"
+  queda inhabilitado con un mensaje "próximamente".
+- **Si Nave NO soporta sandbox**: testeamos con pagos reales chiquitos
+  ($1 ARS) que después devolvemos vía refund.
+- **Si Nave NO soporta webhooks**: el job de reconciliación horaria (§6.3)
+  pasa a ser cada 5 minutos. Menos lindo pero funciona.
 
 ---
 
