@@ -326,12 +326,15 @@ export default function EventosCorporativosPage() {
                   Paso 01
                 </p>
                 <h3 className="font-display fluid-lg uppercase text-bone mb-2">
-                  Mandás un WhatsApp con tu idea
+                  Reservás el slot online
                 </h3>
                 <p className="text-ash fluid-base leading-relaxed">
-                  Cuántas personas son, qué día tenés pensado, si querés
-                  half-day o full-day, si necesitás factura. Te respondemos
-                  con una propuesta el mismo día.
+                  Entrás a la app, elegís día y horario libre del calendario
+                  de privadas. Para eventos corporativos necesitás un grupo
+                  de{" "}
+                  <span className="text-bone">10 personas o más</span>. Al
+                  confirmar te abrimos WhatsApp con un mensaje listo —
+                  empezás el diálogo con todos los datos.
                 </p>
               </li>
               <li className="border-l-2 border-bone/30 pl-6">
@@ -339,12 +342,13 @@ export default function EventosCorporativosPage() {
                   Paso 02
                 </p>
                 <h3 className="font-display fluid-lg uppercase text-bone mb-2">
-                  Cerramos fecha y reservamos cupo
+                  Cerramos cotización y factura por WhatsApp
                 </h3>
                 <p className="text-ash fluid-base leading-relaxed">
-                  Bloqueamos el día en agenda. Te pedimos un anticipo del 30%
-                  para confirmar y el saldo se abona al final del evento. Si
-                  hace falta factura, la coordinamos.
+                  Vemos half-day o full-day, datos fiscales para factura A/B,
+                  catering. Anticipo del 30% para confirmar y el saldo se
+                  abona al final del evento. El slot queda bloqueado mientras
+                  coordinamos.
                 </p>
               </li>
               <li className="border-l-2 border-bone/30 pl-6">

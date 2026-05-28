@@ -12,7 +12,7 @@ import {
 const PAGE_URL = `${SITE_URL}/cumpleanos`;
 const TITLE = "Cumpleaños de airsoft en Buenos Aires (+18)";
 const DESCRIPTION =
-  "Festejá tu cumpleaños jugando airsoft indoor en CABA. Grupos de 8 a 25 personas, equipo incluido, partidas temáticas. Reservas por WhatsApp.";
+  "Festejá tu cumpleaños jugando airsoft indoor en CABA. Grupos desde 10 personas, equipo incluido, partidas temáticas. Reservas por WhatsApp.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -34,7 +34,7 @@ const serviceJsonLd = {
   serviceType: "Cumpleaños con airsoft indoor",
   name: "Cumpleaños · Experiencia Airsoft",
   description:
-    "Festejos de cumpleaños con airsoft CQB indoor en Buenos Aires. Grupos de 8 a 25 personas, equipo de alquiler incluido, partidas con dinámicas tácticas.",
+    "Festejos de cumpleaños con airsoft CQB indoor en Buenos Aires. Grupos desde 10 personas, equipo de alquiler incluido, partidas con dinámicas tácticas.",
   provider: { "@id": `${SITE_URL}/#business` },
   areaServed: { "@type": "City", name: "Buenos Aires" },
   audience: {
@@ -52,7 +52,7 @@ const faqJsonLd = {
       name: "¿Hacen cumpleaños de airsoft en Buenos Aires?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Sí. Recibimos grupos de cumpleaños desde 8 hasta 25 personas, con todo el equipo de alquiler incluido y partidas guiadas por staff. Hay que tener 18 años cumplidos para todos los participantes.",
+        text: "Sí. Recibimos grupos de cumpleaños desde 10 personas, con todo el equipo de alquiler incluido y partidas guiadas por staff. Hay que tener 18 años cumplidos para todos los participantes.",
       },
     },
     {
@@ -68,7 +68,7 @@ const faqJsonLd = {
       name: "¿Cuántas personas entran en un cumpleaños?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Lo más cómodo es 8 a 16 personas para un bloque de 2 horas. Grupos más grandes los manejamos en bloques separados o reservando el campo en exclusiva.",
+        text: "Necesitamos un mínimo de 10 personas para armar la partida privada. Lo más cómodo es 10 a 20 personas para un bloque de 4 horas. Grupos más grandes los manejamos en bloques separados o reservando el campo en exclusiva.",
       },
     },
     {
@@ -236,12 +236,14 @@ export default function CumpleanosPage() {
                   Paso 01
                 </p>
                 <h3 className="font-display fluid-lg uppercase text-bone mb-2">
-                  Mandanos un WhatsApp
+                  Elegí día y horario online
                 </h3>
                 <p className="text-ash fluid-base leading-relaxed">
-                  Decinos cuántos son, qué día querés, si van a traer torta o
-                  necesitan mesa armada. Te respondemos con la cotización el
-                  mismo día.
+                  Entrá a la app, mirá el calendario de privadas y reservá un
+                  slot libre. Necesitás un grupo de{" "}
+                  <span className="text-bone">10 personas o más</span>. Cuando
+                  confirmás, te abrimos WhatsApp con un mensaje listo para
+                  coordinar con el dueño.
                 </p>
               </li>
               <li className="border-l-2 border-bone/30 pl-6">
@@ -249,11 +251,13 @@ export default function CumpleanosPage() {
                   Paso 02
                 </p>
                 <h3 className="font-display fluid-lg uppercase text-bone mb-2">
-                  Reservás con seña
+                  Coordinamos por WhatsApp
                 </h3>
                 <p className="text-ash fluid-base leading-relaxed">
-                  Para asegurar el día dejás una seña por transferencia. El
-                  saldo se abona el día de la partida según cuántos vinieron.
+                  Cerramos cantidad, cotización, torta/picada, mesa armada,
+                  fotos. Para asegurar el día dejás una seña por
+                  transferencia. El saldo se abona el día según cuántos
+                  vinieron.
                 </p>
               </li>
               <li className="border-l-2 border-bone/30 pl-6">
@@ -285,10 +289,12 @@ export default function CumpleanosPage() {
                   ¿Cuántas personas como mínimo?
                 </dt>
                 <dd className="text-ash fluid-base leading-relaxed">
-                  Lo ideal son 8 personas para que la partida tenga buen ritmo.
-                  Menos también, pero las dinámicas son más limitadas. Si son
-                  6-7 los sumamos a una partida abierta del día y festejás el
-                  cumple al cierre.
+                  Para armar una privada necesitamos{" "}
+                  <span className="text-bone">10 personas</span> como mínimo —
+                  así las dinámicas tácticas funcionan bien y el grupo
+                  aprovecha las 4 horas. Si son menos, los podemos sumar a una
+                  partida pública del día y festejás el cumple al cierre —
+                  escribinos por WhatsApp.
                 </dd>
               </div>
               <div>
