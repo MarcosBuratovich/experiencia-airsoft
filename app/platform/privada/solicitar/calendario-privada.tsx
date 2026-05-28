@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { SlotEstado } from "@/lib/slots-privada";
 import {
@@ -12,6 +12,9 @@ import {
 } from "../actions";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
+
+const PRIVADA_CUPO_MIN = 10;
+const PRIVADA_CUPO_MAX = 60;
 
 function readErr(state: unknown) {
   if (!state || typeof state !== "object") return { error: undefined, formErrors: undefined };
@@ -270,18 +273,36 @@ function SlotModal({
 function FormSolicitar({
   slot,
   onClose,
-  onChanged,
+  onChanged: _onChanged,
 }: {
   slot: SlotItem;
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [cant, setCant] = useState("10");
+  const [cant, setCant] = useState(String(PRIVADA_CUPO_MIN));
   const [notas, setNotas] = useState("");
   const [state, action, pending] = useActionState(
     solicitarPrivadaAction,
     initialReq,
   );
+  const router = useRouter();
+  const handledRef = useRef(false);
+
+  const cantNum = Number(cant) || 0;
+  const cantValida = cantNum >= PRIVADA_CUPO_MIN && cantNum <= PRIVADA_CUPO_MAX;
+
+  // Cuando el server responde ok, abrimos WhatsApp con el mensaje
+  // pre-armado y mandamos al user a /mis-solicitudes. Usamos un ref
+  // para no abrir dos veces si React vuelve a correr el effect.
+  useEffect(() => {
+    if (handledRef.current) return;
+    if (!state || !("ok" in state) || !state.ok) return;
+    handledRef.current = true;
+    if (typeof window !== "undefined") {
+      window.open(state.hrefWA, "_blank", "noopener,noreferrer");
+    }
+    router.push("/mis-solicitudes?ok=1");
+  }, [state, router]);
 
   return (
     <form action={action}>
@@ -289,6 +310,15 @@ function FormSolicitar({
       <input type="hidden" name="hora_inicio" value={slot.hora} />
 
       <div className="p-5 space-y-4">
+        <div className="border border-orange/40 bg-orange/5 clip-notch p-3">
+          <p className="sect-label mb-1 text-orange">// Cómo sigue</p>
+          <p className="font-sans fluid-sm text-ash leading-relaxed">
+            Cuando confirmes, te abrimos <span className="text-bone">WhatsApp con el mensaje listo</span> para
+            coordinar con el dueño (fecha, gente, equipo). El slot queda
+            bloqueado mientras coordinamos.
+          </p>
+        </div>
+
         <label className="block">
           <span className="sect-label mb-1 block">¿Cuántas personas?</span>
           <input
@@ -298,12 +328,19 @@ function FormSolicitar({
             pattern="\d*"
             maxLength={2}
             value={cant}
-            {...makeIntHandlers(setCant, 60)}
+            {...makeIntHandlers(setCant, PRIVADA_CUPO_MAX)}
             required
-            className="w-full bg-ink border border-rail/60 px-3 py-2.5 font-mono text-bone focus:border-orange outline-none"
+            className={`w-full bg-ink border px-3 py-2.5 font-mono text-bone focus:border-orange outline-none ${
+              cant && !cantValida ? "border-orange-300" : "border-rail/60"
+            }`}
           />
-          <span className="mt-1 block font-mono fluid-xs text-smoke">
-            Mínimo 2 · máximo 60.
+          <span
+            className={`mt-1 block font-mono fluid-xs ${
+              cant && !cantValida ? "text-orange-300" : "text-smoke"
+            }`}
+          >
+            Mínimo {PRIVADA_CUPO_MIN} personas · máximo {PRIVADA_CUPO_MAX}.{" "}
+            Las privadas se arman desde {PRIVADA_CUPO_MIN} para arriba.
           </span>
           {readErr(state).formErrors?.cupo_estimado?.[0] && (
             <span className="mt-1 block font-mono fluid-xs text-orange-300">
@@ -314,7 +351,7 @@ function FormSolicitar({
 
         <label className="block">
           <span className="sect-label mb-1 block">
-            Notas para el admin (opcional)
+            ¿Qué tipo de evento es? (opcional)
           </span>
           <textarea
             name="notas"
@@ -322,9 +359,13 @@ function FormSolicitar({
             maxLength={500}
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
-            placeholder="Cumpleaños, evento corporativo, etc."
+            placeholder="Cumpleaños, despedida, junta de clan, evento corporativo, etc."
             className="w-full bg-ink border border-rail/60 px-3 py-2 font-sans text-bone focus:border-orange outline-none resize-y"
           />
+          <span className="mt-1 block font-mono fluid-xs text-smoke">
+            Va a aparecer en el mensaje de WhatsApp para que el dueño tenga
+            contexto.
+          </span>
         </label>
 
         <ErrorBanner error={readErr(state).error} />
@@ -340,10 +381,10 @@ function FormSolicitar({
         </button>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !cantValida}
           className="btn-wa px-4 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {pending ? "Enviando..." : "Enviar solicitud"}
+          {pending ? "Abriendo WhatsApp..." : "Coordinar por WhatsApp"}
         </button>
       </div>
     </form>

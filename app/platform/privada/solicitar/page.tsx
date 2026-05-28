@@ -53,11 +53,43 @@ export default async function SolicitarPrivadaPage() {
         <h1 className="sect-title fluid-3xl">
           {isAdmin ? "Calendario de privadas" : "Reservar partida privada"}
         </h1>
-        <p className="mt-3 text-ash fluid-sm">
-          {isAdmin
-            ? "Click en cualquier slot para crear una partida directa o liberar un slot reservado para que un usuario pueda pedirlo."
-            : "Cada partida dura 4 horas. Elegí un slot libre y un admin la confirma. Mientras tu solicitud está pendiente, ese slot queda bloqueado para los demás."}
-        </p>
+        {isAdmin ? (
+          <p className="mt-3 text-ash fluid-sm">
+            Click en cualquier slot para crear una partida directa o liberar
+            un slot reservado para que un usuario pueda pedirlo.
+          </p>
+        ) : (
+          <div className="mt-4 border border-orange/40 bg-orange/5 clip-notch p-4 sm:p-5">
+            <p className="sect-label mb-2 text-orange">
+              // Antes de elegir un horario
+            </p>
+            <p className="font-sans fluid-sm text-bone leading-relaxed">
+              Las privadas son para grupos de{" "}
+              <span className="text-orange font-semibold">10 personas o más</span>
+              {" "}— cumpleaños, despedidas, eventos corporativos, juntas de
+              clan. Duran 4 horas en cancha exclusiva.
+            </p>
+            <ol className="mt-3 space-y-1.5 font-mono fluid-xs text-ash">
+              <li>
+                <span className="text-orange mr-2">1.</span>
+                Elegí día y horario libre en el calendario de abajo.
+              </li>
+              <li>
+                <span className="text-orange mr-2">2.</span>
+                Decinos cuántos van a venir y de qué se trata.
+              </li>
+              <li>
+                <span className="text-orange mr-2">3.</span>
+                Te abrimos <span className="text-bone">WhatsApp con el mensaje listo</span>{" "}
+                para confirmar todo con el dueño.
+              </li>
+              <li>
+                <span className="text-orange mr-2">4.</span>
+                Mientras coordinamos, el slot queda reservado para vos.
+              </li>
+            </ol>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">

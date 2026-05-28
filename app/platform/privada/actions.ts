@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { slotRecurrentePisado } from "@/lib/horarios";
-import { modalidadLabel } from "@/lib/format";
+import { formatFechaLarga, modalidadLabel } from "@/lib/format";
 import { inicioPartida } from "@/lib/partidas";
 import {
   getSlotsEstado,
@@ -20,6 +20,7 @@ import {
   type ActionErrorState,
   type FriendlyError,
 } from "@/lib/errors";
+import { WHATSAPP_URL } from "@/app/_components/site-constants";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -27,16 +28,27 @@ const ERR = (input: unknown): { error: FriendlyError } => ({
 
 const SLOT_HORAS = SLOTS_PRIVADA.map((s) => s.hora) as readonly string[];
 
+/** Cupo mínimo de la PARTIDA privada que se le exige al usuario final. */
+export const PRIVADA_CUPO_MIN = 10;
+export const PRIVADA_CUPO_MAX = 60;
+
 const crearSchema = z.object({
   fecha_propuesta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
   hora_inicio: z
     .string()
     .refine((v) => SLOT_HORAS.includes(v), "Horario inválido"),
-  cupo_estimado: z.coerce.number().int().min(2, "Mínimo 2").max(60, "Máximo 60"),
+  cupo_estimado: z.coerce
+    .number()
+    .int()
+    .min(PRIVADA_CUPO_MIN, `Mínimo ${PRIVADA_CUPO_MIN} personas para armar una privada`)
+    .max(PRIVADA_CUPO_MAX, `Máximo ${PRIVADA_CUPO_MAX}`),
   notas: z.string().trim().max(500).optional(),
 });
 
-export type SolicitarPrivadaState = ActionErrorState | undefined;
+export type SolicitarPrivadaState =
+  | ActionErrorState
+  | { ok: true; hrefWA: string }
+  | undefined;
 
 export async function solicitarPrivadaAction(
   _prev: SolicitarPrivadaState,
@@ -101,10 +113,62 @@ export async function solicitarPrivadaAction(
     return actionError(error);
   }
 
+  // Datos del usuario para personalizar el mensaje de WhatsApp.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nombre, apellido")
+    .eq("id", user.id)
+    .maybeSingle();
+  const nombreCompleto =
+    `${profile?.nombre ?? ""} ${profile?.apellido ?? ""}`.trim();
+
   revalidatePath("/mis-solicitudes");
   revalidatePath("/admin/solicitudes");
   revalidatePath("/privada/solicitar");
-  redirect("/mis-solicitudes?ok=1");
+
+  return {
+    ok: true,
+    hrefWA: buildWhatsappLink({
+      nombre: nombreCompleto,
+      fecha: v.fecha_propuesta,
+      hora: v.hora_inicio.slice(0, 5),
+      cantidad: v.cupo_estimado,
+      notas: v.notas,
+    }),
+  };
+}
+
+/**
+ * Construye el link wa.me con el mensaje pre-armado para que el usuario
+ * arranque la conversación con el dueño. El mensaje incluye el nombre
+ * (si lo tenemos), día/hora, cantidad y notas. Sin emojis: el dueño
+ * copy-pastea o reenvía sin problemas.
+ */
+function buildWhatsappLink(args: {
+  nombre: string;
+  fecha: string;
+  hora: string;
+  cantidad: number;
+  notas: string | null | undefined;
+}): string {
+  const fechaLarga = formatFechaLarga(args.fecha);
+  const saludo = args.nombre
+    ? `Hola! Soy ${args.nombre}, quiero reservar una partida privada.`
+    : "Hola! Quiero reservar una partida privada.";
+  const lineas = [
+    saludo,
+    "",
+    `Día: ${fechaLarga}`,
+    `Horario: ${args.hora} hs`,
+    `Cantidad: ${args.cantidad} personas`,
+  ];
+  if (args.notas && args.notas.trim()) {
+    lineas.push(`Notas: ${args.notas.trim()}`);
+  }
+  lineas.push("");
+  lineas.push("(Solicitud generada desde la plataforma)");
+  const texto = lineas.join("\n");
+  return `${WHATSAPP_URL}?text=${encodeURIComponent(texto)}`;
 }
 
 export async function cancelarPrivadaAction(solicitudId: string) {
