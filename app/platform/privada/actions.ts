@@ -28,9 +28,12 @@ const ERR = (input: unknown): { error: FriendlyError } => ({
 
 const SLOT_HORAS = SLOTS_PRIVADA.map((s) => s.hora) as readonly string[];
 
-/** Cupo mínimo de la PARTIDA privada que se le exige al usuario final. */
-export const PRIVADA_CUPO_MIN = 10;
-export const PRIVADA_CUPO_MAX = 60;
+// Cupo mínimo/máximo de la PARTIDA privada (no se exporta porque este
+// archivo es "use server" y Next solo permite exportar async functions).
+// El form client tiene su propia copia de estas constantes — si las
+// cambiás acá, cambialas también en calendario-privada.tsx.
+const PRIVADA_CUPO_MIN = 10;
+const PRIVADA_CUPO_MAX = 60;
 
 const crearSchema = z.object({
   fecha_propuesta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
