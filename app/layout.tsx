@@ -9,16 +9,17 @@ const anton = Anton({
   display: "swap",
 });
 
+// Pesos: solo los que se usan (300/light no aparece en ningún lado).
 const oswald = Oswald({
   variable: "--font-oswald",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
 });

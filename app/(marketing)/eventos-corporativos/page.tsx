@@ -25,6 +25,11 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_AR",
   },
+  twitter: {
+    // card grande; title/description se derivan del title/description
+    // de esta misma página (no del layout root).
+    card: "summary_large_image",
+  },
 };
 
 const serviceJsonLd = {

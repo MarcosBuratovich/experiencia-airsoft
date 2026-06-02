@@ -424,59 +424,120 @@ const breadcrumbJsonLd = {
   ],
 };
 
+// Fuente única de las preguntas frecuentes: se usa tanto para el
+// JSON-LD (FAQPage) como para la sección visible en HTML más abajo.
+// Google ignora el FAQPage schema si las preguntas no están visibles.
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: "¿Quiénes pueden jugar al airsoft en Experiencia Airsoft?",
+    a: "Mayores de 18 años con documento al momento del ingreso. Aceptamos jugadores nuevos y con experiencia — no hace falta tener equipo propio.",
+  },
+  {
+    q: "¿Necesito traer equipo propio?",
+    a: "No. Alquilás el equipo completo en el lugar: marcadora, protección facial, chaleco y BBs. Solo venís a jugar.",
+  },
+  {
+    q: "¿Cómo reservo una partida?",
+    a: "Todas las reservas son por WhatsApp al +54 9 11 3868-9783. Trabajamos 100% bajo reserva previa.",
+  },
+  {
+    q: "¿Dónde queda Experiencia Airsoft?",
+    a: "Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina. Somos un centro de airsoft CQB indoor.",
+  },
+  {
+    q: "¿Cuál es la potencia máxima permitida?",
+    a: "Máximo 330 FPS. Es la categoría más baja permitida para CQB y la usamos porque jugamos en espacios cerrados con distancias cortas — la experiencia táctica no se mide en potencia, sino en estrategia y trabajo en equipo.",
+  },
+  {
+    q: "¿Qué modalidades de partida ofrecen?",
+    a: "Partidas públicas abiertas (cualquiera se anota), privadas de grupo (10 a 20 personas) y eventos corporativos para empresas y team building.",
+  },
+];
+
 const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "¿Quiénes pueden jugar al airsoft en Experiencia Airsoft?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Mayores de 18 años con documento al momento del ingreso. Aceptamos jugadores nuevos y con experiencia — no hace falta tener equipo propio.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Necesito traer equipo propio?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "No. Alquilás el equipo completo en el lugar: marcadora, protección facial, chaleco y BBs. Solo venís a jugar.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Cómo reservo una partida?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Todas las reservas son por WhatsApp al +54 9 11 3868-9783. Trabajamos 100% bajo reserva previa.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Dónde queda Experiencia Airsoft?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Gral. Conesa 1858, C1870, Ciudad Autónoma de Buenos Aires, Argentina. Somos un centro de airsoft CQB indoor.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Cuál es la potencia máxima permitida?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Máximo 330 FPS. Es la categoría más baja permitida para CQB y la usamos porque jugamos en espacios cerrados con distancias cortas — la experiencia táctica no se mide en potencia, sino en estrategia y trabajo en equipo.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Qué modalidades de partida ofrecen?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Partidas públicas abiertas (cualquiera se anota), privadas de grupo (10 a 20 personas) y eventos corporativos para empresas y team building.",
-      },
-    },
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: { "@type": "Answer", text: item.a },
+  })),
+};
+
+// Organization separada (con @id propio) para que Google arme el
+// Knowledge Panel y entienda las redes oficiales vía sameAs.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
+  name: "Experiencia Airsoft",
+  url: SITE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: `${SITE_URL}/img/00_logo_principal.png`,
+    width: 1920,
+    height: 1920,
+  },
+  image: `${SITE_URL}/img/07_zona_fria_hero.jpg`,
+  sameAs: [
+    "https://www.instagram.com/experienciaairsoft/",
+    "https://www.youtube.com/@experienciaairsoft8250",
   ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "Reservas",
+    telephone: "+541138689783",
+    availableLanguage: ["Spanish"],
+    contactOption: "WhatsApp",
+  },
+};
+
+// Partidas públicas recurrentes como Event con eventSchedule semanal.
+// No hardcodeamos precio (cambia seguido y un precio viejo en Google es
+// peor que ninguno): el offer apunta a la pantalla de reservas.
+const DIA_TO_SCHEMA: Record<string, string> = {
+  Martes: "https://schema.org/Tuesday",
+  Miércoles: "https://schema.org/Wednesday",
+  Jueves: "https://schema.org/Thursday",
+  Viernes: "https://schema.org/Friday",
+  Sábado: "https://schema.org/Saturday",
+  Domingo: "https://schema.org/Sunday",
+};
+
+const eventsJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": partidas.map((p) => {
+    const [startTime, endTime] = p.time
+      .replace(/\s*HS\s*$/i, "")
+      .split("—")
+      .map((s) => s.trim());
+    return {
+      "@type": "Event",
+      name: `Partida pública de airsoft CQB — ${p.day}`,
+      description:
+        "Partida abierta de airsoft CQB indoor en Buenos Aires. Equipo de alquiler incluido, máximo 330 FPS, +18. Cupo limitado, reserva previa.",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      eventStatus: "https://schema.org/EventScheduled",
+      eventSchedule: {
+        "@type": "Schedule",
+        byDay: DIA_TO_SCHEMA[p.day],
+        startTime,
+        endTime,
+        repeatFrequency: "P1W",
+        scheduleTimezone: "America/Argentina/Buenos_Aires",
+      },
+      location: { "@id": `${SITE_URL}/#business` },
+      organizer: { "@id": `${SITE_URL}/#business` },
+      image: `${SITE_URL}${p.image}`,
+      offers: {
+        "@type": "Offer",
+        url: "https://app.experienciaairsoft.com/partidas",
+        availability: "https://schema.org/InStock",
+        priceCurrency: "ARS",
+      },
+      isAccessibleForFree: false,
+    };
+  }),
 };
 
 export default function Home() {
@@ -489,6 +550,16 @@ export default function Home() {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsJsonLd) }}
       />
       <script
         type="application/ld+json"
@@ -1377,6 +1448,31 @@ export default function Home() {
               </div>
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section
+        id="faq"
+        className="relative fluid-section-y bg-ink border-t border-bone/10"
+      >
+        <div className="max-w-[900px] mx-auto fluid-gutter-x">
+          <p className="sect-label mb-3 reveal">[ Preguntas frecuentes ]</p>
+          <h2 className="sect-title fluid-3xl text-bone mb-8 reveal">
+            Lo que más nos preguntan
+          </h2>
+          <dl className="space-y-7">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.q} className="reveal">
+                <dt className="font-display fluid-lg uppercase text-bone tracking-wide mb-2">
+                  {item.q}
+                </dt>
+                <dd className="text-ash fluid-base leading-relaxed">
+                  {item.a}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
