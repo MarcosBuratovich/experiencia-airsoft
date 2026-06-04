@@ -495,53 +495,101 @@ const organizationJsonLd = {
 // Partidas públicas recurrentes como Event con eventSchedule semanal.
 // No hardcodeamos precio (cambia seguido y un precio viejo en Google es
 // peor que ninguno): el offer apunta a la pantalla de reservas.
-const DIA_TO_SCHEMA: Record<string, string> = {
-  Martes: "https://schema.org/Tuesday",
-  Miércoles: "https://schema.org/Wednesday",
-  Jueves: "https://schema.org/Thursday",
-  Viernes: "https://schema.org/Friday",
-  Sábado: "https://schema.org/Saturday",
-  Domingo: "https://schema.org/Sunday",
+// Día (en español) → día de la semana JS (0 = domingo).
+const DIA_TO_DOW: Record<string, number> = {
+  Domingo: 0,
+  Lunes: 1,
+  Martes: 2,
+  Miércoles: 3,
+  Jueves: 4,
+  Viernes: 5,
+  Sábado: 6,
 };
 
-const eventsJsonLd = {
-  "@context": "https://schema.org",
-  "@graph": partidas.map((p) => {
+// Cuántas fechas futuras de cada partida publicamos en el JSON-LD.
+const EVENT_OCURRENCIAS = 4;
+// Precio "desde" (entrada BYOP). Mantener sincronizado con /precios.
+const EVENT_PRICE_DESDE = "25000";
+
+// Google NO consume `eventSchedule`/`Schedule` para los rich results de
+// Event: exige `startDate` con fecha y hora concretas. Por eso, en vez
+// de un evento recurrente, generamos las próximas N ocurrencias reales
+// de cada partida. Argentina es UTC-3 todo el año (sin horario de
+// verano), así que el offset es fijo -03:00.
+//
+// Esto corre en cada regeneración de la página (ver `export const
+// revalidate` abajo), así las fechas se mantienen frescas sin redeploy.
+function buildEventsJsonLd() {
+  const baseAR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const hoyAR = `${baseAR.getUTCFullYear()}-${String(baseAR.getUTCMonth() + 1).padStart(2, "0")}-${String(baseAR.getUTCDate()).padStart(2, "0")}`;
+
+  const events = partidas.flatMap((p) => {
     const [startTime, endTime] = p.time
       .replace(/\s*HS\s*$/i, "")
       .split("—")
       .map((s) => s.trim());
-    return {
-      "@type": "Event",
-      name: `Partida pública de airsoft CQB — ${p.day}`,
-      description:
-        "Partida abierta de airsoft CQB indoor en Buenos Aires. Equipo de alquiler incluido, máximo 330 FPS, +18. Cupo limitado, reserva previa.",
-      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-      eventStatus: "https://schema.org/EventScheduled",
-      eventSchedule: {
-        "@type": "Schedule",
-        byDay: DIA_TO_SCHEMA[p.day],
-        startTime,
-        endTime,
-        repeatFrequency: "P1W",
-        scheduleTimezone: "America/Argentina/Buenos_Aires",
-      },
-      location: { "@id": `${SITE_URL}/#business` },
-      organizer: { "@id": `${SITE_URL}/#business` },
-      image: `${SITE_URL}${p.image}`,
-      offers: {
-        "@type": "Offer",
-        url: "https://app.experienciaairsoft.com/partidas",
-        availability: "https://schema.org/InStock",
-        priceCurrency: "ARS",
-      },
-      isAccessibleForFree: false,
-    };
-  }),
-};
+    const dow = DIA_TO_DOW[p.day];
+    const delta = (dow - baseAR.getUTCDay() + 7) % 7;
+
+    return Array.from({ length: EVENT_OCURRENCIAS }, (_, i) => {
+      const d = new Date(baseAR);
+      d.setUTCDate(baseAR.getUTCDate() + delta + i * 7);
+      const fecha = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      return {
+        "@type": "Event",
+        name: `Partida pública de airsoft CQB — ${p.day}`,
+        description:
+          "Partida abierta de airsoft CQB indoor en Buenos Aires. Equipo de alquiler incluido, máximo 330 FPS, +18. Cupo limitado, reserva previa.",
+        startDate: `${fecha}T${startTime}:00-03:00`,
+        endDate: `${fecha}T${endTime}:00-03:00`,
+        eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+        eventStatus: "https://schema.org/EventScheduled",
+        image: `${SITE_URL}${p.image}`,
+        location: {
+          "@type": "Place",
+          name: "Experiencia Airsoft",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Gral. Conesa 1858",
+            addressLocality: "Ciudad Autónoma de Buenos Aires",
+            postalCode: "C1870",
+            addressRegion: "CABA",
+            addressCountry: "AR",
+          },
+        },
+        organizer: {
+          "@type": "Organization",
+          name: "Experiencia Airsoft",
+          url: SITE_URL,
+        },
+        performer: {
+          "@type": "Organization",
+          name: "Experiencia Airsoft",
+        },
+        offers: {
+          "@type": "Offer",
+          price: EVENT_PRICE_DESDE,
+          priceCurrency: "ARS",
+          availability: "https://schema.org/InStock",
+          validFrom: `${hoyAR}T00:00:00-03:00`,
+          url: "https://app.experienciaairsoft.com/partidas",
+        },
+        isAccessibleForFree: false,
+      };
+    });
+  });
+
+  return { "@context": "https://schema.org", "@graph": events };
+}
+
+// Regenera la página una vez por día: mantiene frescas las fechas de
+// los Event (próximas partidas) sin necesidad de redeploy. La página
+// sigue siendo estática (ISR), no dynamic.
+export const revalidate = 86400;
 
 export default function Home() {
   const year = new Date().getFullYear();
+  const eventsJsonLd = buildEventsJsonLd();
 
   return (
     <>
