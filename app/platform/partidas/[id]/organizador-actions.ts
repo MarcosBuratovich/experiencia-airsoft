@@ -32,6 +32,12 @@ const guestNombreSchema = z
     "No repitas el mismo caracter más de 4 veces",
   );
 
+// DNI obligatorio para guests cargados a mano (mismo formato que el signup).
+const guestDniSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{7,8}$/, "DNI inválido (7-8 dígitos)");
+
 async function assertOrganizadorOAdmin(partidaId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -60,6 +66,7 @@ async function assertOrganizadorOAdmin(partidaId: string) {
 const addGuestSchema = z.object({
   partidaId: z.uuid(),
   nombre: guestNombreSchema,
+  dni: guestDniSchema,
 });
 
 export async function addGuestAction(input: z.infer<typeof addGuestSchema>) {
@@ -98,6 +105,7 @@ export async function addGuestAction(input: z.infer<typeof addGuestSchema>) {
     partida_id: partida.id,
     user_id: null,
     guest_nombre: parsed.data.nombre,
+    guest_dni: parsed.data.dni,
     agregado_por: user.id,
     estado,
     posicion_waitlist,
@@ -174,6 +182,7 @@ export async function quitarInscripcionAction(input: z.infer<typeof removeSchema
 const alquilerSchema = z.object({
   partidaId: z.uuid(),
   nombre: guestNombreSchema,
+  dni: guestDniSchema,
 });
 
 /** Cualquier usuario inscripto agrega un alquiler bajo su nombre. */
@@ -231,6 +240,7 @@ export async function agregarMiAlquilerAction(
     partida_id: partida.id,
     user_id: null,
     guest_nombre: parsed.data.nombre,
+    guest_dni: parsed.data.dni,
     agregado_por: user.id,
     estado,
     posicion_waitlist,

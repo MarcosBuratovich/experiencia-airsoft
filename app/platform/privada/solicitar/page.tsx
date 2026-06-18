@@ -67,7 +67,8 @@ export default async function SolicitarPrivadaPage() {
               Las privadas son para grupos de{" "}
               <span className="text-orange font-semibold">10 personas o más</span>
               {" "}— cumpleaños, despedidas, eventos corporativos, juntas de
-              clan. Duran 4 horas en cancha exclusiva.
+              clan. Se juegan en cancha exclusiva, en el turno que elijas (3 o 4
+              horas según el horario).
             </p>
             <ol className="mt-3 space-y-1.5 font-mono fluid-xs text-ash">
               <li>
@@ -92,7 +93,7 @@ export default async function SolicitarPrivadaPage() {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">
+      <div className="mb-6 grid grid-cols-3 sm:grid-cols-5 gap-2 font-mono fluid-xs uppercase tracking-[.15em]">
         <LegendItem
           cls="bg-green-500/5 border-green-500/50 text-green-400"
           label="Libre"

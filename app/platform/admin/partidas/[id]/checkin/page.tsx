@@ -21,18 +21,24 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!partida) notFound();
 
-  // Columnas que dependen de migraciones nuevas. Si la migración 5b aún
-  // no se aplicó en este Supabase, el select extendido falla y todo el
-  // query devuelve null. Por eso intentamos el extendido y si falla
-  // caemos al base (las recargas quedan en 0 y se ven después de la
-  // migración).
-  const SELECT_BASE =
-    "id, estado, user_id, guest_nombre, tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, precio_total, profiles!inscripciones_user_id_fkey(nombre, apellido, dni, celular, socio, flair), checkins(presente, pago_estado, pago_monto, nota)";
-  const SELECT_EXTENDED =
-    SELECT_BASE.replace(
-      "precio_total",
-      "recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_recargas, precio_total",
-    );
+  // Columnas que dependen de migraciones nuevas: recarga_* (fase 5b) y
+  // guest_dni (fase 15). Cualquiera de las dos puede no estar aplicada todavía
+  // en este Supabase, y si pedimos una columna inexistente el query entero
+  // devuelve null. Probamos de la grilla más completa a la más básica y nos
+  // quedamos con la primera que funciona, así el check-in nunca se rompe por
+  // una migración pendiente.
+  const buildSelect = ({
+    recargas,
+    guestDni,
+  }: {
+    recargas: boolean;
+    guestDni: boolean;
+  }) =>
+    `id, estado, user_id, guest_nombre, ${guestDni ? "guest_dni, " : ""}tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, ${
+      recargas
+        ? "recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_recargas, "
+        : ""
+    }precio_total, profiles!inscripciones_user_id_fkey(nombre, apellido, dni, celular, socio, flair), checkins(presente, pago_estado, pago_monto, nota)`;
 
   const tryQuery = async (selectStr: string) =>
     supabase
@@ -42,21 +48,28 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       .in("estado", ["confirmado", "waitlist"])
       .order("created_at");
 
-  let inscripcionesRes = await tryQuery(SELECT_EXTENDED);
-  let migracionRecargasPendiente = false;
-  if (inscripcionesRes.error) {
+  const candidatos = [
+    { recargas: true, guestDni: true },
+    { recargas: true, guestDni: false },
+    { recargas: false, guestDni: true },
+    { recargas: false, guestDni: false },
+  ] as const;
+  let inscripcionesRes = await tryQuery(buildSelect(candidatos[0]));
+  let usado: (typeof candidatos)[number] = candidatos[0];
+  for (let k = 1; k < candidatos.length && inscripcionesRes.error; k++) {
     console.error(
-      "[checkin] query extendido falló, fallback al base:",
+      "[checkin] query falló, intento más básico:",
       inscripcionesRes.error.message,
     );
-    migracionRecargasPendiente = true;
-    inscripcionesRes = await tryQuery(SELECT_BASE);
-    if (inscripcionesRes.error) {
-      console.error(
-        "[checkin] query base también falló:",
-        inscripcionesRes.error.message,
-      );
-    }
+    usado = candidatos[k];
+    inscripcionesRes = await tryQuery(buildSelect(usado));
+  }
+  const migracionRecargasPendiente = !usado.recargas;
+  if (inscripcionesRes.error) {
+    console.error(
+      "[checkin] todos los queries fallaron:",
+      inscripcionesRes.error.message,
+    );
   }
 
   const inscripciones = inscripcionesRes.data;
@@ -83,6 +96,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     precio_recargas?: number | null;
     precio_total?: number | null;
     guest_nombre?: string | null;
+    guest_dni?: string | null;
     profiles:
       | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean; flair?: string | null }
       | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean; flair?: string | null }[]
@@ -109,9 +123,14 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       isGuest,
       clanes: i.user_id ? (clanesPorUser.get(i.user_id) ?? []) : [],
       flair: p?.flair ?? null,
-      dni: p?.dni ?? "—",
+      dni: isGuest ? (i.guest_dni ?? "—") : (p?.dni ?? "—"),
       celular: p?.celular ?? "—",
-      socio: p?.socio ?? false,
+      // Para un walk-in guest, "socio" se deriva del medio de pago elegido
+      // ('socio_presente'); para inscriptos con cuenta viene del perfil. Un
+      // alquiler nunca cuenta como socio (evita badges contradictorios).
+      socio: isGuest
+        ? c?.pago_estado === "socio_presente" && i.tipo_jugador !== "alquiler"
+        : (p?.socio ?? false),
       tipo_jugador: i.tipo_jugador ?? "byop",
       estado: i.estado,
       alquila_marcadora: !!i.alquila_marcadora,
@@ -208,6 +227,11 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             tracer100: precios.recarga_tracer_100,
             conv200: precios.recarga_conv_200,
             conv400: precios.recarga_conv_400,
+          }}
+          precios={{
+            entrada_byop: precios.entrada_byop,
+            entrada_socio: precios.entrada_socio,
+            alquiler_marcadora: precios.alquiler_marcadora,
           }}
         />
       )}

@@ -4,18 +4,35 @@ import { hoyEnArgentina, sumarDias } from "./semana";
 
 type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
 
-/** Cada partida (pública o privada) dura 4 hs fijas. */
+/**
+ * Duración por defecto (fallback) cuando una partida/solicitud no tiene
+ * duracion_min. Las privadas se ofrecen en 4 turnos por día (Lun a Dom) y
+ * cada turno tiene su propia duración — no son todos de 4 hs (ver SLOTS_PRIVADA).
+ */
 export const SLOT_DURACION_MIN = 240;
 
-/** Slots fijos que se ofrecen para reserva de privada. */
+/**
+ * Turnos fijos que se ofrecen para reserva de privada, de Lunes a Domingo.
+ * Cada turno arranca a `hora` y dura `duracionMin` minutos (algunos de 3 hs,
+ * otros de 4 hs).
+ */
 export const SLOTS_PRIVADA: ReadonlyArray<{
   hora: string; // 'HH:MM:SS'
   label: string;
+  duracionMin: number;
 }> = [
-  { hora: "09:00:00", label: "9 — 13 hs" },
-  { hora: "14:00:00", label: "14 — 18 hs" },
-  { hora: "19:00:00", label: "19 — 23 hs" },
+  { hora: "09:00:00", label: "9 — 13 hs", duracionMin: 240 }, // Turno Mañana
+  { hora: "13:00:00", label: "13 — 16 hs", duracionMin: 180 }, // Turno Tarde
+  { hora: "16:00:00", label: "16 — 19 hs", duracionMin: 180 }, // Tarde Noche
+  { hora: "19:00:00", label: "19 — 23 hs", duracionMin: 240 }, // Turno Noche
 ];
+
+/** Duración (min) del turno que arranca a `hora`. Fallback a SLOT_DURACION_MIN. */
+export function duracionDeSlot(hora: string): number {
+  return (
+    SLOTS_PRIVADA.find((s) => s.hora === hora)?.duracionMin ?? SLOT_DURACION_MIN
+  );
+}
 
 export type SlotEstado =
   | "disponible"
@@ -85,7 +102,7 @@ export async function getSlotsEstado(
   // 2) Solicitudes pendientes en el rango.
   const { data: pendientes } = await supabase
     .from("solicitudes_privada")
-    .select("fecha_propuesta, hora_inicio")
+    .select("fecha_propuesta, hora_inicio, duracion_min")
     .gte("fecha_propuesta", min)
     .lte("fecha_propuesta", max)
     .eq("estado", "pendiente");
@@ -111,18 +128,23 @@ export async function getSlotsEstado(
     arr.push({ startMin: start, endMin: end, visibilidad: p.visibilidad });
     partidasPorFecha.set(p.fecha, arr);
   }
-  const pendientesPorFecha = new Map<string, Set<string>>();
+  // Pendientes como rangos [start, end) para detectar solapamiento — no
+  // comparamos por hora exacta para que una solicitud vieja (hecha con otra
+  // grilla de horarios, p.ej. 14:00) siga bloqueando los slots nuevos que pisa.
+  const pendientesPorFecha = new Map<string, Ocupacion[]>();
   for (const r of pendientes ?? []) {
-    const set = pendientesPorFecha.get(r.fecha_propuesta) ?? new Set();
-    set.add(r.hora_inicio);
-    pendientesPorFecha.set(r.fecha_propuesta, set);
+    const start = hhmmToMin(r.hora_inicio);
+    const end = start + (r.duracion_min ?? SLOT_DURACION_MIN);
+    const arr = pendientesPorFecha.get(r.fecha_propuesta) ?? [];
+    arr.push({ startMin: start, endMin: end, visibilidad: "privada" });
+    pendientesPorFecha.set(r.fecha_propuesta, arr);
   }
 
   for (const fecha of fechasOrdenadas) {
-    for (const { hora } of SLOTS_PRIVADA) {
+    for (const { hora, duracionMin } of SLOTS_PRIVADA) {
       const key = `${fecha}|${hora}`;
       const slotStart = hhmmToMin(hora);
-      const slotEnd = slotStart + SLOT_DURACION_MIN;
+      const slotEnd = slotStart + duracionMin;
 
       // 1. Pasada
       if (fecha < hoy) {
@@ -140,8 +162,11 @@ export async function getSlotsEstado(
         continue;
       }
 
-      // 4. Solicitud pendiente exacta
-      if (pendientesPorFecha.get(fecha)?.has(hora)) {
+      // 4. Solicitud pendiente que se solapa con el slot (por rango, no hora exacta)
+      const pendiente = (pendientesPorFecha.get(fecha) ?? []).find(
+        (o) => o.startMin < slotEnd && o.endMin > slotStart,
+      );
+      if (pendiente) {
         map.set(key, "pendiente");
         continue;
       }

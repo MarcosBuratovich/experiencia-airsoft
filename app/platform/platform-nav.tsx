@@ -15,6 +15,7 @@ type Props = {
 };
 
 type AdminLink = { href: string; label: string; subtitle?: string; badge?: number };
+type AdminGroup = { title: string; links: AdminLink[] };
 
 export function PlatformNav({
   isAuthed,
@@ -93,24 +94,47 @@ export function PlatformNav({
 
   const pending = solicitudesPendientes ?? 0;
 
-  const adminLinks: AdminLink[] = [
-    { href: "/admin/partidas", label: "Partidas", subtitle: "Listas y check-in" },
-    { href: "/admin/socios", label: "Socios", subtitle: "Cuotas y pagos" },
-    { href: "/admin/usuarios", label: "Usuarios", subtitle: "Roles y búsqueda" },
+  const adminGroups: AdminGroup[] = [
     {
-      href: "/admin/solicitudes",
-      label: "Solicitudes",
-      subtitle: "Partidas privadas",
-      badge: pending,
+      title: "Operación",
+      links: [
+        { href: "/admin/calendario", label: "Calendario", subtitle: "Agenda del mes" },
+        { href: "/admin/partidas", label: "Partidas", subtitle: "Listas y check-in" },
+        {
+          href: "/admin/solicitudes",
+          label: "Solicitudes",
+          subtitle: "Reservas privadas",
+          badge: pending,
+        },
+      ],
     },
-    { href: "/admin/eventos", label: "Eventos", subtitle: "Diagnóstico y carga manual" },
+    {
+      title: "Comunidad",
+      links: [
+        { href: "/admin/socios", label: "Socios", subtitle: "Cuotas y pagos" },
+        { href: "/admin/usuarios", label: "Usuarios", subtitle: "Roles y búsqueda" },
+      ],
+    },
+    {
+      title: "Análisis",
+      links: [
+        { href: "/admin/analytics", label: "Analytics", subtitle: "Métricas del mes" },
+        { href: "/admin/eventos", label: "Eventos", subtitle: "Diagnóstico y carga" },
+      ],
+    },
   ];
-  const superLinks: AdminLink[] = isSuperAdmin
-    ? [
-        { href: "/admin/precios", label: "Precios", subtitle: "Config de entrada y alquiler" },
-        { href: "/admin/templates", label: "Templates", subtitle: "Slots recurrentes" },
-      ]
-    : [];
+  const superGroup: AdminGroup | null = isSuperAdmin
+    ? {
+        title: "Super · config",
+        links: [
+          { href: "/admin/precios", label: "Precios", subtitle: "Entrada y alquiler" },
+          { href: "/admin/templates", label: "Templates", subtitle: "Slots recurrentes" },
+        ],
+      }
+    : null;
+  const allGroups: AdminGroup[] = superGroup
+    ? [...adminGroups, superGroup]
+    : adminGroups;
 
   if (!isAuthed) {
     return (
@@ -183,23 +207,23 @@ export function PlatformNav({
                 className="absolute right-0 top-full mt-3 w-[300px] bg-carbon border border-orange/40 clip-notch shadow-[0_24px_70px_-20px_rgba(255,107,26,0.45)] z-50"
               >
                 <div className="diag-lines-faint p-5">
-                  <p className="sect-label mb-3">Operación</p>
-                  <ul className="space-y-1">
-                    {adminLinks.map((l) => (
-                      <AdminMenuItem key={l.href} link={l} active={pathname === l.href || pathname.startsWith(l.href + "/")} />
-                    ))}
-                  </ul>
-                  {superLinks.length > 0 && (
-                    <>
-                      <div className="my-4 h-px bg-rail/60" />
-                      <p className="sect-label mb-3">Super · config</p>
+                  {allGroups.map((g, gi) => (
+                    <div key={g.title}>
+                      {gi > 0 && <div className="my-4 h-px bg-rail/60" />}
+                      <p className="sect-label mb-3">{g.title}</p>
                       <ul className="space-y-1">
-                        {superLinks.map((l) => (
-                          <AdminMenuItem key={l.href} link={l} active={pathname === l.href} />
+                        {g.links.map((l) => (
+                          <AdminMenuItem
+                            key={l.href}
+                            link={l}
+                            active={
+                              pathname === l.href || pathname.startsWith(l.href + "/")
+                            }
+                          />
                         ))}
                       </ul>
-                    </>
-                  )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -300,40 +324,26 @@ export function PlatformNav({
                 </ul>
               </div>
 
-              {isAdmin && (
-                <div>
-                  <p className="sect-label mb-2">Admin</p>
-                  <ul className="space-y-1">
-                    {adminLinks.map((l) => (
-                      <MobileLink
-                        key={l.href}
-                        href={l.href}
-                        label={l.label}
-                        active={pathname === l.href || pathname.startsWith(l.href + "/")}
-                        badge={l.badge}
-                        onNavigate={closeMobile}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {superLinks.length > 0 && (
-                <div>
-                  <p className="sect-label mb-2">Super</p>
-                  <ul className="space-y-1">
-                    {superLinks.map((l) => (
-                      <MobileLink
-                        key={l.href}
-                        href={l.href}
-                        label={l.label}
-                        active={pathname === l.href}
-                        onNavigate={closeMobile}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {isAdmin &&
+                allGroups.map((g) => (
+                  <div key={g.title}>
+                    <p className="sect-label mb-2">{g.title}</p>
+                    <ul className="space-y-1">
+                      {g.links.map((l) => (
+                        <MobileLink
+                          key={l.href}
+                          href={l.href}
+                          label={l.label}
+                          active={
+                            pathname === l.href || pathname.startsWith(l.href + "/")
+                          }
+                          badge={l.badge}
+                          onNavigate={closeMobile}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
 
               <div className="pt-4 border-t border-rail/60">
                 <button

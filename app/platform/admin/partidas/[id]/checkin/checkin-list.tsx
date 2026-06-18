@@ -3,6 +3,11 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertCheckinAction, actualizarRecargasInscripcionAction } from "./actions";
+import {
+  AgregarWalkin,
+  type PreciosEntrada,
+  type WalkinAdded,
+} from "./agregar-walkin";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
 import type { ClanChip } from "@/lib/clanes";
 
@@ -69,13 +74,15 @@ function equipoLabel(i: Inscripcion): string | null {
 }
 
 export function CheckinList({
-  partidaId: _partidaId,
+  partidaId,
   inscripciones,
   preciosRecargas,
+  precios,
 }: {
   partidaId: string;
   inscripciones: Inscripcion[];
   preciosRecargas: PreciosRecargas;
+  precios: PreciosEntrada;
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -169,6 +176,44 @@ export function CheckinList({
     });
   };
 
+  // Inserción optimista de un walk-in recién agregado por el admin. Construye
+  // la fila con los mismos precios que usó el server (pasados como prop).
+  const addWalkin = (d: WalkinAdded) => {
+    const esSocio = d.tipo === "socio";
+    const esAlquiler = d.tipo === "alquiler";
+    const precio_entrada = esSocio ? precios.entrada_socio : precios.entrada_byop;
+    const precio_alquiler = esAlquiler ? precios.alquiler_marcadora : 0;
+    const precio_total = precio_entrada + precio_alquiler;
+    const nueva: Inscripcion = {
+      id: d.id,
+      nombre: d.nombre,
+      clanes: [],
+      flair: null,
+      dni: d.dni || "—",
+      celular: "—",
+      socio: esSocio,
+      tipo_jugador: esAlquiler ? "alquiler" : "byop",
+      estado: "confirmado",
+      alquila_marcadora: esAlquiler,
+      alquila_premium: false,
+      alquila_chaleco: false,
+      recarga_tracer_100: 0,
+      recarga_conv_200: 0,
+      recarga_conv_400: 0,
+      precio_entrada,
+      precio_alquiler,
+      precio_recargas: 0,
+      precio_total,
+      checkin: {
+        presente: true,
+        pago_estado: esSocio ? "socio_presente" : d.pago,
+        pago_monto: precio_total,
+        nota: null,
+      },
+    };
+    setRows((prev) => [...prev, nueva]);
+  };
+
   const togglePresente = (r: Inscripcion, checked: boolean) => {
     const patch: Partial<Checkin> = { presente: checked };
     if (checked && !r.checkin?.pago_estado) {
@@ -190,6 +235,8 @@ export function CheckinList({
         <Stat label="Transfer." value={ars(totals.transferencia)} />
         <Stat label="Debe" value={ars(totals.debe)} tone="warn" />
       </div>
+
+      <AgregarWalkin partidaId={partidaId} precios={precios} onAdded={addWalkin} />
 
       {!rows.length && (
         <div className="border border-rail/60 bg-carbon fluid-card clip-notch">

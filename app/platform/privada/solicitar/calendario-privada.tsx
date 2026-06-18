@@ -146,7 +146,7 @@ export function CalendarioPrivada({
                   {dia}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {items.map((s) => (
                   <SlotButton
                     key={`${s.fecha}|${s.hora}`}
@@ -417,11 +417,18 @@ function FormAdminCrear({
     crearPartidaDirectaAction,
     initialDir,
   );
+  const handledRef = useRef(false);
 
-  if (state && "ok" in state && state.ok) {
+  // Side-effects (refresh + cerrar modal) en un effect, no durante el render:
+  // onClose hace setState en el padre y onChanged es router.refresh(). El ref
+  // garantiza que corran una sola vez (mismo patrón que FormSolicitar).
+  useEffect(() => {
+    if (handledRef.current) return;
+    if (!state || !("ok" in state) || !state.ok) return;
+    handledRef.current = true;
     onChanged();
     onClose();
-  }
+  }, [state, onChanged, onClose]);
 
   return (
     <form action={action}>

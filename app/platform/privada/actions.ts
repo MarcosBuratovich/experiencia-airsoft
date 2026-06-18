@@ -11,7 +11,7 @@ import { inicioPartida } from "@/lib/partidas";
 import {
   getSlotsEstado,
   SLOTS_PRIVADA,
-  SLOT_DURACION_MIN,
+  duracionDeSlot,
 } from "@/lib/slots-privada";
 import {
   actionError,
@@ -106,7 +106,7 @@ export async function solicitarPrivadaAction(
     user_id: user.id,
     fecha_propuesta: v.fecha_propuesta,
     hora_inicio: v.hora_inicio,
-    duracion_min: SLOT_DURACION_MIN,
+    duracion_min: duracionDeSlot(v.hora_inicio),
     cupo_estimado: v.cupo_estimado,
     modalidad: "dinamica",
     notas: v.notas || null,
@@ -271,6 +271,9 @@ export async function aprobarPrivadaAction(
 
   revalidatePath("/admin/solicitudes");
   revalidatePath("/mis-solicitudes");
+  revalidatePath("/admin/calendario");
+  revalidatePath("/admin/partidas");
+  revalidatePath("/partidas");
   return { ok: true, partidaId: partida.id, token: partida.private_token };
 }
 
@@ -393,7 +396,7 @@ export async function crearPartidaDirectaAction(
         `${modalidadLabel(v.modalidad)} ${v.visibilidad === "privada" ? "privada" : ""}`.trim(),
       fecha: v.fecha,
       hora_inicio: v.hora_inicio,
-      duracion_min: SLOT_DURACION_MIN,
+      duracion_min: duracionDeSlot(v.hora_inicio),
       modalidad: v.modalidad,
       cupo_max: v.cupo_max,
       visibilidad: v.visibilidad,
@@ -444,5 +447,6 @@ export async function rechazarPrivadaAction(
 
   revalidatePath("/admin/solicitudes");
   revalidatePath("/mis-solicitudes");
+  revalidatePath("/admin/calendario");
   return { ok: true };
 }
