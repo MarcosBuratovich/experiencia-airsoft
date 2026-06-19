@@ -39,11 +39,9 @@ const featuresJsonLd = {
   operatingSystem: "Web",
   inLanguage: "es-AR",
   description: DESCRIPTION,
-  publisher: {
-    "@type": "Organization",
-    name: "Experiencia Airsoft",
-    url: "https://www.experienciaairsoft.com",
-  },
+  // Referencia por @id a la Organization canónica (definida en www) en vez de
+  // una Organization anónima: consolida app.* como la misma entidad de marca.
+  publisher: { "@id": "https://www.experienciaairsoft.com/#organization" },
   offers: {
     "@type": "Offer",
     price: "0",

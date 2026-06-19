@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
 const PLATFORM_HOSTS = new Set(
-  (process.env.NEXT_PUBLIC_PLATFORM_HOSTS ?? "app.localhost:3000,app.experiencia-airsoft.com")
+  (process.env.NEXT_PUBLIC_PLATFORM_HOSTS ?? "app.localhost:3000,app.experienciaairsoft.com")
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean),

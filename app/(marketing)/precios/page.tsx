@@ -10,7 +10,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/precios`;
-const TITLE = "Precios de partidas de airsoft en Buenos Aires";
+const TITLE = "Precios de airsoft en Buenos Aires";
 const DESCRIPTION =
   "Cuánto cuesta jugar airsoft en Experiencia Airsoft (CABA). Alquiler $60.000 (marcadora con tracer + bbs incluidas), BYOP $25.000 si traés tu equipo, recargas, chaleco y socios. 10% de descuento pagando en efectivo. Reservas por WhatsApp.";
 
@@ -37,7 +37,7 @@ const serviceJsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
   serviceType: "Partida de airsoft CQB indoor",
-  provider: { "@id": `${SITE_URL}/#business` },
+  provider: { "@id": `${SITE_URL}/#organization` },
   areaServed: { "@type": "City", name: "Buenos Aires" },
   hasOfferCatalog: {
     "@type": "OfferCatalog",

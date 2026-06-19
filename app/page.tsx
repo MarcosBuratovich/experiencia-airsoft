@@ -311,7 +311,10 @@ const businessJsonLd = {
     "Centro de airsoft CQB indoor en Buenos Aires. Partidas públicas abiertas, grupos privados y eventos corporativos con equipo incluido. Máximo 330 FPS, +18. Reservas por WhatsApp.",
   slogan: "No es potencia. Es táctica.",
   url: SITE_URL,
-  telephone: "+541138689783",
+  // El LocalBusiness físico es parte de la Organization canónica (mismo @id en
+  // los 3 hosts), no una entidad separada: consolida la marca para sitelinks.
+  parentOrganization: { "@id": `${SITE_URL}/#organization` },
+  telephone: "+5491138689783",
   email: "hola@experienciaairsoft.com",
   image: [
     `${SITE_URL}/img/07_zona_fria_hero.jpg`,
@@ -338,7 +341,8 @@ const businessJsonLd = {
     latitude: -34.5594,
     longitude: -58.4634,
   },
-  hasMap: "https://maps.app.goo.gl/?q=Gral.+Conesa+1858,+CABA",
+  hasMap:
+    "https://www.google.com/maps/search/?api=1&query=Gral.+Conesa+1858,+CABA",
   openingHoursSpecification: [
     {
       "@type": "OpeningHoursSpecification",
@@ -356,7 +360,7 @@ const businessJsonLd = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "Reservas",
-    telephone: "+541138689783",
+    telephone: "+5491138689783",
     availableLanguage: ["Spanish"],
     contactOption: "WhatsApp",
   },
@@ -390,26 +394,10 @@ const businessJsonLd = {
   ],
 };
 
-const websiteJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": `${SITE_URL}/#website`,
-  url: SITE_URL,
-  name: "Experiencia Airsoft",
-  alternateName: ["Experiencia Airsoft CABA", "Airsoft CQB Buenos Aires"],
-  inLanguage: "es-AR",
-  publisher: { "@id": `${SITE_URL}/#business` },
-  // SearchAction: cuando Google tiene confianza en el site, expone el
-  // searchbox debajo del resultado principal (relacionado con sitelinks).
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${SITE_URL}/blog?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
-};
+// Organization y WebSite (entidad canónica) se emiten site-wide desde
+// app/layout.tsx vía <SiteJsonLd/>, no acá. Se quitó el SearchAction que
+// apuntaba a /blog?q= (el blog no procesa la búsqueda) — el Sitelinks Search
+// Box fue deprecado por Google (nov-2024).
 
 const breadcrumbJsonLd = {
   "@context": "https://schema.org",
@@ -462,34 +450,6 @@ const faqJsonLd = {
     name: item.q,
     acceptedAnswer: { "@type": "Answer", text: item.a },
   })),
-};
-
-// Organization separada (con @id propio) para que Google arme el
-// Knowledge Panel y entienda las redes oficiales vía sameAs.
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "@id": `${SITE_URL}/#organization`,
-  name: "Experiencia Airsoft",
-  url: SITE_URL,
-  logo: {
-    "@type": "ImageObject",
-    url: `${SITE_URL}/img/00_logo_principal.png`,
-    width: 1920,
-    height: 1920,
-  },
-  image: `${SITE_URL}/img/07_zona_fria_hero.jpg`,
-  sameAs: [
-    "https://www.instagram.com/experienciaairsoft/",
-    "https://www.youtube.com/@experienciaairsoft8250",
-  ],
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "Reservas",
-    telephone: "+541138689783",
-    availableLanguage: ["Spanish"],
-    contactOption: "WhatsApp",
-  },
 };
 
 // Partidas públicas recurrentes como Event con eventSchedule semanal.
@@ -594,35 +554,36 @@ export default function Home() {
   return (
     <>
       <ScrollFx />
+      {/* Organization + WebSite se emiten site-wide desde layout.tsx. Acá van
+          solo los nodos específicos de la home: LocalBusiness, Events, FAQ,
+          breadcrumb. .replace(/</g, "<") sanitiza contra XSS. */}
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(businessJsonLd).replace(/</g, "\\u003c"),
+        }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(eventsJsonLd).replace(/</g, "\\u003c"),
+        }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c"),
+        }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c"),
+        }}
       />
 
       {/* NAV */}
@@ -1807,12 +1768,28 @@ export default function Home() {
                 <li>
                   <a
                     href={TIENDA_URL}
-                    target="_blank"
                     rel="noopener"
                     className="text-bone hover:text-orange transition-colors"
                   >
-                    Tienda
-                    <span aria-hidden className="ml-1 text-smoke">↗</span>
+                    Tienda de airsoft
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={`${TIENDA_URL}/productos`}
+                    rel="noopener"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Marcadoras y equipamiento
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={`${TIENDA_URL}/categorias`}
+                    rel="noopener"
+                    className="text-bone hover:text-orange transition-colors"
+                  >
+                    Categorías de la tienda
                   </a>
                 </li>
               </ul>

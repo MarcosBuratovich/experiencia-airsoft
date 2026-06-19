@@ -12,7 +12,10 @@ export const metadata: Metadata = {
   description:
     "Ingresá a tu cuenta de Experiencia Airsoft para reservar partidas, gestionar clanes y tu perfil de jugador.",
   alternates: { canonical: `${APP_URL}/login` },
-  robots: { index: true, follow: true },
+  // noindex: formulario transaccional thin; indexarlo gasta crawl budget y
+  // compite por la marca con un resultado de baja calidad. follow para pasar
+  // autoridad a las páginas públicas enlazadas.
+  robots: { index: false, follow: true },
   openGraph: {
     type: "website",
     url: `${APP_URL}/login`,

@@ -12,7 +12,9 @@ export const metadata: Metadata = {
   description:
     "Creá tu cuenta gratis para reservar partidas de airsoft en Experiencia Airsoft (CABA). Te lleva un minuto: nombre, DNI, celular y email.",
   alternates: { canonical: `${APP_URL}/signup` },
-  robots: { index: true, follow: true },
+  // noindex: formulario transaccional thin (ver login). Para captar "crear
+  // cuenta airsoft", mejor una sección en www/primera-vez que enlace a /signup.
+  robots: { index: false, follow: true },
   openGraph: {
     type: "website",
     url: `${APP_URL}/signup`,

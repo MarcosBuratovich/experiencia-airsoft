@@ -10,7 +10,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/cumpleanos`;
-const TITLE = "Cumpleaños de airsoft en Buenos Aires (+18)";
+const TITLE = "Cumpleaños de airsoft en Buenos Aires";
 const DESCRIPTION =
   "Festejá tu cumpleaños jugando airsoft indoor en CABA. Grupos desde 10 personas, equipo incluido, partidas temáticas. Reservas por WhatsApp.";
 
@@ -40,7 +40,7 @@ const serviceJsonLd = {
   name: "Cumpleaños · Experiencia Airsoft",
   description:
     "Festejos de cumpleaños con airsoft CQB indoor en Buenos Aires. Grupos desde 10 personas, equipo de alquiler incluido, partidas con dinámicas tácticas.",
-  provider: { "@id": `${SITE_URL}/#business` },
+  provider: { "@id": `${SITE_URL}/#organization` },
   areaServed: { "@type": "City", name: "Buenos Aires" },
   audience: {
     "@type": "PeopleAudience",

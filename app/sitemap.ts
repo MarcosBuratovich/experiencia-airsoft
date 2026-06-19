@@ -17,8 +17,6 @@ const LAST_UPDATED = {
   airsoftVsPaintball: "2026-05-22",
   blogIndex: "2026-05-22",
   appLanding: "2026-05-26",
-  appLogin: "2026-05-26",
-  appSignup: "2026-05-26",
 } as const;
 
 const toDate = (iso: string) => new Date(`${iso}T00:00:00-03:00`);
@@ -81,26 +79,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     ...blogEntries,
-    // Subdominio app.* — landing pública + login + signup (las páginas
-    // autenticadas son noindex y no se listan acá). Domain property en
-    // GSC para experienciaairsoft.com cubre ambos hosts.
+    // Subdominio app.* — solo la landing pública. /login y /signup son
+    // formularios transaccionales thin: noindex (ver login/signup page.tsx),
+    // fuera del sitemap para no gastar crawl budget ni competir por la marca.
+    // La Domain property en GSC para experienciaairsoft.com cubre ambos hosts.
     {
       url: APP_URL,
       lastModified: toDate(LAST_UPDATED.appLanding),
       changeFrequency: "monthly",
       priority: 0.9,
-    },
-    {
-      url: `${APP_URL}/signup`,
-      lastModified: toDate(LAST_UPDATED.appSignup),
-      changeFrequency: "yearly",
-      priority: 0.7,
-    },
-    {
-      url: `${APP_URL}/login`,
-      lastModified: toDate(LAST_UPDATED.appLogin),
-      changeFrequency: "yearly",
-      priority: 0.5,
     },
   ];
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Anton, Oswald, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteJsonLd } from "./_components/site-jsonld";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -33,8 +34,9 @@ const jetbrains = JetBrains_Mono({
 
 const SITE_URL = "https://www.experienciaairsoft.com";
 const TITLE = "Experiencia Airsoft — Airsoft CQB indoor en Buenos Aires";
+// ~153 caracteres: bajo el límite de ~160 que Google trunca en el SERP.
 const DESCRIPTION =
-  "Centro de airsoft CQB indoor en Buenos Aires. Partidas abiertas, grupos privados y eventos corporativos. Máximo 330 FPS, equipo incluido, +18. Reservas por WhatsApp.";
+  "Airsoft CQB indoor en Buenos Aires: partidas abiertas, grupos privados y eventos corporativos. Equipo incluido, máximo 330 FPS, +18. Reservá por WhatsApp.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -127,7 +129,10 @@ export default function RootLayout({
       lang="es"
       className={`${anton.variable} ${oswald.variable} ${inter.variable} ${jetbrains.variable}`}
     >
-      <body className="relative">{children}</body>
+      <body className="relative">
+        <SiteJsonLd />
+        {children}
+      </body>
     </html>
   );
 }

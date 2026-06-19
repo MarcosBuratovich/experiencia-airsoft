@@ -10,7 +10,7 @@ import {
 } from "../../_components/site-constants";
 
 const PAGE_URL = `${SITE_URL}/airsoft-vs-paintball`;
-const TITLE = "Airsoft vs paintball: diferencias y costos";
+const TITLE = "Airsoft vs paintball: diferencias";
 const DESCRIPTION =
   "Comparación honesta entre airsoft y paintball: cuál duele más, cuál es más barato, cuál es más realista. Si dudás entre los dos, este artículo es para vos.";
 
