@@ -136,13 +136,13 @@ export function CalendarioAdmin({
     <>
       <Leyenda />
 
-      {/* Desktop — grilla mensual */}
-      <div className="hidden sm:block border border-rail/60 clip-notch overflow-hidden">
+      {/* Desktop — grilla mensual (solo en pantallas anchas; abajo, agenda) */}
+      <div className="hidden lg:block border border-rail/60 clip-notch overflow-hidden">
         <div className="grid grid-cols-7 bg-carbon">
           {DIAS_HEADER.map((d) => (
             <div
               key={d}
-              className="px-2 py-2 text-center font-mono fluid-xs uppercase tracking-[.2em] text-smoke border-b border-rail/40"
+              className="px-3 py-3 text-center font-mono fluid-xs uppercase tracking-[.25em] text-smoke border-b border-rail/40"
             >
               {d}
             </div>
@@ -157,18 +157,18 @@ export function CalendarioAdmin({
               return (
                 <div
                   key={fecha}
-                  className={`min-h-[92px] border-t border-l border-rail/30 p-1.5 ${
+                  className={`group min-h-[160px] border-t border-l border-rail/30 p-2.5 ${
                     delMes ? "" : "bg-ink/40"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-2">
                     <span
-                      className={`font-mono fluid-xs ${
+                      className={`font-mono fluid-sm leading-none ${
                         esHoy
-                          ? "bg-orange text-ink px-1.5 rounded-sm"
+                          ? "bg-orange text-ink px-1.5 py-0.5 rounded-sm font-semibold"
                           : delMes
                             ? "text-ash"
-                            : "text-smoke/50"
+                            : "text-smoke/40"
                       }`}
                     >
                       {diaNumero(fecha)}
@@ -177,7 +177,7 @@ export function CalendarioAdmin({
                       <button
                         type="button"
                         onClick={() => setCrearFecha(fecha)}
-                        className="text-smoke hover:text-orange font-mono leading-none cursor-pointer px-1"
+                        className="w-6 h-6 flex items-center justify-center text-smoke hover:text-orange hover:bg-orange/10 font-mono text-lg leading-none cursor-pointer rounded-sm opacity-0 group-hover:opacity-100 transition"
                         aria-label="Crear partida"
                         title="Crear partida"
                       >
@@ -185,7 +185,7 @@ export function CalendarioAdmin({
                       </button>
                     )}
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {dayItems.map((it) => (
                       <Chip key={`${it.tipo}-${it.id}`} it={it} onClick={() => setSelected(it)} />
                     ))}
@@ -197,8 +197,8 @@ export function CalendarioAdmin({
         ))}
       </div>
 
-      {/* Mobile — agenda (solo días con items) */}
-      <div className="sm:hidden space-y-3">
+      {/* Agenda (mobile/tablet — solo días con items) */}
+      <div className="lg:hidden space-y-3">
         <button
           type="button"
           onClick={() => setCrearFecha(hoy.startsWith(mes) ? hoy : `${mes}-01`)}
@@ -269,8 +269,8 @@ function Chip({ it, onClick, full }: { it: ItemDia; onClick: () => void; full?: 
     <button
       type="button"
       onClick={onClick}
-      className={`block w-full text-left px-1.5 py-1 clip-notch border font-mono text-[10px] sm:text-[11px] tracking-[.06em] uppercase truncate cursor-pointer hover:border-orange ${cls} ${
-        full ? "fluid-xs" : ""
+      className={`block w-full text-left px-2 py-1.5 clip-notch border font-mono text-[11px] tracking-[.06em] uppercase truncate cursor-pointer hover:border-orange ${cls} ${
+        full ? "fluid-xs py-2" : ""
       }`}
       title={label}
     >

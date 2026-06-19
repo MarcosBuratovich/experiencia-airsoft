@@ -116,7 +116,6 @@ export default async function CalendarioAdminPage({
 
   const mesPrev = restarMeses(mes, 1);
   const mesNext = restarMeses(mes, -1);
-  const hayNext = mesNext <= mesActual;
   const anio = mes.split("-")[0];
   const titulo = `${nombreMes(mes)} ${anio}`;
 
@@ -135,26 +134,32 @@ export default async function CalendarioAdminPage({
         </Link>
       </div>
 
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <Link
           href={`/admin/calendario?mes=${mesPrev}`}
-          className="btn-ghost px-3 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold"
+          className="btn-ghost px-3 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold shrink-0"
         >
-          ← {nombreMes(mesPrev)}
+          ← <span className="hidden sm:inline">{nombreMes(mesPrev)}</span>
+          <span className="sm:hidden">Ant</span>
         </Link>
-        <h2 className="sect-title fluid-xl text-center capitalize">{titulo}</h2>
-        {hayNext ? (
-          <Link
-            href={`/admin/calendario?mes=${mesNext}`}
-            className="btn-ghost px-3 py-2 clip-tag uppercase tracking-wider fluid-xs font-semibold"
-          >
-            {nombreMes(mesNext)} →
-          </Link>
-        ) : (
-          <span className="px-3 py-2 font-mono fluid-xs uppercase tracking-wider text-smoke/40 select-none">
-            {nombreMes(mesNext)} →
-          </span>
-        )}
+        <div className="text-center min-w-0">
+          <h2 className="sect-title fluid-xl capitalize leading-none">{titulo}</h2>
+          {mes !== mesActual && (
+            <Link
+              href="/admin/calendario"
+              className="mt-1 inline-block font-mono fluid-xs uppercase tracking-[.2em] text-orange hover:underline"
+            >
+              Volver a hoy
+            </Link>
+          )}
+        </div>
+        <Link
+          href={`/admin/calendario?mes=${mesNext}`}
+          className="btn-ghost px-3 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold shrink-0"
+        >
+          <span className="hidden sm:inline">{nombreMes(mesNext)}</span>
+          <span className="sm:hidden">Sig</span> →
+        </Link>
       </div>
 
       <CalendarioAdmin items={items} mes={mes} hoy={hoy} />
