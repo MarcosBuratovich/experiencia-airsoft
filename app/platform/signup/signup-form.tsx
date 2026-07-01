@@ -1,7 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { signupAction, type SignupState } from "../actions/auth";
+import { useActionState, useState, useTransition } from "react";
+import {
+  signupAction,
+  sugerirNumeroAction,
+  type SignupState,
+} from "../actions/auth";
 import { PhoneInput } from "../components/phone-input";
 import { ErrorBanner } from "../../_components/error-banner";
 
@@ -27,7 +31,16 @@ export function SignupForm() {
   const [state, action, pending] = useActionState(signupAction, initial);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [numero, setNumero] = useState("");
+  const [sugPending, startSug] = useTransition();
   const checks = checkPassword(password);
+
+  const sugerirNumero = () => {
+    startSug(async () => {
+      const res = await sugerirNumeroAction();
+      if ("numero" in res) setNumero(res.numero);
+    });
+  };
   const passwordValid =
     checks.length && checks.uppercase && checks.lowercase && checks.number;
   const confirmMismatch =
@@ -114,17 +127,30 @@ export function SignupForm() {
 
       <label className="block">
         <span className="sect-label mb-1 block">Número de jugador</span>
-        <input
-          name="player_number"
-          inputMode="numeric"
-          maxLength={6}
-          pattern="\d{6}"
-          required
-          placeholder="6 dígitos"
-          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-mono tracking-[.2em] text-bone focus:border-orange outline-none transition"
-        />
+        <div className="flex gap-2">
+          <input
+            name="player_number"
+            inputMode="numeric"
+            maxLength={6}
+            pattern="\d{6}"
+            required
+            value={numero}
+            onChange={(e) => setNumero(e.target.value.replace(/[^\d]/g, ""))}
+            placeholder="6 dígitos"
+            className="flex-1 min-w-0 bg-carbon border border-rail/60 px-3 py-2.5 font-mono tracking-[.2em] text-bone focus:border-orange outline-none transition"
+          />
+          <button
+            type="button"
+            onClick={sugerirNumero}
+            disabled={sugPending}
+            className="btn-ghost px-3 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {sugPending ? "..." : "Sugerir"}
+          </button>
+        </div>
         <span className="mt-1 block font-mono fluid-xs text-smoke">
-          Es tu identificador en cancha. Único, no se puede repetir. Elegí algo memorable.
+          Es tu identificador en cancha. Único, no se puede repetir. Elegí algo
+          memorable o tocá &ldquo;Sugerir&rdquo;.
         </span>
         {formErrors?.player_number?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">

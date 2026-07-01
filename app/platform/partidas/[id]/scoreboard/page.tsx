@@ -30,7 +30,7 @@ export default async function ScoreboardPage({
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`/login?next=/partidas/${id}/scoreboard`);
 
   const { data: partida } = await supabase
     .from("partidas")

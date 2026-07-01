@@ -41,3 +41,15 @@ export async function numeroDisponible(
   const { data } = await query.maybeSingle();
   return !data;
 }
+
+/** Devuelve un número de 6 dígitos libre (o null si no encontró en N intentos). */
+export async function sugerirNumeroLibre(
+  supabase: ServerSupabase,
+  intentos = 12,
+): Promise<string | null> {
+  for (let i = 0; i < intentos; i++) {
+    const n = String(Math.floor(100000 + Math.random() * 900000));
+    if (await numeroDisponible(supabase, n)) return n;
+  }
+  return null;
+}

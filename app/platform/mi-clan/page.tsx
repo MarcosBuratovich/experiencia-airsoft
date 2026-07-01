@@ -8,7 +8,7 @@ import { MisSolicitudes } from "./mis-solicitudes";
 export default async function MiClanPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/mi-clan");
 
   // Cargo todos los clanes del user (hasta 3) desde la junction.
   const clanesMap = await getClanesPorProfileIds(supabase, [user.id]);

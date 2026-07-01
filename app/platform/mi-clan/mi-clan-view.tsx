@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { formatFechaHora } from "@/lib/format";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../_components/error-banner";
 import {
@@ -194,6 +195,9 @@ function SolicitudCapitanRow({
         <div className="flex-1 min-w-0">
           <p className="text-bone">
             {solicitud.user.nombre} {solicitud.user.apellido}
+          </p>
+          <p className="font-mono fluid-xs text-smoke mt-0.5">
+            Solicitó el {formatFechaHora(solicitud.created_at)}
           </p>
           {solicitud.mensaje && (
             <p className="font-mono fluid-xs text-ash mt-1 italic">“{solicitud.mensaje}”</p>

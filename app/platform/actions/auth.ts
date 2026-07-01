@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { numeroDisponible } from "@/lib/player-number";
+import { numeroDisponible, sugerirNumeroLibre } from "@/lib/player-number";
 import {
   actionError,
   actionFieldErrors,
@@ -121,6 +121,16 @@ function sanitizeNext(v: FormDataEntryValue | null): string {
   if (typeof v !== "string" || !v) return "/";
   if (!v.startsWith("/") || v.startsWith("//") || v.startsWith("/\\")) return "/";
   return v;
+}
+
+/** Sugiere un número de jugador de 6 dígitos que esté libre. */
+export async function sugerirNumeroAction(): Promise<
+  { numero: string } | { error: string }
+> {
+  const supabase = await createClient();
+  const numero = await sugerirNumeroLibre(supabase);
+  if (!numero) return { error: "No pudimos sugerir un número. Probá de nuevo." };
+  return { numero };
 }
 
 // ─────────────────────────────────────────────────────────────────────────

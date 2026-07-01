@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function ClanesDirectorio() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/clanes");
 
   const { count: miCantClanes } = await supabase
     .from("profile_clanes")

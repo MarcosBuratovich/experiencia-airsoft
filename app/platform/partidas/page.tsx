@@ -20,7 +20,7 @@ type PartidaCard = {
 export default async function PartidasPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/partidas");
 
   // Traemos las partidas públicas no canceladas a partir de hoy.
   // Las "en curso" caen acá porque su fecha es hoy aunque ya hayan empezado.

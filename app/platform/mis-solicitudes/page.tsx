@@ -12,7 +12,7 @@ export default async function MisSolicitudesPage({
   const { ok } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/mis-solicitudes");
 
   const { data: solicitudes } = await supabase
     .from("solicitudes_privada")
