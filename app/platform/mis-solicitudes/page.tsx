@@ -23,6 +23,16 @@ export default async function MisSolicitudesPage({
     .order("created_at", { ascending: false })
     .limit(20);
 
+  // Al abrir esta pantalla, las solicitudes resueltas dejan de ser "novedad"
+  // (limpia el badge del nav). Idempotente; si falta la migración fase-16 no
+  // rompe (la update falla en silencio).
+  await supabase
+    .from("solicitudes_privada")
+    .update({ resuelto_visto: true })
+    .eq("user_id", user.id)
+    .in("estado", ["aprobada", "rechazada"])
+    .eq("resuelto_visto", false);
+
   const partidaIds = (solicitudes ?? [])
     .map((s) => s.partida_id)
     .filter((v): v is string => !!v);

@@ -8,6 +8,7 @@ import { formatFechaHora, formatFechaLarga, formatHora, modalidadLabel } from "@
 import type { EstadoEfectivo } from "@/lib/partidas";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "@/app/_components/error-banner";
+import { useModalA11y } from "../../components/use-modal-a11y";
 import {
   editarPartidaAction,
   crearPartidaCalendarioAction,
@@ -72,6 +73,13 @@ function readErr(state: unknown) {
 
 function diaNumero(iso: string): number {
   return Number(iso.split("-")[2]);
+}
+
+/** Link wa.me al solicitante con mensaje pre-armado sobre su reserva. */
+function waLinkSol(it: ItemSolicitud): string {
+  const num = (it.celular ?? "").replace(/\D/g, "");
+  const msg = `Hola ${it.solicitante}! Sobre tu reserva de privada para ${formatFechaLarga(it.fecha)} ${formatHora(it.hora)} hs (~${it.cupoEstimado} personas).`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
 function colorPartida(it: ItemPartida): string {
@@ -318,16 +326,22 @@ function ModalShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
     <div
       className="fixed inset-0 z-50 bg-ink/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="dialog"
-      aria-modal="true"
     >
-      <div className="bg-carbon border border-rail/60 w-full max-w-md clip-notch">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        className="bg-carbon border border-rail/60 w-full max-w-md clip-notch outline-none"
+      >
         <div className="flex items-start justify-between p-5 border-b border-rail/40">
           <div>
             {subtitulo && <p className="sect-label mb-1">// {subtitulo}</p>}
@@ -679,7 +693,19 @@ function SolicitudModal({
         </p>
         <p>{formatFechaLarga(it.fecha)} · {formatHora(it.hora)} hs · {it.duracionMin} min</p>
         <p>~{it.cupoEstimado} personas</p>
-        <p>Solicita: <span className="text-bone">{it.solicitante}</span>{it.celular ? ` · ${it.celular}` : ""}</p>
+        <p>Solicita: <span className="text-bone">{it.solicitante}</span></p>
+        {it.celular && (
+          <p>
+            <a
+              href={waLinkSol(it)}
+              target="_blank"
+              rel="noopener"
+              className="text-orange hover:underline"
+            >
+              WhatsApp {it.celular}
+            </a>
+          </p>
+        )}
         <p className="text-smoke">Solicitada el {formatFechaHora(it.createdAt)}</p>
         {it.notas && <p className="text-smoke normal-case tracking-normal font-sans">{it.notas}</p>}
       </div>

@@ -13,6 +13,7 @@ type Props = {
   isSuperAdmin?: boolean;
   userLabel: string | null;
   solicitudesPendientes?: number;
+  misSolicitudesResueltas?: number;
 };
 
 type AdminLink = { href: string; label: string; subtitle?: string; badge?: number };
@@ -24,9 +25,11 @@ export function PlatformNav({
   isSuperAdmin,
   userLabel,
   solicitudesPendientes,
+  misSolicitudesResueltas,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const avisoPrivadas = misSolicitudesResueltas ?? 0;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -166,6 +169,11 @@ export function PlatformNav({
         </NavLink>
         <NavLink href="/mis-solicitudes" active={isSectionActive(pathname, "/mis-solicitudes") || isSectionActive(pathname, "/privada")} primary>
           Privadas
+          {avisoPrivadas > 0 && (
+            <span className="ml-1.5 inline-block min-w-[1.1rem] px-1 py-0.5 bg-orange text-ink font-mono text-[10px] leading-none tracking-normal rounded-sm align-middle">
+              {avisoPrivadas}
+            </span>
+          )}
         </NavLink>
         <NavLink href="/perfil" active={isSectionActive(pathname, "/perfil")} primary>
           Perfil
@@ -331,6 +339,7 @@ export function PlatformNav({
                     href="/mis-solicitudes"
                     label="Privadas"
                     active={isSectionActive(pathname, "/mis-solicitudes") || isSectionActive(pathname, "/privada")}
+                    badge={avisoPrivadas}
                     onNavigate={closeMobile}
                   />
                   <MobileLink

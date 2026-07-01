@@ -12,6 +12,7 @@ import {
 } from "../actions";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
+import { useModalA11y } from "../../components/use-modal-a11y";
 
 const PRIVADA_CUPO_MIN = 10;
 const PRIVADA_CUPO_MAX = 60;
@@ -191,6 +192,7 @@ function SlotModal({
 
   const fechaInfo = formatFecha(slot.fecha);
   const titulo = `${DIAS_LARGOS[diaSemanaDe(slot.fecha)]} ${fechaInfo.numero} ${fechaInfo.mes}`;
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div
@@ -198,10 +200,15 @@ function SlotModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="dialog"
-      aria-modal="true"
     >
-      <div className="bg-carbon border border-rail/60 w-full max-w-md clip-notch">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        className="bg-carbon border border-rail/60 w-full max-w-md clip-notch outline-none"
+      >
         <div className="flex items-start justify-between p-5 border-b border-rail/40">
           <div>
             <p className="sect-label mb-1">// {isAdmin ? "Admin · slot" : "Reservar slot"}</p>
@@ -291,9 +298,10 @@ function FormSolicitar({
   const cantNum = Number(cant) || 0;
   const cantValida = cantNum >= PRIVADA_CUPO_MIN && cantNum <= PRIVADA_CUPO_MAX;
 
-  // Cuando el server responde ok, abrimos WhatsApp con el mensaje
-  // pre-armado y mandamos al user a /mis-solicitudes. Usamos un ref
-  // para no abrir dos veces si React vuelve a correr el effect.
+  // Cuando el server responde ok, intentamos abrir WhatsApp. NO navegamos
+  // automáticamente: mostramos una pantalla de éxito con el link a mano por si
+  // el navegador bloqueó el popup (Safari / in-app de IG/FB). Ref para no
+  // abrir dos veces.
   useEffect(() => {
     if (handledRef.current) return;
     if (!state || !("ok" in state) || !state.ok) return;
@@ -301,8 +309,36 @@ function FormSolicitar({
     if (typeof window !== "undefined") {
       window.open(state.hrefWA, "_blank", "noopener,noreferrer");
     }
-    router.push("/mis-solicitudes?ok=1");
-  }, [state, router]);
+  }, [state]);
+
+  if (state && "ok" in state && state.ok) {
+    return (
+      <div className="p-5 space-y-4">
+        <div className="border border-green-500/40 bg-green-500/5 clip-notch p-4">
+          <p className="sect-label mb-1 text-green-400">// Solicitud enviada</p>
+          <p className="font-sans fluid-sm text-bone leading-relaxed">
+            Te abrimos WhatsApp con el mensaje listo para coordinar con el dueño.
+            Si no se abrió, tocá el botón.
+          </p>
+        </div>
+        <a
+          href={state.hrefWA}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-wa w-full px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold inline-flex items-center justify-center"
+        >
+          Abrir WhatsApp
+        </a>
+        <button
+          type="button"
+          onClick={() => router.push("/mis-solicitudes?ok=1")}
+          className="btn-ghost w-full px-4 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer"
+        >
+          Ver mis solicitudes
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form action={action}>

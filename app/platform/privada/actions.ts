@@ -262,6 +262,7 @@ export async function aprobarPrivadaAction(
       respuesta_admin: respuesta?.trim() || null,
       resolved_by: userId,
       resolved_at: new Date().toISOString(),
+      resuelto_visto: false,
     })
     .eq("id", solicitudId);
   if (updErr) {
@@ -437,6 +438,7 @@ export async function rechazarPrivadaAction(
       respuesta_admin: respuesta?.trim() || null,
       resolved_by: userId,
       resolved_at: new Date().toISOString(),
+      resuelto_visto: false,
     })
     .eq("id", solicitudId)
     .eq("estado", "pendiente");

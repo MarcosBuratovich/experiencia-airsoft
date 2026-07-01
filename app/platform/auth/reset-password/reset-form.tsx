@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   resetPasswordAction,
   type ResetPasswordState,
@@ -9,8 +9,25 @@ import { ErrorBanner } from "../../../_components/error-banner";
 
 const initial: ResetPasswordState = undefined;
 
+function checkPassword(pw: string) {
+  return {
+    length: pw.length >= 8,
+    uppercase: /[A-Z]/.test(pw),
+    lowercase: /[a-z]/.test(pw),
+    number: /[0-9]/.test(pw),
+  };
+}
+
 export function ResetPasswordForm() {
   const [state, action, pending] = useActionState(resetPasswordAction, initial);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const checks = checkPassword(password);
+  const passwordValid =
+    checks.length && checks.uppercase && checks.lowercase && checks.number;
+  const confirmMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
+
   const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
   const error = state && "error" in state ? state.error : undefined;
 
@@ -24,18 +41,22 @@ export function ResetPasswordForm() {
           name="password"
           type="password"
           required
-          minLength={8}
           autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
         />
+        <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 font-mono fluid-xs">
+          <PwCheck ok={checks.length} label="Mínimo 8 caracteres" />
+          <PwCheck ok={checks.uppercase} label="Una mayúscula" />
+          <PwCheck ok={checks.lowercase} label="Una minúscula" />
+          <PwCheck ok={checks.number} label="Un número" />
+        </ul>
         {formErrors?.password?.[0] && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {formErrors.password[0]}
           </span>
         )}
-        <span className="mt-1 block font-mono fluid-xs text-smoke">
-          Mínimo 8 caracteres, al menos una letra y un número.
-        </span>
       </label>
 
       <label className="block">
@@ -44,11 +65,19 @@ export function ResetPasswordForm() {
           name="confirmPassword"
           type="password"
           required
-          minLength={8}
           autoComplete="new-password"
-          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 text-bone focus:border-orange outline-none transition"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className={`w-full bg-carbon border px-3 py-2.5 text-bone focus:border-orange outline-none transition ${
+            confirmMismatch ? "border-orange-300" : "border-rail/60"
+          }`}
         />
-        {formErrors?.confirmPassword?.[0] && (
+        {confirmMismatch && (
+          <span className="mt-1 block font-mono fluid-xs text-orange-300">
+            Las contraseñas no coinciden
+          </span>
+        )}
+        {formErrors?.confirmPassword?.[0] && !confirmMismatch && (
           <span className="mt-1 block font-mono fluid-xs text-orange-300">
             {formErrors.confirmPassword[0]}
           </span>
@@ -57,11 +86,22 @@ export function ResetPasswordForm() {
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={
+          pending || !passwordValid || confirmMismatch || confirmPassword.length === 0
+        }
         className="btn-wa w-full py-3 clip-tag uppercase tracking-wider font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
       >
         {pending ? "Guardando..." : "Guardar contraseña"}
       </button>
     </form>
+  );
+}
+
+function PwCheck({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li className={`flex items-center gap-1.5 ${ok ? "text-green-400" : "text-smoke"}`}>
+      <span aria-hidden>{ok ? "✓" : "·"}</span>
+      <span>{label}</span>
+    </li>
   );
 }

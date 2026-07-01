@@ -21,6 +21,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 
   let profile: { nombre: string; apellido: string; role: string } | null = null;
   let solicitudesPendientes = 0;
+  let misSolicitudesResueltas = 0;
   if (user) {
     const { data } = await supabase
       .from("profiles")
@@ -36,6 +37,16 @@ export default async function PlatformLayout({ children }: { children: React.Rea
         .eq("estado", "pendiente");
       solicitudesPendientes = count ?? 0;
     }
+
+    // Aviso al jugador de sus solicitudes resueltas que todavía no vio.
+    // (Si falta la migración fase-16, la query falla y el count queda en 0.)
+    const { count: resueltas } = await supabase
+      .from("solicitudes_privada")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("estado", ["aprobada", "rechazada"])
+      .eq("resuelto_visto", false);
+    misSolicitudesResueltas = resueltas ?? 0;
   }
 
   return (
@@ -62,6 +73,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             isSuperAdmin={profile?.role === "super_admin"}
             userLabel={profile ? `${profile.nombre} ${profile.apellido}` : null}
             solicitudesPendientes={solicitudesPendientes}
+            misSolicitudesResueltas={misSolicitudesResueltas}
           />
         </div>
       </header>
