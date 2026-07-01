@@ -20,7 +20,7 @@ export default async function PartidaDetail({
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`/login?next=/partidas/${id}`);
 
   const [{ data: partida }, { data: profile }, { data: pagosCuota }, precios] =
     await Promise.all([

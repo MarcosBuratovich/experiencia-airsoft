@@ -6,13 +6,14 @@ import { ErrorBanner } from "../../_components/error-banner";
 
 const initial: LoginState = undefined;
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(loginAction, initial);
   const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
   const error = state && "error" in state ? state.error : undefined;
 
   return (
     <form action={action} className="space-y-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <ErrorBanner error={error} />
 
       <label className="block">

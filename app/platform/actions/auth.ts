@@ -109,9 +109,18 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   }
 
   revalidatePath("/", "layout");
-  // Después de login mostramos el dashboard con los CTAs grandes.
-  // Si querían anotarse a una partida, llegan en 1 click desde ahí.
-  redirect("/");
+  // Volvemos al destino original si venía uno (?next=), o al dashboard.
+  redirect(sanitizeNext(formData.get("next")));
+}
+
+/**
+ * Sólo permite paths relativos internos como destino post-login, para evitar
+ * open-redirect (nada de URLs absolutas ni '//host').
+ */
+function sanitizeNext(v: FormDataEntryValue | null): string {
+  if (typeof v !== "string" || !v) return "/";
+  if (!v.startsWith("/") || v.startsWith("//") || v.startsWith("/\\")) return "/";
+  return v;
 }
 
 // ─────────────────────────────────────────────────────────────────────────

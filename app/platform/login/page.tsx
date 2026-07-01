@@ -34,13 +34,15 @@ export default async function LoginPage({
     error?: string;
     reset?: string;
     deleted?: string;
+    next?: string;
   }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/");
-
-  const { signup, error, reset, deleted } = await searchParams;
+  const { signup, error, reset, deleted, next } = await searchParams;
+  const dest =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  if (user) redirect(dest);
 
   // Si vino del signup, mostramos un takeover grande explicando que tiene
   // que verificar el mail. El mail abre en otra pestaña, así que el botón
@@ -173,7 +175,7 @@ export default async function LoginPage({
         </div>
       )}
 
-      <LoginForm />
+      <LoginForm next={next} />
 
       <div className="mt-6 flex items-center justify-between font-mono fluid-xs text-smoke">
         <Link href="/auth/forgot-password" className="text-orange hover:underline">
