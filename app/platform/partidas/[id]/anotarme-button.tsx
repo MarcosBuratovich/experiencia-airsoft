@@ -7,7 +7,7 @@ import type { TipoJugador } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
-type Inscripcion = { id: string; estado: string };
+type Inscripcion = { id: string; estado: string; posicion_waitlist?: number | null };
 
 type PreciosMin = {
   entrada_byop: number;
@@ -97,25 +97,43 @@ export function AnotarmeButton({
   }
 
   if (inscripcion) {
-    const label =
-      inscripcion.estado === "waitlist" ? "Estás en lista de espera" : "Confirmado";
+    const enEspera = inscripcion.estado === "waitlist";
+    const label = enEspera
+      ? `Lista de espera${
+          inscripcion.posicion_waitlist ? ` · puesto #${inscripcion.posicion_waitlist}` : ""
+        }`
+      : "Confirmado";
+    const desanotar = () => {
+      if (
+        !confirm(
+          enEspera
+            ? "¿Salir de la lista de espera?"
+            : "¿Desanotarte? Perdés tu lugar confirmado; si la partida está llena lo toma alguien de la espera y al re-anotarte quedás al final.",
+        )
+      )
+        return;
+      setError(null);
+      startTransition(async () => {
+        const res = await desanotarmeAction(partidaId);
+        if (res && "error" in res && res.error) setError(res.error);
+        else router.refresh();
+      });
+    };
     return (
-      <div className="flex items-center gap-3">
-        <span className="mil-tag bone">{label}</span>
-        <button
-          type="button"
-          disabled={pending || fueraDeVentana}
-          onClick={() =>
-            startTransition(async () => {
-              await desanotarmeAction(partidaId);
-              router.refresh();
-            })
-          }
-          className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs cursor-pointer disabled:opacity-40"
-          title={fueraDeVentana ? "Ya pasó la ventana" : undefined}
-        >
-          {pending ? "..." : "Desanotarme"}
-        </button>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="mil-tag bone">{label}</span>
+          <button
+            type="button"
+            disabled={pending || fueraDeVentana}
+            onClick={desanotar}
+            className="btn-ghost px-4 py-2 clip-tag uppercase tracking-wider fluid-xs cursor-pointer disabled:opacity-40"
+            title={fueraDeVentana ? "Ya pasó la ventana" : undefined}
+          >
+            {pending ? "..." : "Desanotarme"}
+          </button>
+        </div>
+        <ErrorBanner error={error} variant="inline" />
       </div>
     );
   }
@@ -124,6 +142,14 @@ export function AnotarmeButton({
     return (
       <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">
         Ventana de inscripción cerrada.
+      </p>
+    );
+  }
+
+  if (estado === "cerrada") {
+    return (
+      <p className="font-mono fluid-xs text-orange-300 uppercase tracking-[.25em]">
+        Inscripción cerrada.
       </p>
     );
   }

@@ -34,6 +34,13 @@ const ESTADO_STYLES: Record<string, string> = {
   cancelada: "bg-smoke/40 text-ash",
 };
 
+/** Link wa.me al solicitante con un mensaje pre-armado sobre su reserva. */
+function waLink(s: Props["solicitud"]): string {
+  const num = s.user.celular.replace(/\D/g, "");
+  const msg = `Hola ${s.user.nombre}! Sobre tu reserva de privada para ${s.fecha} ${s.hora} hs (${s.cupo} personas).`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+
 export function SolicitudAdminCard({ solicitud: s }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<FriendlyError | null>(null);
@@ -105,9 +112,24 @@ export function SolicitudAdminCard({ solicitud: s }: Props) {
       </p>
       <p className="font-mono fluid-xs text-ash mt-1">
         Solicita: <span className="text-bone">{s.user.nombre}</span>
-        {s.user.celular && <> · {s.user.celular}</>}
-        {s.user.email && <> · {s.user.email}</>}
       </p>
+      <div className="mt-1 flex items-center gap-3 flex-wrap font-mono fluid-xs">
+        {s.user.celular && (
+          <a
+            href={waLink(s)}
+            target="_blank"
+            rel="noopener"
+            className="text-orange hover:underline"
+          >
+            WhatsApp {s.user.celular}
+          </a>
+        )}
+        {s.user.email && (
+          <a href={`mailto:${s.user.email}`} className="text-ash hover:text-orange">
+            {s.user.email}
+          </a>
+        )}
+      </div>
       <p className="font-mono fluid-xs text-smoke mt-1">
         Solicitada el {formatFechaHora(s.created_at)}
         {s.resolved_at && <> · resuelta el {formatFechaHora(s.resolved_at)}</>}

@@ -118,7 +118,7 @@ export default async function PartidaDetail({
   return (
     <div className="max-w-3xl mx-auto">
       <Link
-        href="/partidas"
+        href={isAdmin ? "/admin/partidas" : "/partidas"}
         className="font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.25em]"
       >
         ← Volver
@@ -162,7 +162,15 @@ export default async function PartidaDetail({
       <div className="mb-8">
         <AnotarmeButton
           partidaId={partida.id}
-          inscripcion={mine ? { id: mine.id, estado: mine.estado } : null}
+          inscripcion={
+            mine
+              ? {
+                  id: mine.id,
+                  estado: mine.estado,
+                  posicion_waitlist: mine.posicion_waitlist,
+                }
+              : null
+          }
           estado={partida.estado}
           lleno={lleno}
           fueraDeVentana={fueraDeVentana}

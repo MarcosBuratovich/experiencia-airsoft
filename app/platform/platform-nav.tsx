@@ -130,6 +130,7 @@ export function PlatformNav({
         links: [
           { href: "/admin/precios", label: "Precios", subtitle: "Entrada y alquiler" },
           { href: "/admin/templates", label: "Templates", subtitle: "Slots recurrentes" },
+          { href: "/admin/mantenimiento", label: "Mantenimiento", subtitle: "Migraciones y utilidades" },
         ],
       }
     : null;
