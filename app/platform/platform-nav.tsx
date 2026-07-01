@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
+import { SITE_URL, TIENDA_URL } from "@/app/_components/site-constants";
 
 type Props = {
   isAuthed: boolean;
@@ -230,6 +231,22 @@ export function PlatformNav({
           </div>
         )}
 
+        <span className="text-rail/60 hidden lg:inline" aria-hidden>
+          |
+        </span>
+        <a
+          href={SITE_URL}
+          className="hidden lg:inline-flex text-smoke hover:text-orange transition cursor-pointer items-center gap-1"
+        >
+          Web<span aria-hidden>↗</span>
+        </a>
+        <a
+          href={TIENDA_URL}
+          className="hidden lg:inline-flex text-smoke hover:text-orange transition cursor-pointer items-center gap-1"
+        >
+          Tienda<span aria-hidden>↗</span>
+        </a>
+
         {userLabel && (
           <span className="text-smoke hidden lg:inline normal-case tracking-normal font-sans">
             {userLabel}
@@ -344,6 +361,34 @@ export function PlatformNav({
                     </ul>
                   </div>
                 ))}
+
+              <div>
+                <p className="sect-label mb-2">Ir a</p>
+                <ul className="space-y-1">
+                  <li>
+                    <a
+                      href={SITE_URL}
+                      className="flex items-center justify-between py-2 px-3 border-l-2 border-transparent text-bone hover:border-orange/60 hover:text-orange transition"
+                    >
+                      <span className="font-display uppercase tracking-wider text-[1.05rem]">
+                        Web
+                      </span>
+                      <span aria-hidden>↗</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={TIENDA_URL}
+                      className="flex items-center justify-between py-2 px-3 border-l-2 border-transparent text-bone hover:border-orange/60 hover:text-orange transition"
+                    >
+                      <span className="font-display uppercase tracking-wider text-[1.05rem]">
+                        Tienda
+                      </span>
+                      <span aria-hidden>↗</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
 
               <div className="pt-4 border-t border-rail/60">
                 <button

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ContactosWhatsapp } from "@/app/_components/contactos-whatsapp";
+import { SITE_URL, TIENDA_URL } from "@/app/_components/site-constants";
 import { PlatformNav } from "./platform-nav";
 
 export const metadata: Metadata = {
@@ -71,6 +72,20 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           <span className="font-mono fluid-xs uppercase tracking-[.22em] text-smoke">
             © Experiencia Airsoft
           </span>
+          <nav className="flex items-center gap-4 font-mono fluid-xs uppercase tracking-[.22em]">
+            <a
+              href={SITE_URL}
+              className="text-smoke hover:text-orange transition inline-flex items-center gap-1"
+            >
+              Web<span aria-hidden>↗</span>
+            </a>
+            <a
+              href={TIENDA_URL}
+              className="text-smoke hover:text-orange transition inline-flex items-center gap-1"
+            >
+              Tienda<span aria-hidden>↗</span>
+            </a>
+          </nav>
           <ContactosWhatsapp variant="minimal" />
         </div>
       </footer>
