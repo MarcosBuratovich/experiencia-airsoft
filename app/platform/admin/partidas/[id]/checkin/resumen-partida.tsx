@@ -4,7 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertCheckinAction } from "./actions";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import { ErrorBanner } from "@/app/_components/error-banner";
 import type { ClanChip } from "@/lib/clanes";
+import type { FriendlyError } from "@/lib/errors";
 
 type Checkin = {
   presente: boolean;
@@ -71,6 +73,7 @@ export function ResumenPartida({
 }) {
   const [rows, setRows] = useState(filas);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -97,9 +100,11 @@ export function ResumenPartida({
   }, [rows]);
 
   const cambiarPago = (id: string, pago_estado: string) => {
-    setPendingId(id);
     const row = rows.find((r) => r.id === id);
     if (!row) return;
+    setPendingId(id);
+    setError(null);
+    const snapshot = row;
 
     setRows((prev) =>
       prev.map((r) =>
@@ -118,13 +123,18 @@ export function ResumenPartida({
     );
 
     startTransition(async () => {
-      await upsertCheckinAction(id, {
+      const res = await upsertCheckinAction(id, {
         presente: row.checkin?.presente ?? true,
         pago_estado,
         pago_monto: row.checkin?.pago_monto ?? row.precio_total,
         nota: row.checkin?.nota ?? null,
       });
       setPendingId(null);
+      if (res && "error" in res && res.error) {
+        setRows((prev) => prev.map((r) => (r.id === id ? snapshot : r)));
+        setError(res.error);
+        return;
+      }
       router.refresh();
     });
   };
@@ -137,6 +147,8 @@ export function ResumenPartida({
         <Stat label="Transfer." value={ars(totales.transferencia)} />
         <Stat label="Pendiente" value={ars(totales.debe)} tone={totales.debe > 0 ? "warn" : undefined} />
       </div>
+
+      <ErrorBanner error={error} variant="inline" className="mb-6" />
 
       {/* Deudas */}
       <section className="mb-8">

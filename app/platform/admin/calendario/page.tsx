@@ -44,7 +44,7 @@ export default async function CalendarioAdminPage({
     supabase
       .from("solicitudes_privada")
       .select(
-        "id, user_id, fecha_propuesta, hora_inicio, duracion_min, cupo_estimado, modalidad, notas",
+        "id, user_id, fecha_propuesta, hora_inicio, duracion_min, cupo_estimado, modalidad, notas, created_at",
       )
       .gte("fecha_propuesta", desde)
       .lt("fecha_propuesta", hasta)
@@ -107,6 +107,7 @@ export default async function CalendarioAdminPage({
       cupoEstimado: s.cupo_estimado,
       duracionMin: s.duracion_min,
       notas: s.notas,
+      createdAt: s.created_at,
       solicitante: perfil
         ? `${perfil.nombre ?? ""} ${perfil.apellido ?? ""}`.trim() || "—"
         : "—",

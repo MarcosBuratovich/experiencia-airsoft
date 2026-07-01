@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { aprobarPrivadaAction, rechazarPrivadaAction } from "../../privada/actions";
+import { formatFechaHora } from "@/lib/format";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
@@ -106,6 +107,10 @@ export function SolicitudAdminCard({ solicitud: s }: Props) {
         Solicita: <span className="text-bone">{s.user.nombre}</span>
         {s.user.celular && <> · {s.user.celular}</>}
         {s.user.email && <> · {s.user.email}</>}
+      </p>
+      <p className="font-mono fluid-xs text-smoke mt-1">
+        Solicitada el {formatFechaHora(s.created_at)}
+        {s.resolved_at && <> · resuelta el {formatFechaHora(s.resolved_at)}</>}
       </p>
 
       {s.notas && (

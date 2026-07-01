@@ -9,7 +9,9 @@ import {
   type WalkinAdded,
 } from "./agregar-walkin";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import { ErrorBanner } from "@/app/_components/error-banner";
 import type { ClanChip } from "@/lib/clanes";
+import type { FriendlyError } from "@/lib/errors";
 
 type PreciosRecargas = {
   tracer100: number;
@@ -86,6 +88,9 @@ export function CheckinList({
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
+  const [query, setQuery] = useState("");
+  const [ocultarPresentes, setOcultarPresentes] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -93,11 +98,22 @@ export function CheckinList({
     id: string,
     recargas: { tracer100: number; conv200: number; conv400: number },
   ) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
     setPendingId(id);
+    setError(null);
+    const snapshot = row;
     const nuevoPrecioRecargas =
       recargas.tracer100 * preciosRecargas.tracer100 +
       recargas.conv200 * preciosRecargas.conv200 +
       recargas.conv400 * preciosRecargas.conv400;
+    const nuevoTotal = row.precio_entrada + row.precio_alquiler + nuevoPrecioRecargas;
+    // Si el monto cobrado no se editó a mano (coincide con el total previo o es
+    // null), lo re-sincronizamos con el nuevo total para no subcobrar.
+    const montoSinEditar =
+      row.checkin?.pago_monto == null || row.checkin.pago_monto === row.precio_total;
+    const resync = !!row.checkin?.presente && montoSinEditar;
+    const nuevoMonto = resync ? nuevoTotal : row.checkin?.pago_monto ?? null;
 
     setRows((prev) =>
       prev.map((r) =>
@@ -108,14 +124,30 @@ export function CheckinList({
               recarga_conv_200: recargas.conv200,
               recarga_conv_400: recargas.conv400,
               precio_recargas: nuevoPrecioRecargas,
-              precio_total: r.precio_entrada + r.precio_alquiler + nuevoPrecioRecargas,
+              precio_total: nuevoTotal,
+              checkin: r.checkin ? { ...r.checkin, pago_monto: nuevoMonto } : r.checkin,
             }
           : r,
       ),
     );
 
     startTransition(async () => {
-      await actualizarRecargasInscripcionAction(id, recargas);
+      const res = await actualizarRecargasInscripcionAction(id, recargas);
+      if (res && "error" in res && res.error) {
+        setRows((prev) => prev.map((r) => (r.id === id ? snapshot : r)));
+        setError(res.error);
+        setPendingId(null);
+        return;
+      }
+      // Persistir el monto re-sincronizado en el check-in.
+      if (resync && snapshot.checkin) {
+        await upsertCheckinAction(id, {
+          presente: snapshot.checkin.presente,
+          pago_estado: snapshot.checkin.pago_estado,
+          pago_monto: nuevoMonto,
+          nota: snapshot.checkin.nota,
+        });
+      }
       setPendingId(null);
       router.refresh();
     });
@@ -137,10 +169,23 @@ export function CheckinList({
     return { efectivo, transferencia, debe, presentes };
   }, [rows]);
 
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (ocultarPresentes && r.checkin?.presente) return false;
+      if (!q) return true;
+      return (
+        r.nombre.toLowerCase().includes(q) || (r.dni ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [rows, query, ocultarPresentes]);
+
   const update = (id: string, patch: Partial<Checkin>) => {
-    setPendingId(id);
     const row = rows.find((r) => r.id === id);
     if (!row) return;
+    setPendingId(id);
+    setError(null);
+    const snapshot = row;
 
     setRows((prev) =>
       prev.map((r) =>
@@ -170,8 +215,14 @@ export function CheckinList({
             : row.checkin?.pago_monto ?? row.precio_total,
         nota: patch.nota !== undefined ? patch.nota : row.checkin?.nota ?? null,
       };
-      await upsertCheckinAction(id, merged);
+      const res = await upsertCheckinAction(id, merged);
       setPendingId(null);
+      if (res && "error" in res && res.error) {
+        // Revertir el optimismo para no mostrar un guardado que no persistió.
+        setRows((prev) => prev.map((r) => (r.id === id ? snapshot : r)));
+        setError(res.error);
+        return;
+      }
       router.refresh();
     });
   };
@@ -179,7 +230,7 @@ export function CheckinList({
   // Inserción optimista de un walk-in recién agregado por el admin. Construye
   // la fila con los mismos precios que usó el server (pasados como prop).
   const addWalkin = (d: WalkinAdded) => {
-    const esSocio = d.tipo === "socio";
+    const esSocio = d.socio;
     const esAlquiler = d.tipo === "alquiler";
     const precio_entrada = esSocio ? precios.entrada_socio : precios.entrada_byop;
     const precio_alquiler = esAlquiler ? precios.alquiler_marcadora : 0;
@@ -206,7 +257,7 @@ export function CheckinList({
       precio_total,
       checkin: {
         presente: true,
-        pago_estado: esSocio ? "socio_presente" : d.pago,
+        pago_estado: esSocio && precio_total === 0 ? "socio_presente" : d.pago,
         pago_monto: precio_total,
         nota: null,
       },
@@ -238,6 +289,31 @@ export function CheckinList({
 
       <AgregarWalkin partidaId={partidaId} precios={precios} onAdded={addWalkin} />
 
+      <ErrorBanner error={error} variant="inline" className="mb-4" />
+
+      {rows.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o DNI…"
+            className="flex-1 min-w-[180px] bg-ink border border-rail/60 px-3 py-2 font-sans text-bone focus:border-orange outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => setOcultarPresentes((v) => !v)}
+            className={`px-3 py-2 clip-tag font-mono fluid-xs uppercase tracking-[.18em] cursor-pointer border ${
+              ocultarPresentes
+                ? "bg-orange text-ink border-orange"
+                : "border-rail/60 text-ash hover:border-orange"
+            }`}
+          >
+            {ocultarPresentes ? "Ver todos" : "Ocultar presentes"}
+          </button>
+        </div>
+      )}
+
       {!rows.length && (
         <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
           <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
@@ -246,9 +322,17 @@ export function CheckinList({
         </div>
       )}
 
+      {rows.length > 0 && !visibleRows.length && (
+        <div className="border border-rail/60 bg-carbon fluid-card clip-notch">
+          <p className="font-mono fluid-xs text-smoke uppercase tracking-[.25em]">
+            Nadie coincide con el filtro.
+          </p>
+        </div>
+      )}
+
       {/* Mobile — cards */}
       <ul className="lg:hidden space-y-3">
-        {rows.map((r) => (
+        {visibleRows.map((r) => (
           <MobileCheckinCard
             key={r.id}
             r={r}
@@ -275,7 +359,7 @@ export function CheckinList({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {visibleRows.map((r) => {
                 const c = r.checkin;
                 const isPending = pendingId === r.id;
                 const equipo = equipoLabel(r);
@@ -321,6 +405,7 @@ export function CheckinList({
                     </td>
                     <td className="px-3 py-3 align-top">
                       <input
+                        key={`monto-${c?.pago_monto ?? r.precio_total}`}
                         type="number"
                         defaultValue={c?.pago_monto ?? r.precio_total}
                         onBlur={(e) =>
@@ -418,6 +503,7 @@ function MobileCheckinCard({
         <div>
           <span className="sect-label mb-1 block">Monto</span>
           <input
+            key={`monto-${r.checkin?.pago_monto ?? r.precio_total}`}
             type="number"
             defaultValue={r.checkin?.pago_monto ?? r.precio_total}
             onBlur={(e) =>

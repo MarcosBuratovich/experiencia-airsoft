@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState, useTransition } f
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sumarDias, diaSemanaDe } from "@/lib/semana";
-import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
+import { formatFechaHora, formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import type { EstadoEfectivo } from "@/lib/partidas";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "@/app/_components/error-banner";
@@ -50,6 +50,7 @@ export type ItemSolicitud = {
   cupoEstimado: number;
   duracionMin: number;
   notas: string | null;
+  createdAt: string;
   solicitante: string;
   celular: string | null;
 };
@@ -679,6 +680,7 @@ function SolicitudModal({
         <p>{formatFechaLarga(it.fecha)} · {formatHora(it.hora)} hs · {it.duracionMin} min</p>
         <p>~{it.cupoEstimado} personas</p>
         <p>Solicita: <span className="text-bone">{it.solicitante}</span>{it.celular ? ` · ${it.celular}` : ""}</p>
+        <p className="text-smoke">Solicitada el {formatFechaHora(it.createdAt)}</p>
         {it.notas && <p className="text-smoke normal-case tracking-normal font-sans">{it.notas}</p>}
       </div>
 

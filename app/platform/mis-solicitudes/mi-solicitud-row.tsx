@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cancelarPrivadaAction } from "../privada/actions";
+import { formatFechaHora } from "@/lib/format";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../_components/error-banner";
 
@@ -82,6 +83,9 @@ export function MiSolicitudRow({ solicitud: s }: Props) {
 
       <p className="font-display fluid-lg text-bone uppercase tracking-wider">
         {s.fecha} · {s.hora}
+      </p>
+      <p className="font-mono fluid-xs text-smoke mt-1">
+        Solicitada el {formatFechaHora(s.created_at)}
       </p>
 
       {s.notas && (

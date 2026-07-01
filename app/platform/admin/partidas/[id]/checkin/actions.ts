@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   calcularPrecioInscripcion,
   calcularPrecioRecargas,
@@ -129,12 +130,16 @@ export async function actualizarRecargasInscripcionAction(
  */
 const walkinSchema = z.object({
   partidaId: z.uuid(),
+  // Si viene userId, es una persona con cuenta (se anota con su user_id real y
+  // socio se deriva del perfil). Si no, es carga manual (guest con nombre+DNI).
+  userId: z.uuid().optional(),
   nombre: z
     .string()
     .trim()
     .min(2, "Mínimo 2 caracteres")
     .max(60, "Máximo 60 caracteres")
-    .refine((s) => isCleanText(s), "Nombre con contenido no permitido"),
+    .refine((s) => isCleanText(s), "Nombre con contenido no permitido")
+    .optional(),
   dni: z
     .string()
     .trim()
@@ -142,8 +147,7 @@ const walkinSchema = z.object({
     .optional(),
   tipo: z.enum(["socio", "byop", "alquiler"]),
   // El cliente solo elige medios "reales"; 'socio_presente' lo decide el
-  // server cuando tipo === 'socio' (no se acepta del cliente para evitar
-  // filas inconsistentes byop/alquiler marcadas como socio).
+  // server cuando la entrada queda gratis (socio sin cargo).
   pago_estado: z.enum(["efectivo", "transferencia", "debe"]),
 });
 
@@ -181,10 +185,42 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     );
   }
 
-  const esSocio = v.tipo === "socio";
   const esAlquiler = v.tipo === "alquiler";
-
   const precios = await getPreciosConfig(supabase);
+
+  // Resolver la persona: cuenta existente (userId) o carga manual (guest).
+  let userId: string | null = null;
+  let guestNombre: string | null = null;
+  let guestDni: string | null = null;
+  let esSocio = v.tipo === "socio";
+
+  if (v.userId) {
+    const { data: persona } = await supabase
+      .from("profiles")
+      .select("id, socio")
+      .eq("id", v.userId)
+      .maybeSingle();
+    if (!persona) return ERR("La persona seleccionada no existe");
+    const { data: yaInscripto } = await supabase
+      .from("inscripciones")
+      .select("id")
+      .eq("partida_id", v.partidaId)
+      .eq("user_id", v.userId)
+      .maybeSingle();
+    if (yaInscripto) return ERR("Esa persona ya está anotada en la partida");
+    userId = persona.id;
+    esSocio = persona.socio; // socio se deriva de la cuenta, no del tipo elegido
+  } else {
+    if (!v.nombre) return ERR("Ingresá un nombre o elegí una cuenta");
+    guestNombre = v.nombre;
+    guestDni = v.dni ?? null;
+  }
+
+  // Insertar una inscripción con el user_id de otra persona no lo permite la
+  // RLS (solo self-insert o guest); como ya validamos que quien llama es admin,
+  // usamos el cliente service-role para ese caso puntual.
+  const db = (userId ? createServiceRoleClient() : supabase) as typeof supabase;
+
   const desglose = calcularPrecioInscripcion({
     tipo_jugador: esAlquiler ? "alquiler" : "byop",
     socio: esSocio,
@@ -192,20 +228,20 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     precios,
   });
 
-  // El socio se registra como 'socio_presente' (el server lo decide, no el
-  // cliente); el resto usa el medio elegido. El monto siempre es el total del
-  // desglose (para socio = entrada_socio, normalmente 0) para que el monto
-  // registrado coincida con el precio.
-  const pago_estado = esSocio ? "socio_presente" : v.pago_estado;
+  // 'socio_presente' solo cuando la entrada quedó gratis (socio sin cargo). Si
+  // un socio alquila, paga con el medio elegido. El monto es el total del
+  // desglose para que lo cobrado coincida con el precio.
+  const pago_estado =
+    esSocio && desglose.total === 0 ? "socio_presente" : v.pago_estado;
   const pago_monto = desglose.total;
 
-  const { data: insc, error: insErr } = await supabase
+  const { data: insc, error: insErr } = await db
     .from("inscripciones")
     .insert({
       partida_id: v.partidaId,
-      user_id: null,
-      guest_nombre: v.nombre,
-      guest_dni: v.dni ?? null,
+      user_id: userId,
+      guest_nombre: guestNombre,
+      guest_dni: guestDni,
       agregado_por: user.id,
       estado: "confirmado",
       tipo_jugador: esAlquiler ? "alquiler" : "byop",
@@ -224,7 +260,7 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
   // throw del SDK por red— compensamos borrando la inscripción para no dejarla
   // huérfana, y verificamos que el rollback haya funcionado.
   try {
-    const { error: chkErr } = await supabase.from("checkins").insert({
+    const { error: chkErr } = await db.from("checkins").insert({
       inscripcion_id: insc.id,
       admin_id: user.id,
       presente: true,
@@ -233,7 +269,7 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     });
     if (chkErr) throw chkErr;
   } catch (chkErr) {
-    const { error: rbErr } = await supabase
+    const { error: rbErr } = await db
       .from("inscripciones")
       .delete()
       .eq("id", insc.id);
@@ -249,4 +285,59 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
 
   revalidatePath(`/admin/partidas`);
   return { ok: true, inscripcionId: insc.id };
+}
+
+export type PersonaBusqueda = {
+  id: string;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  celular: string;
+  socio: boolean;
+  player_number: string | null;
+};
+
+/** Busca cuentas por nombre/apellido/DNI/nº de jugador para el autocomplete. */
+export async function buscarPersonasAction(
+  query: string,
+): Promise<{ personas: PersonaBusqueda[] }> {
+  const q = query.trim();
+  if (q.length < 2) return { personas: [] };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { personas: [] };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    return { personas: [] };
+  }
+
+  // Sanitizar el needle para no romper la sintaxis del .or() de PostgREST.
+  const needle = q.replace(/[,()%]/g, " ").trim();
+  if (!needle) return { personas: [] };
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, nombre, apellido, dni, celular, socio, player_number")
+    .or(
+      `nombre.ilike.%${needle}%,apellido.ilike.%${needle}%,dni.ilike.%${needle}%,player_number.ilike.%${needle}%`,
+    )
+    .order("apellido")
+    .limit(8);
+
+  return {
+    personas: (data ?? []).map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      apellido: p.apellido,
+      dni: p.dni,
+      celular: p.celular,
+      socio: p.socio,
+      player_number: p.player_number,
+    })),
+  };
 }
