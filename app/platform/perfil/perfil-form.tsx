@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { actualizarPerfilAction, type ActualizarPerfilState } from "./actions";
+import { sugerirNumeroAction } from "../actions/auth";
 import { PhoneInput } from "../components/phone-input";
 import { ErrorBanner } from "../../_components/error-banner";
 
@@ -39,6 +40,15 @@ export function PerfilForm({
   const [nombre, setNombre] = useState(initialNombre);
   const [apellido, setApellido] = useState(initialApellido);
   const [alias, setAlias] = useState(initialAlias ?? "");
+  const [numero, setNumero] = useState(playerNumber ?? "");
+  const [sugPending, startSug] = useTransition();
+
+  const sugerirNumero = () => {
+    startSug(async () => {
+      const res = await sugerirNumeroAction();
+      if ("numero" in res) setNumero(res.numero);
+    });
+  };
   const aliasN = aliasLen(alias);
 
   const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
@@ -130,16 +140,27 @@ export function PerfilForm({
 
       <label className="block">
         <span className="sect-label mb-1 block">Número de jugador</span>
-        <input
-          name="player_number"
-          inputMode="numeric"
-          maxLength={6}
-          pattern="\d{6}"
-          defaultValue={playerNumber ?? ""}
-          required
-          placeholder="6 dígitos"
-          className="w-full bg-carbon border border-rail/60 px-3 py-2.5 font-mono tracking-[.2em] text-bone focus:border-orange outline-none transition"
-        />
+        <div className="flex gap-2">
+          <input
+            name="player_number"
+            inputMode="numeric"
+            maxLength={6}
+            pattern="\d{6}"
+            value={numero}
+            onChange={(e) => setNumero(e.target.value.replace(/[^\d]/g, ""))}
+            required
+            placeholder="6 dígitos"
+            className="flex-1 min-w-0 bg-carbon border border-rail/60 px-3 py-2.5 font-mono tracking-[.2em] text-bone focus:border-orange outline-none transition"
+          />
+          <button
+            type="button"
+            onClick={sugerirNumero}
+            disabled={sugPending}
+            className="btn-ghost px-3 py-2.5 clip-tag uppercase tracking-wider fluid-xs font-semibold cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {sugPending ? "..." : "Sugerir"}
+          </button>
+        </div>
         <span className="mt-1 block font-mono fluid-xs text-smoke">
           Único entre todos los jugadores. Lo usa el sistema de cancha para
           registrar tus stats en cada partida.
