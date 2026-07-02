@@ -26,8 +26,8 @@ export type PreciosConfig = Record<PreciosKey, PrecioDual>;
 export const PRECIOS_DEFAULT: PreciosConfig = {
   entrada_byop: { efectivo: 25000, transferencia: 25000 },
   entrada_socio: { efectivo: 0, transferencia: 0 },
-  // total para alquiler = entrada 25k + alquiler 35k = 60k
-  alquiler_marcadora: { efectivo: 35000, transferencia: 35000 },
+  // El alquiler ya incluye la entrada — es el precio total del alquiler.
+  alquiler_marcadora: { efectivo: 60000, transferencia: 60000 },
   alquiler_chaleco: { efectivo: 0, transferencia: 0 },
   recarga_tracer_100: { efectivo: 0, transferencia: 0 },
   recarga_conv_200: { efectivo: 0, transferencia: 0 },
@@ -38,7 +38,7 @@ export const PRECIOS_DEFAULT: PreciosConfig = {
 export const PRECIOS_LABELS: Record<PreciosKey, { titulo: string; descripcion: string }> = {
   entrada_byop: {
     titulo: "Entrada base",
-    descripcion: "Lo que paga cualquier jugador (BYOP o alquiler). Socios al día no pagan entrada.",
+    descripcion: "Lo que paga un jugador BYOP (trae su equipo). Socios al día no pagan entrada.",
   },
   entrada_socio: {
     titulo: "Entrada · Socio",
@@ -46,7 +46,7 @@ export const PRECIOS_LABELS: Record<PreciosKey, { titulo: string; descripcion: s
   },
   alquiler_marcadora: {
     titulo: "Alquiler equipo",
-    descripcion: "Marcadora + tracer + protección. Se suma a la entrada para el total de alquiler.",
+    descripcion: "Precio TOTAL del alquiler (marcadora + tracer + protección + entrada ya incluida).",
   },
   alquiler_chaleco: {
     titulo: "Chaleco táctico",
@@ -152,9 +152,11 @@ export type DesglosePrecio = {
  * Calcula el precio de una inscripción para un medio de pago dado.
  *
  * Modelo:
- *   - Entrada: entrada_socio si socio al día, sino entrada_byop.
- *   - Alquiler equipo: solo si tipo=alquiler (un único tier).
- *   - Chaleco: opcional, suma al alquiler.
+ *   - ALQUILER: el precio de alquiler YA incluye la entrada, así que NO se
+ *     suma la entrada aparte. Total = alquiler (+ chaleco opcional). El
+ *     beneficio de socio no aplica (la entrada va incluida en el alquiler).
+ *   - BYOP: paga solo la entrada (entrada_socio si socio al día, sino
+ *     entrada_byop).
  *
  * Las recargas NO se incluyen acá — las asigna el admin durante el check-in
  * (ver `calcularPrecioRecargas`).
@@ -170,17 +172,17 @@ export function calcularPrecioInscripcion(
 ): DesglosePrecio {
   const { tipo_jugador, socio, alquila, precios } = opts;
 
+  if (tipo_jugador === "alquiler") {
+    let alquiler = 0;
+    if (alquila.marcadora) alquiler += precios.alquiler_marcadora[metodo];
+    if (alquila.chaleco) alquiler += precios.alquiler_chaleco[metodo];
+    return { entrada: 0, alquiler, total: alquiler };
+  }
+
   const entrada = socio
     ? precios.entrada_socio[metodo]
     : precios.entrada_byop[metodo];
-
-  let alquiler = 0;
-  if (tipo_jugador === "alquiler") {
-    if (alquila.marcadora) alquiler += precios.alquiler_marcadora[metodo];
-    if (alquila.chaleco) alquiler += precios.alquiler_chaleco[metodo];
-  }
-
-  return { entrada, alquiler, total: entrada + alquiler };
+  return { entrada, alquiler: 0, total: entrada };
 }
 
 /**

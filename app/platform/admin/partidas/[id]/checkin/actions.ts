@@ -127,9 +127,9 @@ export async function actualizarRecargasInscripcionAction(
  * y la marca presente con el medio de pago en un solo paso.
  *
  * Tipo determina el precio (modelo de precios.ts):
- *   - socio    → entrada 0, sin alquiler, pago 'socio_presente' (monto 0).
- *   - byop     → entrada base, sin alquiler.
- *   - alquiler → entrada base + alquiler de equipo.
+ *   - socio    → entrada 0, pago 'socio_presente' (monto 0).
+ *   - byop     → entrada base.
+ *   - alquiler → precio de alquiler (ya incluye la entrada).
  * El DNI es opcional. Las recargas se cargan después con los controles de la fila.
  */
 const walkinSchema = z.object({

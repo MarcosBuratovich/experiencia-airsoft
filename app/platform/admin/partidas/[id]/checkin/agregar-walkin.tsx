@@ -82,12 +82,17 @@ export function AgregarWalkin({
 
   const socio = personaSel ? personaSel.socio : tipo === "socio";
   const esAlquiler = tipo === "alquiler";
-  const totalEfectivo =
-    (socio ? precios.entrada_socio.efectivo : precios.entrada_byop.efectivo) +
-    (esAlquiler ? precios.alquiler_marcadora.efectivo : 0);
-  const totalTransferencia =
-    (socio ? precios.entrada_socio.transferencia : precios.entrada_byop.transferencia) +
-    (esAlquiler ? precios.alquiler_marcadora.transferencia : 0);
+  // El alquiler ya incluye la entrada: para alquiler el total es solo el alquiler.
+  const totalEfectivo = esAlquiler
+    ? precios.alquiler_marcadora.efectivo
+    : socio
+      ? precios.entrada_socio.efectivo
+      : precios.entrada_byop.efectivo;
+  const totalTransferencia = esAlquiler
+    ? precios.alquiler_marcadora.transferencia
+    : socio
+      ? precios.entrada_socio.transferencia
+      : precios.entrada_byop.transferencia;
   // El medio elegido determina el total a cobrar ('debe' = lista = transferencia).
   const total = pago === "efectivo" ? totalEfectivo : totalTransferencia;
   const requierePago = totalEfectivo > 0 || totalTransferencia > 0;

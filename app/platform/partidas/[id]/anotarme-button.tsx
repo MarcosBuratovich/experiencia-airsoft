@@ -83,10 +83,16 @@ export function AnotarmeButton({
   const aplicaBeneficio = esSocio && socioAlDia;
   const socioConDeuda = esSocio && !socioAlDia;
 
-  const entrada = aplicaBeneficio ? precios.entrada_socio : precios.entrada_byop;
+  const esAlquiler = tipo === "alquiler";
+  // El alquiler ya incluye la entrada: para alquiler no se cobra entrada aparte.
+  const entrada = esAlquiler
+    ? { efectivo: 0, transferencia: 0 }
+    : aplicaBeneficio
+      ? precios.entrada_socio
+      : precios.entrada_byop;
 
   const alquiler = useMemo(() => {
-    if (tipo !== "alquiler") return { efectivo: 0, transferencia: 0 };
+    if (!esAlquiler) return { efectivo: 0, transferencia: 0 };
     return {
       efectivo:
         precios.alquiler_marcadora.efectivo +
@@ -95,7 +101,7 @@ export function AnotarmeButton({
         precios.alquiler_marcadora.transferencia +
         (chaleco ? precios.alquiler_chaleco.transferencia : 0),
     };
-  }, [tipo, chaleco, precios]);
+  }, [esAlquiler, chaleco, precios]);
 
   const totalEf = entrada.efectivo + alquiler.efectivo;
   const totalTr = entrada.transferencia + alquiler.transferencia;
@@ -271,7 +277,7 @@ export function AnotarmeButton({
               </span>
             </div>
             <p className="font-mono fluid-xs text-smoke mt-0.5">
-              Marcadora + tracer + protección.
+              Marcadora + tracer + protección. Ya incluye la entrada.
             </p>
           </div>
 
@@ -308,12 +314,13 @@ export function AnotarmeButton({
       {!(aplicaBeneficio && tipo === "byop" && esGratis) && (
         <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
           <dl className="space-y-1 font-mono fluid-xs">
-            {!aplicaBeneficio && (
-              <Row
-                label={socioConDeuda ? "Entrada (cuota atrasada)" : "Entrada"}
-                value={dualLabel(entrada.efectivo, entrada.transferencia)}
-              />
-            )}
+            {!aplicaBeneficio &&
+              (entrada.efectivo > 0 || entrada.transferencia > 0) && (
+                <Row
+                  label={socioConDeuda ? "Entrada (cuota atrasada)" : "Entrada"}
+                  value={dualLabel(entrada.efectivo, entrada.transferencia)}
+                />
+              )}
             {(alquiler.efectivo > 0 || alquiler.transferencia > 0) && (
               <Row
                 label="Alquiler"

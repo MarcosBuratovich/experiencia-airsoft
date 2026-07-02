@@ -265,13 +265,18 @@ export function CheckinList({
   const addWalkin = (d: WalkinAdded) => {
     const esSocio = d.socio;
     const esAlquiler = d.tipo === "alquiler";
-    const precio_entrada = esSocio
-      ? precios.entrada_socio.transferencia
-      : precios.entrada_byop.transferencia;
+    // El alquiler ya incluye la entrada: para alquiler no se cobra entrada aparte.
+    const precio_entrada = esAlquiler
+      ? 0
+      : esSocio
+        ? precios.entrada_socio.transferencia
+        : precios.entrada_byop.transferencia;
     const precio_alquiler = esAlquiler ? precios.alquiler_marcadora.transferencia : 0;
-    const precio_fijo_efectivo =
-      (esSocio ? precios.entrada_socio.efectivo : precios.entrada_byop.efectivo) +
-      (esAlquiler ? precios.alquiler_marcadora.efectivo : 0);
+    const precio_fijo_efectivo = esAlquiler
+      ? precios.alquiler_marcadora.efectivo
+      : esSocio
+        ? precios.entrada_socio.efectivo
+        : precios.entrada_byop.efectivo;
     const precio_total = precio_entrada + precio_alquiler;
     const gratis = esSocio && precio_total === 0;
     const nueva: Inscripcion = {
