@@ -6,6 +6,7 @@ import {
   numeroDisponible,
   PLAYER_NUMBER_REGEX,
 } from "@/lib/player-number";
+import { getPreciosConfig } from "@/lib/precios";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
@@ -41,10 +42,20 @@ export async function setSocioAction(userId: string, socio: boolean) {
   if ("error" in ctx) return ctx;
   const { supabase } = ctx;
 
-  const patch: { socio: boolean; socio_desde: string | null } = {
+  const patch: {
+    socio: boolean;
+    socio_desde: string | null;
+    cuota_mensual?: number;
+  } = {
     socio,
     socio_desde: socio ? new Date().toISOString().slice(0, 10) : null,
   };
+  // Al hacer socio, la cuota arranca en la declarada en precios. Después el
+  // admin puede personalizarla con setCuotaAction.
+  if (socio) {
+    const precios = await getPreciosConfig(supabase);
+    patch.cuota_mensual = precios.cuota_socio.transferencia;
+  }
   const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
   if (error) return ERR(error);
   revalidatePath("/admin/usuarios");

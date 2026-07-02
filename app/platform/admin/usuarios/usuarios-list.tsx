@@ -33,16 +33,28 @@ const ROLE_OPTS = [
   { value: "super_admin", label: "Super" },
 ];
 
-export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
+export function UsuariosList({
+  usuarios,
+  cuotaDeclarada,
+}: {
+  usuarios: Usuario[];
+  cuotaDeclarada: number;
+}) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorByUser, setErrorByUser] = useState<Record<string, FriendlyError | null>>(
     {},
   );
+  const [personalizando, setPersonalizando] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const router = useRouter();
 
   const toggleSocio = (u: Usuario) => {
     setPendingId(u.id);
+    setPersonalizando((prev) => {
+      const n = new Set(prev);
+      n.delete(u.id);
+      return n;
+    });
     startTransition(async () => {
       await setSocioAction(u.id, !u.socio);
       setPendingId(null);
@@ -59,7 +71,18 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
     });
   };
 
-  const saveCuota = (id: string, monto: number) => {
+  const startPersonalizar = (id: string) => {
+    setPersonalizando((prev) => new Set(prev).add(id));
+  };
+
+  // Sale del modo edición y guarda solo si cambió respecto al valor actual.
+  const finishCuota = (id: string, monto: number, actual: number) => {
+    setPersonalizando((prev) => {
+      const n = new Set(prev);
+      n.delete(id);
+      return n;
+    });
+    if (monto === actual) return;
     setPendingId(id);
     startTransition(async () => {
       await setCuotaAction(id, monto);
@@ -141,16 +164,12 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <span className="sect-label mb-1 block">Cuota</span>
-                  <input
-                    type="number"
-                    min={0}
-                    defaultValue={u.cuota_mensual}
-                    disabled={!u.socio}
-                    onBlur={(e) => {
-                      const v = Number(e.target.value) || 0;
-                      if (v !== u.cuota_mensual) saveCuota(u.id, v);
-                    }}
-                    className="w-full bg-ink border border-rail/60 px-2 py-2 text-bone font-mono fluid-xs focus:border-orange outline-none disabled:opacity-40"
+                  <CuotaControl
+                    u={u}
+                    cuotaDeclarada={cuotaDeclarada}
+                    editando={personalizando.has(u.id)}
+                    onEditar={() => startPersonalizar(u.id)}
+                    onSave={(v) => finishCuota(u.id, v, u.cuota_mensual)}
                   />
                 </div>
                 <div>
@@ -233,16 +252,12 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
                     )}
                   </td>
                   <td className="px-3 py-3 align-top">
-                    <input
-                      type="number"
-                      min={0}
-                      defaultValue={u.cuota_mensual}
-                      disabled={!u.socio}
-                      onBlur={(e) => {
-                        const v = Number(e.target.value) || 0;
-                        if (v !== u.cuota_mensual) saveCuota(u.id, v);
-                      }}
-                      className="w-24 bg-ink border border-rail/60 px-2 py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none disabled:opacity-40"
+                    <CuotaControl
+                      u={u}
+                      cuotaDeclarada={cuotaDeclarada}
+                      editando={personalizando.has(u.id)}
+                      onEditar={() => startPersonalizar(u.id)}
+                      onSave={(v) => finishCuota(u.id, v, u.cuota_mensual)}
                     />
                   </td>
                   <td className="px-3 py-3 align-top min-w-[10rem]">
@@ -259,5 +274,61 @@ export function UsuariosList({ usuarios }: { usuarios: Usuario[] }) {
         </table>
       </div>
     </>
+  );
+}
+
+/**
+ * Cuota de socio: bloqueada por defecto mostrando el valor (que arranca en la
+ * cuota declarada en precios). El botón "Personalizar" habilita editarla.
+ */
+function CuotaControl({
+  u,
+  cuotaDeclarada,
+  editando,
+  onEditar,
+  onSave,
+}: {
+  u: Usuario;
+  cuotaDeclarada: number;
+  editando: boolean;
+  onEditar: () => void;
+  onSave: (monto: number) => void;
+}) {
+  if (!u.socio) {
+    return (
+      <input
+        type="number"
+        disabled
+        defaultValue={u.cuota_mensual}
+        className="w-full md:w-24 bg-ink border border-rail/60 px-2 py-2 md:py-1.5 text-bone font-mono fluid-xs outline-none opacity-40"
+      />
+    );
+  }
+  if (editando) {
+    return (
+      <input
+        type="number"
+        min={0}
+        autoFocus
+        defaultValue={u.cuota_mensual}
+        onBlur={(e) => onSave(Number(e.target.value) || 0)}
+        className="w-full md:w-24 bg-ink border border-orange px-2 py-2 md:py-1.5 text-bone font-mono fluid-xs focus:border-orange outline-none"
+      />
+    );
+  }
+  const esPersonalizada = u.cuota_mensual !== cuotaDeclarada;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="font-mono fluid-xs text-bone tabular-nums">
+        ${u.cuota_mensual.toLocaleString("es-AR")}
+      </span>
+      <button
+        type="button"
+        onClick={onEditar}
+        className="font-mono text-[10px] uppercase tracking-[.15em] text-smoke hover:text-orange cursor-pointer text-left"
+      >
+        {esPersonalizada ? "Personalizada · editar" : "Personalizar"}
+      </button>
+    </div>
   );
 }

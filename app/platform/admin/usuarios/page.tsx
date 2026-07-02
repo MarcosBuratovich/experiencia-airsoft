@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPreciosConfig } from "@/lib/precios";
 import { UsuariosList } from "./usuarios-list";
 
 export default async function UsuariosPage({
@@ -24,6 +25,8 @@ export default async function UsuariosPage({
   }
 
   const { data: usuarios } = await query.limit(200);
+  const precios = await getPreciosConfig(supabase);
+  const cuotaDeclarada = precios.cuota_socio.transferencia;
 
   return (
     <div>
@@ -42,7 +45,7 @@ export default async function UsuariosPage({
         />
       </form>
 
-      <UsuariosList usuarios={usuarios ?? []} />
+      <UsuariosList usuarios={usuarios ?? []} cuotaDeclarada={cuotaDeclarada} />
     </div>
   );
 }

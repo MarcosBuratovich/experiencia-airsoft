@@ -219,7 +219,9 @@ export function PlatformNav({
                 role="menu"
                 className="absolute right-0 top-full mt-3 w-[300px] bg-carbon border border-orange/40 clip-notch shadow-[0_24px_70px_-20px_rgba(255,107,26,0.45)] z-50"
               >
-                <div className="diag-lines-faint p-5">
+                {/* max-h + scroll: con zoom o muchas secciones el dropdown
+                    desbordaba la página y no se veían las últimas entradas. */}
+                <div className="diag-lines-faint p-5 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain">
                   {allGroups.map((g, gi) => (
                     <div key={g.title}>
                       {gi > 0 && <div className="my-4 h-px bg-rail/60" />}
