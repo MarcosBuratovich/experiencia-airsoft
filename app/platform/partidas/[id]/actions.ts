@@ -80,12 +80,17 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   };
 
   const precios = await getPreciosConfig(supabase);
-  const { entrada, alquiler } = calcularPrecioInscripcion({
+  // Snapshot: precio_entrada/alquiler = transferencia (lista/referencia);
+  // precio_fijo_efectivo = total en efectivo, para que el check-in cobre el
+  // medio elegido sin recalcular el beneficio de socio.
+  const opts = {
     tipo_jugador,
     socio: aplicaBeneficioSocio,
     alquila,
     precios,
-  });
+  };
+  const transf = calcularPrecioInscripcion(opts, "transferencia");
+  const efec = calcularPrecioInscripcion(opts, "efectivo");
 
   const { count } = await supabase
     .from("inscripciones")
@@ -113,8 +118,9 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     tipo_jugador,
     alquila_marcadora: alquila.marcadora,
     alquila_chaleco: alquila.chaleco,
-    precio_entrada: entrada,
-    precio_alquiler: alquiler,
+    precio_entrada: transf.entrada,
+    precio_alquiler: transf.alquiler,
+    precio_fijo_efectivo: efec.total,
     // recargas se asignan despues por el admin durante el check-in
   });
   if (error) {

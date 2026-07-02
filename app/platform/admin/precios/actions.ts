@@ -13,13 +13,14 @@ const ERR = (input: unknown): { error: FriendlyError } => ({
 
 const updateSchema = z.object({
   key: z.enum(PRECIOS_KEYS_ORDER as [PreciosKey, ...PreciosKey[]]),
-  valor: z.number().int().min(0, "El precio debe ser >= 0"),
+  valor_efectivo: z.number().int().min(0, "El precio debe ser >= 0"),
+  valor_transferencia: z.number().int().min(0, "El precio debe ser >= 0"),
 });
 
 export type UpdatePrecioResult = { ok: true } | { error: FriendlyError };
 
 export async function updatePrecioAction(
-  input: { key: string; valor: number },
+  input: { key: string; valor_efectivo: number; valor_transferencia: number },
 ): Promise<UpdatePrecioResult> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
@@ -43,7 +44,10 @@ export async function updatePrecioAction(
   const { error } = await supabase
     .from("precios_config")
     .update({
-      valor: parsed.data.valor,
+      valor_efectivo: parsed.data.valor_efectivo,
+      valor_transferencia: parsed.data.valor_transferencia,
+      // `valor` legacy = transferencia (precio de lista) por compatibilidad.
+      valor: parsed.data.valor_transferencia,
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     })

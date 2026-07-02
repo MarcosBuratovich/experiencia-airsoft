@@ -8,13 +8,14 @@ import {
   type PersonaBusqueda,
 } from "./actions";
 import { isCleanText } from "@/lib/sanitize-text";
+import type { PrecioDual } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "@/app/_components/error-banner";
 
 export type PreciosEntrada = {
-  entrada_byop: number;
-  entrada_socio: number;
-  alquiler_marcadora: number;
+  entrada_byop: PrecioDual;
+  entrada_socio: PrecioDual;
+  alquiler_marcadora: PrecioDual;
 };
 
 export type Tipo = "socio" | "byop" | "alquiler";
@@ -81,10 +82,15 @@ export function AgregarWalkin({
 
   const socio = personaSel ? personaSel.socio : tipo === "socio";
   const esAlquiler = tipo === "alquiler";
-  const total =
-    (socio ? precios.entrada_socio : precios.entrada_byop) +
-    (esAlquiler ? precios.alquiler_marcadora : 0);
-  const requierePago = total > 0;
+  const totalEfectivo =
+    (socio ? precios.entrada_socio.efectivo : precios.entrada_byop.efectivo) +
+    (esAlquiler ? precios.alquiler_marcadora.efectivo : 0);
+  const totalTransferencia =
+    (socio ? precios.entrada_socio.transferencia : precios.entrada_byop.transferencia) +
+    (esAlquiler ? precios.alquiler_marcadora.transferencia : 0);
+  // El medio elegido determina el total a cobrar ('debe' = lista = transferencia).
+  const total = pago === "efectivo" ? totalEfectivo : totalTransferencia;
+  const requierePago = totalEfectivo > 0 || totalTransferencia > 0;
 
   const dniValido = dni.trim() === "" || /^\d{7,8}$/.test(dni.trim());
   const nombreLimpio = isCleanText(nombre.trim());

@@ -3,17 +3,17 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anotarmeAction, desanotarmeAction } from "./actions";
-import type { TipoJugador } from "@/lib/precios";
+import type { PrecioDual, TipoJugador } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
 type Inscripcion = { id: string; estado: string; posicion_waitlist?: number | null };
 
 type PreciosMin = {
-  entrada_byop: number;
-  entrada_socio: number;
-  alquiler_marcadora: number;
-  alquiler_chaleco: number;
+  entrada_byop: PrecioDual;
+  entrada_socio: PrecioDual;
+  alquiler_marcadora: PrecioDual;
+  alquiler_chaleco: PrecioDual;
 };
 
 type DeudaCuota = { meses: number; monto: number };
@@ -56,6 +56,12 @@ function ars(n: number) {
   return `$${n.toLocaleString("es-AR")}`;
 }
 
+/** Muestra un precio: un solo valor si efectivo = transferencia, o ambos. */
+function dualLabel(ef: number, tr: number): string {
+  if (ef === tr) return ars(tr);
+  return `Ef ${ars(ef)} · Tr ${ars(tr)}`;
+}
+
 export function AnotarmeButton({
   partidaId,
   inscripcion,
@@ -79,14 +85,21 @@ export function AnotarmeButton({
 
   const entrada = aplicaBeneficio ? precios.entrada_socio : precios.entrada_byop;
 
-  const alquilerMonto = useMemo(() => {
-    if (tipo !== "alquiler") return 0;
-    let t = precios.alquiler_marcadora;
-    if (chaleco) t += precios.alquiler_chaleco;
-    return t;
+  const alquiler = useMemo(() => {
+    if (tipo !== "alquiler") return { efectivo: 0, transferencia: 0 };
+    return {
+      efectivo:
+        precios.alquiler_marcadora.efectivo +
+        (chaleco ? precios.alquiler_chaleco.efectivo : 0),
+      transferencia:
+        precios.alquiler_marcadora.transferencia +
+        (chaleco ? precios.alquiler_chaleco.transferencia : 0),
+    };
   }, [tipo, chaleco, precios]);
 
-  const total = entrada + alquilerMonto;
+  const totalEf = entrada.efectivo + alquiler.efectivo;
+  const totalTr = entrada.transferencia + alquiler.transferencia;
+  const esGratis = totalEf === 0 && totalTr === 0;
 
   if (estado === "cancelada") {
     return (
@@ -172,12 +185,12 @@ export function AnotarmeButton({
   const btnLabel = pending
     ? "..."
     : lleno
-      ? aplicaBeneficio && total === 0
+      ? aplicaBeneficio && esGratis
         ? "Anotarme a lista de espera"
-        : `Anotarme a lista de espera · ${ars(total)}`
-      : aplicaBeneficio && total === 0
+        : `Anotarme a lista de espera · ${ars(totalTr)}`
+      : aplicaBeneficio && esGratis
         ? "Anotarme · sin cargo"
-        : `Anotarme · ${ars(total)}`;
+        : `Anotarme · ${ars(totalTr)}`;
 
   return (
     <div className="space-y-4">
@@ -254,7 +267,7 @@ export function AnotarmeButton({
             <div className="flex items-center justify-between gap-2">
               <span className="text-bone font-sans">Equipo completo</span>
               <span className="font-mono fluid-xs text-bone shrink-0">
-                {ars(precios.alquiler_marcadora)}
+                {dualLabel(precios.alquiler_marcadora.efectivo, precios.alquiler_marcadora.transferencia)}
               </span>
             </div>
             <p className="font-mono fluid-xs text-smoke mt-0.5">
@@ -262,7 +275,8 @@ export function AnotarmeButton({
             </p>
           </div>
 
-          {precios.alquiler_chaleco > 0 && (
+          {(precios.alquiler_chaleco.efectivo > 0 ||
+            precios.alquiler_chaleco.transferencia > 0) && (
             <label className="flex items-start gap-3 px-2 py-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -274,7 +288,7 @@ export function AnotarmeButton({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-bone font-sans">Chaleco táctico</span>
                   <span className="font-mono fluid-xs text-ash shrink-0">
-                    {ars(precios.alquiler_chaleco)}
+                    {dualLabel(precios.alquiler_chaleco.efectivo, precios.alquiler_chaleco.transferencia)}
                   </span>
                 </div>
                 <p className="font-mono fluid-xs text-smoke mt-0.5">
@@ -291,20 +305,38 @@ export function AnotarmeButton({
         </fieldset>
       )}
 
-      {!(aplicaBeneficio && tipo === "byop" && total === 0) && (
+      {!(aplicaBeneficio && tipo === "byop" && esGratis) && (
         <div className="border border-rail/60 bg-ink/40 clip-notch p-4">
           <dl className="space-y-1 font-mono fluid-xs">
             {!aplicaBeneficio && (
               <Row
                 label={socioConDeuda ? "Entrada (cuota atrasada)" : "Entrada"}
-                value={ars(entrada)}
+                value={dualLabel(entrada.efectivo, entrada.transferencia)}
               />
             )}
-            {alquilerMonto > 0 && <Row label="Alquiler" value={ars(alquilerMonto)} />}
-            <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
-              <span className="sect-label">Total</span>
-              <span className="font-display fluid-xl text-bone">{ars(total)}</span>
-            </div>
+            {(alquiler.efectivo > 0 || alquiler.transferencia > 0) && (
+              <Row
+                label="Alquiler"
+                value={dualLabel(alquiler.efectivo, alquiler.transferencia)}
+              />
+            )}
+            {totalEf === totalTr ? (
+              <div className="border-t border-rail/40 mt-2 pt-2 flex items-center justify-between">
+                <span className="sect-label">Total</span>
+                <span className="font-display fluid-xl text-bone">{ars(totalTr)}</span>
+              </div>
+            ) : (
+              <div className="border-t border-rail/40 mt-2 pt-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="sect-label">Total efectivo</span>
+                  <span className="font-display fluid-lg text-bone">{ars(totalEf)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="sect-label">Total transferencia</span>
+                  <span className="font-display fluid-lg text-bone">{ars(totalTr)}</span>
+                </div>
+              </div>
+            )}
           </dl>
         </div>
       )}

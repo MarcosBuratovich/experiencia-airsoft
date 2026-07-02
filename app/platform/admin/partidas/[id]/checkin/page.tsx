@@ -75,6 +75,23 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   const inscripciones = inscripcionesRes.data;
   const precios = await getPreciosConfig(supabase);
 
+  // precio_fijo_efectivo (fase-17) en query aparte para no romper el check-in
+  // si la migración todavía no corrió (fallback = precio_entrada + alquiler).
+  const fijoEfMap = new Map<string, number>();
+  const fijoRes = await supabase
+    .from("inscripciones")
+    .select("id, precio_fijo_efectivo")
+    .eq("partida_id", id)
+    .in("estado", ["confirmado", "waitlist"]);
+  if (!fijoRes.error) {
+    for (const r of (fijoRes.data ?? []) as {
+      id: string;
+      precio_fijo_efectivo: number | null;
+    }[]) {
+      if (r.precio_fijo_efectivo != null) fijoEfMap.set(r.id, r.precio_fijo_efectivo);
+    }
+  }
+
   const userIds = ((inscripciones ?? []) as unknown as { user_id: string }[]).map(
     (i) => i.user_id,
   );
@@ -142,6 +159,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       precio_entrada,
       precio_alquiler,
       precio_recargas,
+      precio_fijo_efectivo: fijoEfMap.get(i.id) ?? precio_entrada + precio_alquiler,
       precio_total: i.precio_total ?? precio_entrada + precio_alquiler + precio_recargas,
       checkin: c
         ? {

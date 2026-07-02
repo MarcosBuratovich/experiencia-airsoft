@@ -10,6 +10,7 @@ import {
   getPreciosConfig,
 } from "@/lib/precios";
 import { estadoEfectivo } from "@/lib/partidas";
+import { computarEstadoCuota } from "@/lib/socios";
 import { isCleanText } from "@/lib/sanitize-text";
 
 import { friendlyError, type FriendlyError } from "@/lib/errors";
@@ -97,9 +98,12 @@ export async function actualizarRecargasInscripcionAction(
 
   // Calcular precio_recargas con los precios vigentes
   const precios = await getPreciosConfig(supabase);
+  // Referencia en transferencia (lista); el monto method-exacto lo arma el
+  // check-in según el medio elegido.
   const precio_recargas = calcularPrecioRecargas(
     { tracer100, conv200, conv400 },
     precios,
+    "transferencia",
   );
 
   const { error } = await supabase
@@ -197,7 +201,7 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
   if (v.userId) {
     const { data: persona } = await supabase
       .from("profiles")
-      .select("id, socio")
+      .select("id, socio, socio_desde, cuota_mensual")
       .eq("id", v.userId)
       .maybeSingle();
     if (!persona) return ERR("La persona seleccionada no existe");
@@ -209,7 +213,25 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
       .maybeSingle();
     if (yaInscripto) return ERR("Esa persona ya está anotada en la partida");
     userId = persona.id;
-    esSocio = persona.socio; // socio se deriva de la cuenta, no del tipo elegido
+    // El beneficio de socio (entrada gratis) solo aplica si está al día, igual
+    // que en anotarme. Un socio con cuota vencida paga como no-socio.
+    if (persona.socio) {
+      const { data: pagos } = await supabase
+        .from("socio_pagos")
+        .select("periodo")
+        .eq("user_id", persona.id);
+      const cuota = computarEstadoCuota(
+        {
+          socio: true,
+          socio_desde: persona.socio_desde,
+          cuota_mensual: persona.cuota_mensual ?? 0,
+        },
+        pagos ?? [],
+      );
+      esSocio = cuota.esSocio && cuota.alDia;
+    } else {
+      esSocio = false;
+    }
   } else {
     if (!v.nombre) return ERR("Ingresá un nombre o elegí una cuenta");
     guestNombre = v.nombre;
@@ -221,19 +243,25 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
   // usamos el cliente service-role para ese caso puntual.
   const db = (userId ? createServiceRoleClient() : supabase) as typeof supabase;
 
-  const desglose = calcularPrecioInscripcion({
-    tipo_jugador: esAlquiler ? "alquiler" : "byop",
+  const opts = {
+    tipo_jugador: (esAlquiler ? "alquiler" : "byop") as "alquiler" | "byop",
     socio: esSocio,
     alquila: { marcadora: esAlquiler, chaleco: false },
     precios,
-  });
+  };
+  const transf = calcularPrecioInscripcion(opts, "transferencia");
+  const efec = calcularPrecioInscripcion(opts, "efectivo");
 
   // 'socio_presente' solo cuando la entrada quedó gratis (socio sin cargo). Si
-  // un socio alquila, paga con el medio elegido. El monto es el total del
-  // desglose para que lo cobrado coincida con el precio.
-  const pago_estado =
-    esSocio && desglose.total === 0 ? "socio_presente" : v.pago_estado;
-  const pago_monto = desglose.total;
+  // un socio alquila, paga con el medio elegido. Cobramos el total del medio
+  // elegido ('debe' cobra la lista = transferencia).
+  const gratis = esSocio && transf.total === 0;
+  const pago_estado = gratis ? "socio_presente" : v.pago_estado;
+  const pago_monto = gratis
+    ? 0
+    : v.pago_estado === "efectivo"
+      ? efec.total
+      : transf.total;
 
   const { data: insc, error: insErr } = await db
     .from("inscripciones")
@@ -247,8 +275,9 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
       tipo_jugador: esAlquiler ? "alquiler" : "byop",
       alquila_marcadora: esAlquiler,
       alquila_chaleco: false,
-      precio_entrada: desglose.entrada,
-      precio_alquiler: desglose.alquiler,
+      precio_entrada: transf.entrada,
+      precio_alquiler: transf.alquiler,
+      precio_fijo_efectivo: efec.total,
     })
     .select("id")
     .single();
@@ -322,22 +351,55 @@ export async function buscarPersonasAction(
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, nombre, apellido, dni, celular, socio, player_number")
+    .select(
+      "id, nombre, apellido, dni, celular, socio, socio_desde, cuota_mensual, player_number",
+    )
     .or(
       `nombre.ilike.%${needle}%,apellido.ilike.%${needle}%,dni.ilike.%${needle}%,player_number.ilike.%${needle}%`,
     )
     .order("apellido")
     .limit(8);
 
+  // `socio` devuelto = beneficio efectivo (socio al día). Un socio con cuota
+  // vencida se muestra y se cobra como no-socio, igual que en el server, para
+  // que la fila optimista del walk-in coincida con lo cobrado. Pagos batcheados.
+  const socios = (data ?? []).filter((p) => p.socio);
+  const pagosByUser = new Map<string, { periodo: string }[]>();
+  if (socios.length) {
+    const { data: pagos } = await supabase
+      .from("socio_pagos")
+      .select("user_id, periodo")
+      .in("user_id", socios.map((p) => p.id));
+    for (const pg of (pagos ?? []) as { user_id: string; periodo: string }[]) {
+      const arr = pagosByUser.get(pg.user_id) ?? [];
+      arr.push({ periodo: pg.periodo });
+      pagosByUser.set(pg.user_id, arr);
+    }
+  }
+
   return {
-    personas: (data ?? []).map((p) => ({
-      id: p.id,
-      nombre: p.nombre,
-      apellido: p.apellido,
-      dni: p.dni,
-      celular: p.celular,
-      socio: p.socio,
-      player_number: p.player_number,
-    })),
+    personas: (data ?? []).map((p) => {
+      let bonificado = false;
+      if (p.socio) {
+        const cuota = computarEstadoCuota(
+          {
+            socio: true,
+            socio_desde: p.socio_desde,
+            cuota_mensual: p.cuota_mensual ?? 0,
+          },
+          pagosByUser.get(p.id) ?? [],
+        );
+        bonificado = cuota.esSocio && cuota.alDia;
+      }
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        apellido: p.apellido,
+        dni: p.dni,
+        celular: p.celular,
+        socio: bonificado,
+        player_number: p.player_number,
+      };
+    }),
   };
 }

@@ -1,11 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  PRECIOS_DEFAULT,
+  getPreciosConfig,
   PRECIOS_KEYS_ORDER,
   PRECIOS_LABELS,
-  type PreciosConfig,
-  type PreciosKey,
 } from "@/lib/precios";
 import { PreciosForm } from "./precios-form";
 
@@ -24,23 +22,21 @@ export default async function PreciosPage() {
     redirect("/admin/partidas");
   }
 
-  const { data: rows } = await supabase
+  // getPreciosConfig ya resuelve dual + fallback si falta la migración.
+  const precios = await getPreciosConfig(supabase);
+  const { data: metaRows } = await supabase
     .from("precios_config")
-    .select("key, valor, updated_at");
-
-  const precios: PreciosConfig = { ...PRECIOS_DEFAULT };
-  const updatedAt: Partial<Record<PreciosKey, string>> = {};
-  for (const row of (rows ?? []) as { key: string; valor: number; updated_at: string }[]) {
-    if (row.key in precios) {
-      precios[row.key as PreciosKey] = row.valor;
-      updatedAt[row.key as PreciosKey] = row.updated_at;
-    }
+    .select("key, updated_at");
+  const updatedAt = new Map<string, string>();
+  for (const row of (metaRows ?? []) as { key: string; updated_at: string }[]) {
+    updatedAt.set(row.key, row.updated_at);
   }
 
   const items = PRECIOS_KEYS_ORDER.map((key) => ({
     key,
-    valor: precios[key],
-    updated_at: updatedAt[key] ?? null,
+    efectivo: precios[key].efectivo,
+    transferencia: precios[key].transferencia,
+    updated_at: updatedAt.get(key) ?? null,
     titulo: PRECIOS_LABELS[key].titulo,
     descripcion: PRECIOS_LABELS[key].descripcion,
   }));

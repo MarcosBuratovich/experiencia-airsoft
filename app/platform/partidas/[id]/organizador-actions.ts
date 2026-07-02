@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getPreciosConfig } from "@/lib/precios";
+import { calcularPrecioInscripcion, getPreciosConfig } from "@/lib/precios";
 import {
   countEmojis,
   detectBadPattern,
@@ -235,6 +235,14 @@ export async function agregarMiAlquilerAction(
   }
 
   const precios = await getPreciosConfig(supabase);
+  const opts = {
+    tipo_jugador: "alquiler" as const,
+    socio: false,
+    alquila: { marcadora: true, chaleco: false },
+    precios,
+  };
+  const transf = calcularPrecioInscripcion(opts, "transferencia");
+  const efec = calcularPrecioInscripcion(opts, "efectivo");
 
   const { error } = await supabase.from("inscripciones").insert({
     partida_id: partida.id,
@@ -247,8 +255,9 @@ export async function agregarMiAlquilerAction(
     tipo_jugador: "alquiler",
     alquila_marcadora: true,
     alquila_chaleco: false,
-    precio_entrada: precios.entrada_byop,
-    precio_alquiler: precios.alquiler_marcadora,
+    precio_entrada: transf.entrada,
+    precio_alquiler: transf.alquiler,
+    precio_fijo_efectivo: efec.total,
   });
   if (error) return ERR(error);
 
