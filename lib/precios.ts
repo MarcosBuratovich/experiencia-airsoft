@@ -10,14 +10,19 @@ export type MetodoPago = "efectivo" | "transferencia";
 /** Precio de un ítem según el medio de pago (dos valores independientes). */
 export type PrecioDual = { efectivo: number; transferencia: number };
 
+// NOTA sobre nombres legacy de recargas: las columnas/keys `recarga_tracer_100`
+// y `recarga_conv_200` hoy representan packs de 200 unidades (tracer y común).
+// El "_100" del tracer es un nombre viejo (antes era pack de 100); se mantiene
+// para no migrar columnas ni perder el histórico. La vieja `recarga_conv_400`
+// quedó fuera de uso (la columna sigue en la DB para datos históricos).
 export type PreciosKey =
   | "entrada_byop"
   | "entrada_socio"
-  | "alquiler_marcadora"   // Alquiler de equipo (unico tier)
+  | "alquiler_marcadora"   // Alquiler básico (marcadora simple)
+  | "alquiler_premium"     // Alquiler avanzado (marcadora avanzada + tracer)
   | "alquiler_chaleco"
-  | "recarga_tracer_100"
-  | "recarga_conv_200"
-  | "recarga_conv_400"
+  | "recarga_tracer_100"   // Recarga 200 bbs tracer (nombre legacy)
+  | "recarga_conv_200"     // Recarga 200 bbs común
   | "cuota_socio";
 
 export type PreciosConfig = Record<PreciosKey, PrecioDual>;
@@ -28,10 +33,10 @@ export const PRECIOS_DEFAULT: PreciosConfig = {
   entrada_socio: { efectivo: 0, transferencia: 0 },
   // El alquiler ya incluye la entrada — es el precio total del alquiler.
   alquiler_marcadora: { efectivo: 60000, transferencia: 60000 },
+  alquiler_premium: { efectivo: 80000, transferencia: 80000 },
   alquiler_chaleco: { efectivo: 0, transferencia: 0 },
   recarga_tracer_100: { efectivo: 0, transferencia: 0 },
   recarga_conv_200: { efectivo: 0, transferencia: 0 },
-  recarga_conv_400: { efectivo: 0, transferencia: 0 },
   cuota_socio: { efectivo: 0, transferencia: 0 },
 };
 
@@ -45,24 +50,24 @@ export const PRECIOS_LABELS: Record<PreciosKey, { titulo: string; descripcion: s
     descripcion: "Lo que paga un socio al día (normalmente 0).",
   },
   alquiler_marcadora: {
-    titulo: "Alquiler equipo",
-    descripcion: "Precio TOTAL del alquiler (marcadora + tracer + protección + entrada ya incluida).",
+    titulo: "Alquiler básico",
+    descripcion: "Precio TOTAL del alquiler básico (marcadora simple + protección + entrada incluida).",
+  },
+  alquiler_premium: {
+    titulo: "Alquiler avanzado",
+    descripcion: "Precio TOTAL del alquiler avanzado (marcadora avanzada + tracer + protección + entrada incluida).",
   },
   alquiler_chaleco: {
     titulo: "Chaleco táctico",
     descripcion: "Protección extra para el torso. Opcional, suma al alquiler.",
   },
   recarga_tracer_100: {
-    titulo: "Recarga · 100 bbs tracer",
-    descripcion: "Munición fluorescente, 100 unidades.",
+    titulo: "Recarga · 200 bbs tracer",
+    descripcion: "Munición fluorescente (tracer), 200 unidades.",
   },
   recarga_conv_200: {
-    titulo: "Recarga · 200 bbs convencional",
-    descripcion: "Munición convencional, 200 unidades.",
-  },
-  recarga_conv_400: {
-    titulo: "Recarga · 400 bbs convencional",
-    descripcion: "Munición convencional, 400 unidades.",
+    titulo: "Recarga · 200 bbs común",
+    descripcion: "Munición común (no tracer), 200 unidades.",
   },
   cuota_socio: {
     titulo: "Cuota mensual socio",
@@ -74,10 +79,10 @@ export const PRECIOS_KEYS_ORDER: PreciosKey[] = [
   "entrada_byop",
   "entrada_socio",
   "alquiler_marcadora",
+  "alquiler_premium",
   "alquiler_chaleco",
   "recarga_tracer_100",
   "recarga_conv_200",
-  "recarga_conv_400",
   "cuota_socio",
 ];
 
@@ -129,17 +134,20 @@ export async function getPreciosConfig(
 }
 
 export type AlquilerItems = {
-  /** Alquiler de equipo (marcadora + tracer + protección). */
+  /** Alquiler básico (marcadora simple). */
   marcadora: boolean;
+  /** Alquiler avanzado (marcadora avanzada + tracer). Excluyente con marcadora. */
+  premium: boolean;
   /** Chaleco táctico extra. */
   chaleco: boolean;
 };
 
 /** Cantidades de recargas pedidas (las marca el admin durante el check-in). */
 export type RecargasCount = {
+  /** Packs de 200 bbs tracer (columna legacy recarga_tracer_100). */
   tracer100: number;
+  /** Packs de 200 bbs común (columna recarga_conv_200). */
   conv200: number;
-  conv400: number;
 };
 
 export type DesglosePrecio = {
@@ -153,8 +161,8 @@ export type DesglosePrecio = {
  *
  * Modelo:
  *   - ALQUILER: el precio de alquiler YA incluye la entrada, así que NO se
- *     suma la entrada aparte. Total = alquiler (+ chaleco opcional). El
- *     beneficio de socio no aplica (la entrada va incluida en el alquiler).
+ *     suma la entrada aparte. Total = alquiler elegido (básico o avanzado) +
+ *     chaleco opcional. El beneficio de socio no aplica (entrada incluida).
  *   - BYOP: paga solo la entrada (entrada_socio si socio al día, sino
  *     entrada_byop).
  *
@@ -175,6 +183,7 @@ export function calcularPrecioInscripcion(
   if (tipo_jugador === "alquiler") {
     let alquiler = 0;
     if (alquila.marcadora) alquiler += precios.alquiler_marcadora[metodo];
+    if (alquila.premium) alquiler += precios.alquiler_premium[metodo];
     if (alquila.chaleco) alquiler += precios.alquiler_chaleco[metodo];
     return { entrada: 0, alquiler, total: alquiler };
   }
@@ -196,7 +205,6 @@ export function calcularPrecioRecargas(
 ): number {
   return (
     recargas.tracer100 * precios.recarga_tracer_100[metodo] +
-    recargas.conv200 * precios.recarga_conv_200[metodo] +
-    recargas.conv400 * precios.recarga_conv_400[metodo]
+    recargas.conv200 * precios.recarga_conv_200[metodo]
   );
 }

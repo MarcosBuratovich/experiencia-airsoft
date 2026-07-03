@@ -58,7 +58,7 @@ export async function upsertCheckinAction(inscripcionId: string, payload: Checki
  */
 export async function actualizarRecargasInscripcionAction(
   inscripcionId: string,
-  recargas: { tracer100: number; conv200: number; conv400: number },
+  recargas: { tracer100: number; conv200: number },
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -83,7 +83,6 @@ export async function actualizarRecargasInscripcionAction(
   };
   const tracer100 = clamp(recargas.tracer100);
   const conv200 = clamp(recargas.conv200);
-  const conv400 = clamp(recargas.conv400);
 
   // Validar que la inscripción es de un alquiler
   const { data: insc } = await supabase
@@ -101,7 +100,7 @@ export async function actualizarRecargasInscripcionAction(
   // Referencia en transferencia (lista); el monto method-exacto lo arma el
   // check-in según el medio elegido.
   const precio_recargas = calcularPrecioRecargas(
-    { tracer100, conv200, conv400 },
+    { tracer100, conv200 },
     precios,
     "transferencia",
   );
@@ -111,7 +110,6 @@ export async function actualizarRecargasInscripcionAction(
     .update({
       recarga_tracer_100: tracer100,
       recarga_conv_200: conv200,
-      recarga_conv_400: conv400,
       precio_recargas,
     })
     .eq("id", inscripcionId);
@@ -149,7 +147,7 @@ const walkinSchema = z.object({
     .trim()
     .regex(/^\d{7,8}$/, "DNI inválido (7-8 dígitos)")
     .optional(),
-  tipo: z.enum(["socio", "byop", "alquiler"]),
+  tipo: z.enum(["socio", "byop", "alquiler_basico", "alquiler_avanzado"]),
   // El cliente solo elige medios "reales"; 'socio_presente' lo decide el
   // server cuando la entrada queda gratis (socio sin cargo).
   pago_estado: z.enum(["efectivo", "transferencia", "debe"]),
@@ -189,7 +187,8 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     );
   }
 
-  const esAlquiler = v.tipo === "alquiler";
+  const esAvanzado = v.tipo === "alquiler_avanzado";
+  const esAlquiler = v.tipo === "alquiler_basico" || esAvanzado;
   const precios = await getPreciosConfig(supabase);
 
   // Resolver la persona: cuenta existente (userId) o carga manual (guest).
@@ -246,7 +245,11 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
   const opts = {
     tipo_jugador: (esAlquiler ? "alquiler" : "byop") as "alquiler" | "byop",
     socio: esSocio,
-    alquila: { marcadora: esAlquiler, chaleco: false },
+    alquila: {
+      marcadora: esAlquiler && !esAvanzado,
+      premium: esAvanzado,
+      chaleco: false,
+    },
     precios,
   };
   const transf = calcularPrecioInscripcion(opts, "transferencia");
@@ -273,7 +276,8 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
       agregado_por: user.id,
       estado: "confirmado",
       tipo_jugador: esAlquiler ? "alquiler" : "byop",
-      alquila_marcadora: esAlquiler,
+      alquila_marcadora: esAlquiler && !esAvanzado,
+      alquila_premium: esAvanzado,
       alquila_chaleco: false,
       precio_entrada: transf.entrada,
       precio_alquiler: transf.alquiler,

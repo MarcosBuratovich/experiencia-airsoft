@@ -13,6 +13,7 @@ type PreciosMin = {
   entrada_byop: PrecioDual;
   entrada_socio: PrecioDual;
   alquiler_marcadora: PrecioDual;
+  alquiler_premium: PrecioDual;
   alquiler_chaleco: PrecioDual;
 };
 
@@ -76,6 +77,7 @@ export function AnotarmeButton({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [tipo, setTipo] = useState<TipoJugador>("byop");
+  const [tier, setTier] = useState<"basico" | "avanzado">("basico");
   const [chaleco, setChaleco] = useState(false);
   const [error, setError] = useState<FriendlyError | null>(null);
   const router = useRouter();
@@ -93,15 +95,14 @@ export function AnotarmeButton({
 
   const alquiler = useMemo(() => {
     if (!esAlquiler) return { efectivo: 0, transferencia: 0 };
+    const base =
+      tier === "avanzado" ? precios.alquiler_premium : precios.alquiler_marcadora;
     return {
-      efectivo:
-        precios.alquiler_marcadora.efectivo +
-        (chaleco ? precios.alquiler_chaleco.efectivo : 0),
+      efectivo: base.efectivo + (chaleco ? precios.alquiler_chaleco.efectivo : 0),
       transferencia:
-        precios.alquiler_marcadora.transferencia +
-        (chaleco ? precios.alquiler_chaleco.transferencia : 0),
+        base.transferencia + (chaleco ? precios.alquiler_chaleco.transferencia : 0),
     };
-  }, [esAlquiler, chaleco, precios]);
+  }, [esAlquiler, tier, chaleco, precios]);
 
   const totalEf = entrada.efectivo + alquiler.efectivo;
   const totalTr = entrada.transferencia + alquiler.transferencia;
@@ -178,6 +179,7 @@ export function AnotarmeButton({
     startTransition(async () => {
       const res = await anotarmeAction(partidaId, {
         tipo_jugador: tipo,
+        alquiler_avanzado: tipo === "alquiler" && tier === "avanzado",
         alquila_chaleco: tipo === "alquiler" && chaleco,
       });
       if ("error" in res && res.error) {
@@ -269,16 +271,27 @@ export function AnotarmeButton({
         <fieldset className="border border-rail/60 bg-carbon clip-notch p-4 space-y-3">
           <legend className="sect-label px-2">Equipo a alquilar</legend>
 
-          <div className="border border-orange/40 bg-orange/5 clip-notch px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-bone font-sans">Equipo completo</span>
-              <span className="font-mono fluid-xs text-bone shrink-0">
-                {dualLabel(precios.alquiler_marcadora.efectivo, precios.alquiler_marcadora.transferencia)}
-              </span>
-            </div>
-            <p className="font-mono fluid-xs text-smoke mt-0.5">
-              Marcadora + tracer + protección. Ya incluye la entrada.
-            </p>
+          <div className="space-y-2">
+            <TierOpt
+              selected={tier === "basico"}
+              onSelect={() => setTier("basico")}
+              title="Básico"
+              subtitle="Marcadora simple + protección. Incluye la entrada."
+              precio={dualLabel(
+                precios.alquiler_marcadora.efectivo,
+                precios.alquiler_marcadora.transferencia,
+              )}
+            />
+            <TierOpt
+              selected={tier === "avanzado"}
+              onSelect={() => setTier("avanzado")}
+              title="Avanzado"
+              subtitle="Marcadora avanzada + tracer + protección. Incluye la entrada."
+              precio={dualLabel(
+                precios.alquiler_premium.efectivo,
+                precios.alquiler_premium.transferencia,
+              )}
+            />
           </div>
 
           {(precios.alquiler_chaleco.efectivo > 0 ||
@@ -407,6 +420,44 @@ function TipoOpt({
           aria-hidden
         />
         <span className="font-display text-bone uppercase tracking-wider">{title}</span>
+      </div>
+      <p className="mt-1 pl-5 font-mono fluid-xs text-smoke">{subtitle}</p>
+    </button>
+  );
+}
+
+function TierOpt({
+  selected,
+  onSelect,
+  title,
+  subtitle,
+  precio,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  subtitle: string;
+  precio: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full text-left border transition clip-notch px-3 py-2.5 cursor-pointer ${
+        selected ? "bg-orange/10 border-orange" : "bg-ink/30 border-rail/60 hover:border-rail"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={`inline-block w-3 h-3 rounded-full border-2 transition shrink-0 ${
+              selected ? "bg-orange border-orange" : "border-rail"
+            }`}
+            aria-hidden
+          />
+          <span className="font-display text-bone uppercase tracking-wider">{title}</span>
+        </div>
+        <span className="font-mono fluid-xs text-bone shrink-0">{precio}</span>
       </div>
       <p className="mt-1 pl-5 font-mono fluid-xs text-smoke">{subtitle}</p>
     </button>

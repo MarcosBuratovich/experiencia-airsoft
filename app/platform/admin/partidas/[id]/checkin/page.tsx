@@ -36,7 +36,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   }) =>
     `id, estado, user_id, guest_nombre, ${guestDni ? "guest_dni, " : ""}tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, ${
       recargas
-        ? "recarga_tracer_100, recarga_conv_200, recarga_conv_400, precio_recargas, "
+        ? "recarga_tracer_100, recarga_conv_200, precio_recargas, "
         : ""
     }precio_total, profiles!inscripciones_user_id_fkey(nombre, apellido, dni, celular, socio, flair), checkins(presente, pago_estado, pago_monto, nota)`;
 
@@ -107,7 +107,6 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     alquila_chaleco?: boolean | null;
     recarga_tracer_100?: number | null;
     recarga_conv_200?: number | null;
-    recarga_conv_400?: number | null;
     precio_entrada?: number | null;
     precio_alquiler?: number | null;
     precio_recargas?: number | null;
@@ -155,7 +154,6 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       alquila_chaleco: !!i.alquila_chaleco,
       recarga_tracer_100: i.recarga_tracer_100 ?? 0,
       recarga_conv_200: i.recarga_conv_200 ?? 0,
-      recarga_conv_400: i.recarga_conv_400 ?? 0,
       precio_entrada,
       precio_alquiler,
       precio_recargas,
@@ -244,12 +242,12 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
           preciosRecargas={{
             tracer100: precios.recarga_tracer_100,
             conv200: precios.recarga_conv_200,
-            conv400: precios.recarga_conv_400,
           }}
           precios={{
             entrada_byop: precios.entrada_byop,
             entrada_socio: precios.entrada_socio,
             alquiler_marcadora: precios.alquiler_marcadora,
+            alquiler_premium: precios.alquiler_premium,
           }}
         />
       )}

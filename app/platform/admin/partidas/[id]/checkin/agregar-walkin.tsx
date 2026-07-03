@@ -16,9 +16,10 @@ export type PreciosEntrada = {
   entrada_byop: PrecioDual;
   entrada_socio: PrecioDual;
   alquiler_marcadora: PrecioDual;
+  alquiler_premium: PrecioDual;
 };
 
-export type Tipo = "socio" | "byop" | "alquiler";
+export type Tipo = "socio" | "byop" | "alquiler_basico" | "alquiler_avanzado";
 export type Pago = "efectivo" | "transferencia" | "debe";
 
 /** Payload que el form le pasa a CheckinList para insertar la fila optimista. */
@@ -81,15 +82,17 @@ export function AgregarWalkin({
   }, [busq, personaSel]);
 
   const socio = personaSel ? personaSel.socio : tipo === "socio";
-  const esAlquiler = tipo === "alquiler";
+  const esAvanzado = tipo === "alquiler_avanzado";
+  const esAlquiler = tipo === "alquiler_basico" || esAvanzado;
+  const alquilerDual = esAvanzado ? precios.alquiler_premium : precios.alquiler_marcadora;
   // El alquiler ya incluye la entrada: para alquiler el total es solo el alquiler.
   const totalEfectivo = esAlquiler
-    ? precios.alquiler_marcadora.efectivo
+    ? alquilerDual.efectivo
     : socio
       ? precios.entrada_socio.efectivo
       : precios.entrada_byop.efectivo;
   const totalTransferencia = esAlquiler
-    ? precios.alquiler_marcadora.transferencia
+    ? alquilerDual.transferencia
     : socio
       ? precios.entrada_socio.transferencia
       : precios.entrada_byop.transferencia;
@@ -106,12 +109,14 @@ export function AgregarWalkin({
   const tipoOpts: { value: Tipo; label: string }[] = personaSel
     ? [
         { value: "byop", label: "BYOP" },
-        { value: "alquiler", label: "Alquiler" },
+        { value: "alquiler_basico", label: "Alq. básico" },
+        { value: "alquiler_avanzado", label: "Alq. avanzado" },
       ]
     : [
         { value: "socio", label: "Socio" },
         { value: "byop", label: "BYOP" },
-        { value: "alquiler", label: "Alquiler" },
+        { value: "alquiler_basico", label: "Alq. básico" },
+        { value: "alquiler_avanzado", label: "Alq. avanzado" },
       ];
 
   const reset = () => {

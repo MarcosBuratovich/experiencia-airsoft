@@ -17,7 +17,6 @@ import type { FriendlyError } from "@/lib/errors";
 type PreciosRecargas = {
   tracer100: PrecioDual;
   conv200: PrecioDual;
-  conv400: PrecioDual;
 };
 
 type Checkin = {
@@ -42,7 +41,6 @@ type Inscripcion = {
   alquila_chaleco: boolean;
   recarga_tracer_100: number;
   recarga_conv_200: number;
-  recarga_conv_400: number;
   precio_entrada: number;
   precio_alquiler: number;
   precio_recargas: number;
@@ -78,8 +76,7 @@ function montoDeMetodo(
   if (pagoEstado === "efectivo") {
     const recargasEf =
       r.recarga_tracer_100 * preciosRecargas.tracer100.efectivo +
-      r.recarga_conv_200 * preciosRecargas.conv200.efectivo +
-      r.recarga_conv_400 * preciosRecargas.conv400.efectivo;
+      r.recarga_conv_200 * preciosRecargas.conv200.efectivo;
     return r.precio_fijo_efectivo + recargasEf;
   }
   return r.precio_total;
@@ -93,9 +90,8 @@ function equipoLabel(i: Inscripcion): string | null {
     if (i.alquila_chaleco) bits.push("Chaleco");
   }
   if (i.recarga_tracer_100 > 0)
-    bits.push(`${i.recarga_tracer_100}× tracer 100`);
-  if (i.recarga_conv_200 > 0) bits.push(`${i.recarga_conv_200}× conv 200`);
-  if (i.recarga_conv_400 > 0) bits.push(`${i.recarga_conv_400}× conv 400`);
+    bits.push(`${i.recarga_tracer_100}× tracer 200`);
+  if (i.recarga_conv_200 > 0) bits.push(`${i.recarga_conv_200}× común 200`);
   if (!bits.length) return null;
   return bits.join(" · ");
 }
@@ -121,7 +117,7 @@ export function CheckinList({
 
   const updateRecargas = (
     id: string,
-    recargas: { tracer100: number; conv200: number; conv400: number },
+    recargas: { tracer100: number; conv200: number },
   ) => {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
@@ -131,14 +127,12 @@ export function CheckinList({
     // Snapshot de recargas en transferencia (referencia/lista).
     const nuevoPrecioRecargas =
       recargas.tracer100 * preciosRecargas.tracer100.transferencia +
-      recargas.conv200 * preciosRecargas.conv200.transferencia +
-      recargas.conv400 * preciosRecargas.conv400.transferencia;
+      recargas.conv200 * preciosRecargas.conv200.transferencia;
     const nuevoTotal = row.precio_entrada + row.precio_alquiler + nuevoPrecioRecargas;
     const rowActualizado: Inscripcion = {
       ...row,
       recarga_tracer_100: recargas.tracer100,
       recarga_conv_200: recargas.conv200,
-      recarga_conv_400: recargas.conv400,
       precio_recargas: nuevoPrecioRecargas,
       precio_total: nuevoTotal,
     };
@@ -264,16 +258,20 @@ export function CheckinList({
   // la fila con los mismos precios que usó el server (pasados como prop).
   const addWalkin = (d: WalkinAdded) => {
     const esSocio = d.socio;
-    const esAlquiler = d.tipo === "alquiler";
+    const esAvanzado = d.tipo === "alquiler_avanzado";
+    const esAlquiler = d.tipo === "alquiler_basico" || esAvanzado;
+    const alquilerDual = esAvanzado
+      ? precios.alquiler_premium
+      : precios.alquiler_marcadora;
     // El alquiler ya incluye la entrada: para alquiler no se cobra entrada aparte.
     const precio_entrada = esAlquiler
       ? 0
       : esSocio
         ? precios.entrada_socio.transferencia
         : precios.entrada_byop.transferencia;
-    const precio_alquiler = esAlquiler ? precios.alquiler_marcadora.transferencia : 0;
+    const precio_alquiler = esAlquiler ? alquilerDual.transferencia : 0;
     const precio_fijo_efectivo = esAlquiler
-      ? precios.alquiler_marcadora.efectivo
+      ? alquilerDual.efectivo
       : esSocio
         ? precios.entrada_socio.efectivo
         : precios.entrada_byop.efectivo;
@@ -289,12 +287,11 @@ export function CheckinList({
       socio: esSocio,
       tipo_jugador: esAlquiler ? "alquiler" : "byop",
       estado: "confirmado",
-      alquila_marcadora: esAlquiler,
-      alquila_premium: false,
+      alquila_marcadora: esAlquiler && !esAvanzado,
+      alquila_premium: esAvanzado,
       alquila_chaleco: false,
       recarga_tracer_100: 0,
       recarga_conv_200: 0,
-      recarga_conv_400: 0,
       precio_entrada,
       precio_alquiler,
       precio_recargas: 0,
@@ -504,7 +501,7 @@ function MobileCheckinCard({
   onPatch: (id: string, patch: Partial<Checkin>) => void;
   onUpdateRecargas: (
     id: string,
-    recargas: { tracer100: number; conv200: number; conv400: number },
+    recargas: { tracer100: number; conv200: number },
   ) => void;
   preciosRecargas: PreciosRecargas;
 }) {
@@ -598,17 +595,13 @@ function RecargasControls({
   precios: PreciosRecargas;
   onUpdate: (
     id: string,
-    recargas: { tracer100: number; conv200: number; conv400: number },
+    recargas: { tracer100: number; conv200: number },
   ) => void;
 }) {
-  const adjust = (
-    key: "tracer100" | "conv200" | "conv400",
-    delta: number,
-  ) => {
+  const adjust = (key: "tracer100" | "conv200", delta: number) => {
     const next = {
       tracer100: r.recarga_tracer_100,
       conv200: r.recarga_conv_200,
-      conv400: r.recarga_conv_400,
     };
     next[key] = Math.max(0, Math.min(20, next[key] + delta));
     onUpdate(r.id, next);
@@ -617,27 +610,20 @@ function RecargasControls({
   return (
     <div className="border border-rail/40 bg-ink/40 clip-notch p-2.5">
       <p className="sect-label mb-2">// Recargas</p>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         <RecargaCounter
-          label="Tracer 100"
+          label="Tracer 200"
           value={r.recarga_tracer_100}
           precio={precios.tracer100.transferencia}
           onMinus={() => adjust("tracer100", -1)}
           onPlus={() => adjust("tracer100", 1)}
         />
         <RecargaCounter
-          label="Conv 200"
+          label="Común 200"
           value={r.recarga_conv_200}
           precio={precios.conv200.transferencia}
           onMinus={() => adjust("conv200", -1)}
           onPlus={() => adjust("conv200", 1)}
-        />
-        <RecargaCounter
-          label="Conv 400"
-          value={r.recarga_conv_400}
-          precio={precios.conv400.transferencia}
-          onMinus={() => adjust("conv400", -1)}
-          onPlus={() => adjust("conv400", 1)}
         />
       </div>
       {r.precio_recargas > 0 && (

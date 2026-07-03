@@ -18,6 +18,8 @@ const ERR = (input: unknown): { error: FriendlyError } => ({
 
 export type AnotarmeInput = {
   tipo_jugador: TipoJugador;
+  /** Si tipo=alquiler, elige el tier avanzado (marcadora avanzada) en vez del básico. */
+  alquiler_avanzado?: boolean;
   alquila_chaleco?: boolean;
 };
 
@@ -73,9 +75,11 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   );
   const aplicaBeneficioSocio = cuota.esSocio && cuota.alDia;
 
-  // Alquiler tiene un único tier de equipo: si tipo=alquiler, marcadora=true.
+  // Alquiler tiene dos tiers excluyentes: básico (marcadora) o avanzado (premium).
+  const esAvanzado = tipo_jugador === "alquiler" && !!input.alquiler_avanzado;
   const alquila: AlquilerItems = {
-    marcadora: tipo_jugador === "alquiler",
+    marcadora: tipo_jugador === "alquiler" && !esAvanzado,
+    premium: esAvanzado,
     chaleco: tipo_jugador === "alquiler" && !!input.alquila_chaleco,
   };
 
@@ -117,6 +121,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     posicion_waitlist,
     tipo_jugador,
     alquila_marcadora: alquila.marcadora,
+    alquila_premium: alquila.premium,
     alquila_chaleco: alquila.chaleco,
     precio_entrada: transf.entrada,
     precio_alquiler: transf.alquiler,

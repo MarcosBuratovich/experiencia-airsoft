@@ -238,7 +238,7 @@ export async function agregarMiAlquilerAction(
   const opts = {
     tipo_jugador: "alquiler" as const,
     socio: false,
-    alquila: { marcadora: true, chaleco: false },
+    alquila: { marcadora: true, premium: false, chaleco: false },
     precios,
   };
   const transf = calcularPrecioInscripcion(opts, "transferencia");
