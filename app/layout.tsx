@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anton, Oswald, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteJsonLd } from "./_components/site-jsonld";
+import { MetaPixel } from "./_components/meta-pixel";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -130,6 +131,7 @@ export default function RootLayout({
       className={`${anton.variable} ${oswald.variable} ${inter.variable} ${jetbrains.variable}`}
     >
       <body className="relative">
+        <MetaPixel />
         <SiteJsonLd />
         {children}
       </body>
