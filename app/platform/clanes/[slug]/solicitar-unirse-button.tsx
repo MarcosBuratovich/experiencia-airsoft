@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { solicitarUnirseAction } from "../actions";
+import { track } from "@/lib/ga";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
@@ -19,6 +20,11 @@ export function SolicitarUnirseButton({ clanId }: { clanId: string }) {
       if ("error" in res && res.error) {
         setError(res.error);
       } else {
+        track("join_group", {
+          group_id: clanId,
+          estado: "solicitado",
+          con_mensaje: mensaje.trim().length > 0,
+        });
         router.refresh();
       }
     });

@@ -8,6 +8,7 @@ import { estadoEfectivo, inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
 import { NombreConClanes } from "../../components/nombre-con-clanes";
+import { TrackEvent } from "@/app/_components/track-event";
 import { AnotarmeButton } from "./anotarme-button";
 import { OrganizadorPanel } from "./organizador-panel";
 import { MisAlquileresPanel } from "./mis-alquileres-panel";
@@ -160,6 +161,19 @@ export default async function PartidaDetail({
       </div>
 
       <div className="mb-8">
+        {/* Embudo: vio la partida (para audiencias "vio y no se anotó"). */}
+        <TrackEvent
+          event="view_item"
+          params={{
+            items: [
+              {
+                item_id: partida.id,
+                item_name: `${modalidadLabel(partida.modalidad)} ${partida.fecha}`,
+                item_category: partida.modalidad,
+              },
+            ],
+          }}
+        />
         <AnotarmeButton
           partidaId={partida.id}
           inscripcion={

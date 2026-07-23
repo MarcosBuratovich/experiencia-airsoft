@@ -110,7 +110,11 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   revalidatePath("/", "layout");
   // Volvemos al destino original si venía uno (?next=), o al dashboard.
-  redirect(sanitizeNext(formData.get("next")));
+  // `login=ok` viaja en la URL para que el tracker de analytics del layout
+  // dispare el evento `login` (esta action redirige server-side, así que el
+  // form nunca ve el éxito); el tracker limpia el param al disparar.
+  const dest = sanitizeNext(formData.get("next"));
+  redirect(`${dest}${dest.includes("?") ? "&" : "?"}login=ok`);
 }
 
 /**

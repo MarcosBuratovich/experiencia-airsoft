@@ -315,7 +315,9 @@ export async function crearClanAction(
 
   revalidatePath("/clanes");
   revalidatePath("/mi-clan");
-  redirect(`/clanes/${clan.slug}`);
+  // `creado=1` viaja para que el tracker de analytics de la página del clan
+  // dispare crear_clan (esta action redirige server-side).
+  redirect(`/clanes/${clan.slug}?creado=1`);
 }
 
 /**

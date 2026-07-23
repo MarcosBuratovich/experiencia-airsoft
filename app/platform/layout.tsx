@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { ContactosWhatsapp } from "@/app/_components/contactos-whatsapp";
+import { GaUserId, ParamEventTracker } from "@/app/_components/track-event";
 import { SITE_URL, TIENDA_URL } from "@/app/_components/site-constants";
 import { PlatformNav } from "./platform-nav";
 
@@ -51,6 +53,12 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-dvh bg-ink text-bone flex flex-col">
+      {/* user_id (UUID, sin PII) para unificar sesiones logueadas en GA4. */}
+      {user && <GaUserId userId={user.id} />}
+      {/* loginAction redirige con ?login=ok — acá se convierte en evento. */}
+      <Suspense fallback={null}>
+        <ParamEventTracker param="login" event="login" params={{ method: "email" }} />
+      </Suspense>
       <header className="sticky top-0 z-40 border-b border-rail/60 bg-carbon/85 backdrop-blur">
         <div className="fluid-gutter-x flex items-center justify-between gap-3 py-3 sm:py-4">
           <Link

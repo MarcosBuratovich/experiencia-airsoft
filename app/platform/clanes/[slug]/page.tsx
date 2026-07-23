@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getClanStats } from "@/lib/ranking";
+import { ParamEventTracker } from "@/app/_components/track-event";
 import { SolicitarUnirseButton } from "./solicitar-unirse-button";
 
 export default async function ClanDetail({
@@ -83,6 +85,14 @@ export default async function ClanDetail({
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* crearClanAction redirige acá con ?creado=1 — se vuelve evento. */}
+      <Suspense fallback={null}>
+        <ParamEventTracker
+          param="creado"
+          event="crear_clan"
+          params={{ group_id: clan.id }}
+        />
+      </Suspense>
       <Link
         href="/clanes"
         className="font-mono fluid-xs text-smoke hover:text-orange uppercase tracking-[.25em]"

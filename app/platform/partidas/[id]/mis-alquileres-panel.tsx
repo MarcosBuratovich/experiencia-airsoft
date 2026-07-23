@@ -6,6 +6,7 @@ import {
   agregarMiAlquilerAction,
   quitarInscripcionAction,
 } from "./organizador-actions";
+import { track } from "@/lib/ga";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
@@ -44,6 +45,8 @@ export function MisAlquileresPanel({
       if ("error" in res && res.error) {
         setError(res.error);
       } else {
+        // Cada invitado agregado es un jugador pago extra (alquiler en cancha).
+        track("agregar_alquiler_invitado", { partida_id: partidaId });
         setNombre("");
         setDni("");
         router.refresh();
@@ -58,7 +61,10 @@ export function MisAlquileresPanel({
     startDelete(async () => {
       const res = await quitarInscripcionAction({ inscripcionId: id });
       if ("error" in res && res.error) setError(res.error);
-      else router.refresh();
+      else {
+        track("quitar_alquiler_invitado", { partida_id: partidaId });
+        router.refresh();
+      }
       setRemovingId(null);
     });
   };

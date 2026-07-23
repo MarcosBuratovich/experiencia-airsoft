@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatFechaHora } from "@/lib/format";
+import { track } from "@/lib/ga";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../_components/error-banner";
 import {
@@ -339,7 +340,10 @@ function SalirClanButton({
         startTransition(async () => {
           const res = await salirDelClanAction(clanId);
           if ("error" in res && res.error) setError(res.error);
-          else router.refresh();
+          else {
+            track("salir_clan", { group_id: clanId });
+            router.refresh();
+          }
         });
       }}
       disabled={pending}

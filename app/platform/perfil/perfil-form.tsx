@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { actualizarPerfilAction, type ActualizarPerfilState } from "./actions";
+import { track } from "@/lib/ga";
 import { sugerirNumeroAction } from "../actions/auth";
 import { PhoneInput } from "../components/phone-input";
 import { ErrorBanner } from "../../_components/error-banner";
@@ -54,6 +55,13 @@ export function PerfilForm({
   const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
   const error = state && "error" in state ? state.error : undefined;
   const ok = state && "ok" in state && state.ok;
+
+  // Señal de engagement; deps=[state] (identidad nueva por cada submit)
+  // cuenta también guardados exitosos consecutivos, sin duplicar re-renders.
+  useEffect(() => {
+    if (ok) track("editar_perfil");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <form action={action} className="space-y-4">

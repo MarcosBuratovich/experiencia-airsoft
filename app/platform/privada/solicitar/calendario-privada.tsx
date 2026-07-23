@@ -11,6 +11,7 @@ import {
   type SolicitarPrivadaState,
 } from "../actions";
 import type { FriendlyError } from "@/lib/errors";
+import { track } from "@/lib/ga";
 import { ErrorBanner } from "../../../_components/error-banner";
 import { useModalA11y } from "../../components/use-modal-a11y";
 
@@ -306,10 +307,18 @@ function FormSolicitar({
     if (handledRef.current) return;
     if (!state || !("ok" in state) || !state.ok) return;
     handledRef.current = true;
+    // Lead clave (privadas/cumples/corporativos). El ref garantiza
+    // exactamente 1 evento por solicitud; se dispara ANTES del window.open
+    // para que el hit salga aunque el handoff a WhatsApp mate la página.
+    track("generate_lead", {
+      lead_type: "partida_privada",
+      fecha: slot.fecha,
+      cupo_estimado: cantNum,
+    });
     if (typeof window !== "undefined") {
       window.open(state.hrefWA, "_blank", "noopener,noreferrer");
     }
-  }, [state]);
+  }, [state, slot, cantNum]);
 
   if (state && "ok" in state && state.ok) {
     return (

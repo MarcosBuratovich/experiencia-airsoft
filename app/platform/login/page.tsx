@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ContactosWhatsapp } from "@/app/_components/contactos-whatsapp";
+import { TrackEvent } from "@/app/_components/track-event";
 import { LoginForm } from "./login-form";
 
 const APP_URL = "https://app.experienciaairsoft.com";
@@ -50,6 +51,9 @@ export default async function LoginPage({
   if (signup === "ok") {
     return (
       <div className="max-w-xl mx-auto">
+        {/* signupAction redirige acá server-side: es el único lugar donde se
+            ve el éxito del registro. `once` evita re-contar en reloads. */}
+        <TrackEvent event="sign_up" params={{ method: "email" }} once="sign_up" />
         <div className="border border-orange/60 bg-orange/5 clip-notch p-6 sm:p-10 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-6 border-2 border-orange rounded-full text-orange">
             <svg

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cancelarPrivadaAction } from "../privada/actions";
 import { formatFechaHora } from "@/lib/format";
+import { track } from "@/lib/ga";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../_components/error-banner";
 
@@ -45,7 +46,11 @@ export function MiSolicitudRow({ solicitud: s }: Props) {
     startTransition(async () => {
       const res = await cancelarPrivadaAction(s.id);
       if ("error" in res && res.error) setError(res.error);
-      else router.refresh();
+      else {
+        // Netea el generate_lead de la solicitud en el análisis.
+        track("cancelar_solicitud_privada", { solicitud_id: s.id });
+        router.refresh();
+      }
     });
   };
 

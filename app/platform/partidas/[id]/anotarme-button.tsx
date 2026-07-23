@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anotarmeAction, desanotarmeAction } from "./actions";
+import { track } from "@/lib/ga";
 import type { PrecioDual, TipoJugador } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
@@ -136,7 +137,13 @@ export function AnotarmeButton({
       startTransition(async () => {
         const res = await desanotarmeAction(partidaId);
         if (res && "error" in res && res.error) setError(res.error);
-        else router.refresh();
+        else {
+          track("desanotarse_partida", {
+            partida_id: partidaId,
+            en_espera: enEspera,
+          });
+          router.refresh();
+        }
       });
     };
     return (
@@ -185,6 +192,20 @@ export function AnotarmeButton({
       if ("error" in res && res.error) {
         setError(res.error);
       } else {
+        // Conversión principal de la plataforma. value = precio de lista
+        // (transferencia) en ARS, ya calculado arriba para el botón.
+        // En lista de espera todavía no aseguró lugar: value 0 para no
+        // inflar el valor de conversión de Ads (el param waitlist lo marca).
+        track("anotarse_partida", {
+          partida_id: partidaId,
+          tipo_jugador: tipo,
+          alquiler_tier: esAlquiler ? tier : undefined,
+          chaleco: esAlquiler ? chaleco : undefined,
+          es_socio: aplicaBeneficio,
+          waitlist: lleno,
+          value: lleno ? 0 : totalTr,
+          currency: "ARS",
+        });
         router.refresh();
       }
     });
