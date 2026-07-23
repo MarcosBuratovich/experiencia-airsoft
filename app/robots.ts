@@ -29,7 +29,10 @@ export default function robots(): MetadataRoute.Robots {
           "/mis-solicitudes",
           "/clanes/",
           "/privada/",
-          "/eventos",
+          // OJO: acá NO va "/eventos" — robots.txt matchea por PREFIJO y esa
+          // regla bloqueaba también /eventos-corporativos (página de marketing
+          // clave, apareció como "Blocked by robots.txt" en Search Console).
+          // La ruta admin de eventos ya cae bajo "/admin/".
         ],
       },
     ],
