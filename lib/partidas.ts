@@ -12,6 +12,10 @@
  * Inscripción: queda abierta hasta `INSCRIPCION_CIERRE_MIN` minutos después
  * del horario de inicio. El admin también puede cerrarla manualmente
  * (estado = 'cerrada' en DB).
+ *
+ * Check-in: NO usa el estado efectivo. Se habilita desde las 00:00 del día de
+ * la partida (ver `checkinAbierto`), porque la gente llega y se cobra bastante
+ * antes del horario de inicio.
  */
 
 export const INSCRIPCION_CIERRE_MIN = 30;
@@ -75,4 +79,30 @@ export function inscripcionAbierta(p: PartidaCore, now: Date = new Date()): bool
 
 export function yaEmpezo(p: PartidaCore, now: Date = new Date()): boolean {
   return now.getTime() >= inicioPartida(p.fecha, p.hora_inicio).getTime();
+}
+
+/** 00:00 (hora argentina) del día de la partida. */
+export function inicioDelDia(fecha: string): Date {
+  return inicioPartida(fecha, "00:00");
+}
+
+/**
+ * ¿Se puede hacer el check-in de esta partida?
+ *
+ * Ventana = [00:00 del día de la partida, fin de la partida], en hora
+ * argentina. Arranca a la medianoche —y no a la hora de inicio— porque el
+ * admin necesita poder cobrar y marcar presentes a todos los que van llegando
+ * durante el día, no recién cuando la partida empieza. Termina junto con la
+ * partida: a partir de ahí la pantalla pasa a ser el resumen.
+ *
+ * Una partida cancelada nunca habilita check-in. El estado 'cerrada' (que solo
+ * cierra la inscripción) sí lo habilita.
+ */
+export function checkinAbierto(p: PartidaCore, now: Date = new Date()): boolean {
+  if (p.estado === "cancelada") return false;
+  const t = now.getTime();
+  const desde = inicioDelDia(p.fecha).getTime();
+  const hasta =
+    inicioPartida(p.fecha, p.hora_inicio).getTime() + p.duracion_min * 60_000;
+  return t >= desde && t < hasta;
 }

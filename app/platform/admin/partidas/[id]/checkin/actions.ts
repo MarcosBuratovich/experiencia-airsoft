@@ -9,7 +9,7 @@ import {
   calcularPrecioRecargas,
   getPreciosConfig,
 } from "@/lib/precios";
-import { estadoEfectivo } from "@/lib/partidas";
+import { checkinAbierto } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { isCleanText } from "@/lib/sanitize-text";
 
@@ -179,11 +179,12 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     .eq("id", v.partidaId)
     .maybeSingle();
   if (!partida) return ERR("Partida no encontrada");
-  // Walk-in solo durante el check-in (partida en curso); enforced server-side
-  // porque el form solo se monta en ese estado pero la action es invocable.
-  if (estadoEfectivo(partida) !== "en_curso") {
+  // Walk-in solo mientras el check-in está abierto (desde las 00:00 del día de
+  // la partida hasta que termina); enforced server-side porque el form solo se
+  // monta en ese estado pero la action es invocable.
+  if (!checkinAbierto(partida)) {
     return ERR(
-      "Solo se pueden agregar jugadores durante el check-in (partida en curso)",
+      "Solo se pueden agregar jugadores mientras el check-in está abierto (el día de la partida, hasta que termina)",
     );
   }
 

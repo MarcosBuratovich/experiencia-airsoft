@@ -44,6 +44,30 @@ async function chequearAdminYPartida(partidaId: string) {
   return { supabase, partida };
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * ¿Ya hay check-ins cargados para esta partida?
+ *
+ * El check-in abre a las 00:00 del día de la partida, así que una partida que
+ * "todavía no empezó" puede tener presentes y cobros registrados. Eliminarla
+ * borraría esa plata en cascada, así que las acciones de borrado lo chequean.
+ */
+async function tieneCheckins(supabase: SupabaseClient, partidaId: string) {
+  const { data: inscripciones } = await supabase
+    .from("inscripciones")
+    .select("id")
+    .eq("partida_id", partidaId);
+  const ids = (inscripciones ?? []).map((i) => i.id);
+  if (!ids.length) return false;
+
+  const { count } = await supabase
+    .from("checkins")
+    .select("inscripcion_id", { count: "exact", head: true })
+    .in("inscripcion_id", ids);
+  return (count ?? 0) > 0;
+}
+
 export async function cancelarPartidaAction(partidaId: string) {
   const ctx = await chequearAdminYPartida(partidaId);
   if ("error" in ctx) return ctx;
@@ -114,6 +138,11 @@ export async function eliminarPartidaAction(partidaId: string) {
   const inicio = inicioPartida(partida.fecha, partida.hora_inicio);
   if (Date.now() >= inicio.getTime()) {
     return ERR("No se puede eliminar una partida que ya empezó");
+  }
+  if (await tieneCheckins(supabase, partidaId)) {
+    return ERR(
+      "No se puede eliminar: ya hay check-ins cargados. Cancelá la partida en vez de eliminarla.",
+    );
   }
 
   const { error } = await supabase.from("partidas").delete().eq("id", partidaId);
@@ -314,6 +343,11 @@ export async function eliminarPartidaCalendarioAction(partidaId: string) {
   const inicio = inicioPartida(partida.fecha, partida.hora_inicio);
   if (Date.now() >= inicio.getTime()) {
     return ERR("No se puede eliminar una partida que ya empezó");
+  }
+  if (await tieneCheckins(supabase, partidaId)) {
+    return ERR(
+      "No se puede eliminar: ya hay check-ins cargados. Cancelá la partida en vez de eliminarla.",
+    );
   }
 
   const { error } = await supabase.from("partidas").delete().eq("id", partidaId);

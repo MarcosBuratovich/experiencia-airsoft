@@ -16,9 +16,16 @@ type Props = {
   partidaId: string;
   estado: string;
   estadoFx: EstadoEfectivo;
+  /** Check-in habilitado (desde las 00:00 del día de la partida). */
+  checkinAbierto: boolean;
 };
 
-export function PartidaActionsButtons({ partidaId, estado, estadoFx }: Props) {
+export function PartidaActionsButtons({
+  partidaId,
+  estado,
+  estadoFx,
+  checkinAbierto,
+}: Props) {
   const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -92,7 +99,9 @@ export function PartidaActionsButtons({ partidaId, estado, estadoFx }: Props) {
           </button>
         )}
 
-        {isFutura && (
+        {/* Con el check-in abierto ya puede haber presentes y cobros cargados:
+            eliminar los borraría en cascada. Ahí solo queda cancelar. */}
+        {isFutura && !checkinAbierto && (
           <button
             type="button"
             onClick={() =>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
-import { estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
+import { checkinAbierto, estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
 import { GenerarSemanaButton } from "./generar-semana-button";
 
 type Row = {
@@ -15,6 +15,8 @@ type Row = {
   estado: string;
   inscriptos: number;
   estadoFx: EstadoEfectivo;
+  /** Check-in habilitado (desde las 00:00 del día de la partida). */
+  checkinAbierto: boolean;
 };
 
 export default async function AdminPartidas() {
@@ -39,6 +41,12 @@ export default async function AdminPartidas() {
     estado: p.estado,
     inscriptos: Array.isArray(p.inscripciones) ? (p.inscripciones[0]?.count ?? 0) : 0,
     estadoFx: estadoEfectivo({
+      fecha: p.fecha,
+      hora_inicio: p.hora_inicio,
+      duracion_min: p.duracion_min,
+      estado: p.estado,
+    }),
+    checkinAbierto: checkinAbierto({
       fecha: p.fecha,
       hora_inicio: p.hora_inicio,
       duracion_min: p.duracion_min,
@@ -141,10 +149,10 @@ function PartidaAdminRow({ r }: { r: Row }) {
   const primaryHref = isPasada
     ? `/admin/partidas/${r.id}/checkin?vista=resumen`
     : `/admin/partidas/${r.id}/checkin`;
-  const primaryLabel = isFutura
-    ? "Ver inscriptos →"
-    : isEnCurso
-      ? "Check-in →"
+  const primaryLabel = r.checkinAbierto
+    ? "Check-in →"
+    : isFutura
+      ? "Ver inscriptos →"
       : isPasada
         ? "Resumen →"
         : "Ver →";
@@ -178,6 +186,8 @@ function PartidaAdminRow({ r }: { r: Row }) {
           ) : (
             <Pill tone="ok">Abierta</Pill>
           )}
+          {/* Partida de hoy que todavía no arrancó: el check-in ya se puede hacer. */}
+          {r.checkinAbierto && !isEnCurso && <Pill tone="ok">Check-in abierto</Pill>}
           {r.visibilidad === "privada" && (
             <Pill tone="muted">Privada</Pill>
           )}

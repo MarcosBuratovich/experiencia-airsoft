@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
-import { estadoEfectivo } from "@/lib/partidas";
+import { checkinAbierto, estadoEfectivo } from "@/lib/partidas";
 import { getPreciosConfig } from "@/lib/precios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
 import { CheckinList } from "./checkin-list";
@@ -170,21 +170,25 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     };
   });
 
-  const estadoFx = estadoEfectivo({
+  const core = {
     fecha: partida.fecha,
     hora_inicio: partida.hora_inicio,
     duracion_min: partida.duracion_min,
     estado: partida.estado,
-  });
+  };
+  const estadoFx = estadoEfectivo(core);
+  // El check-in se habilita desde las 00:00 del día de la partida, así que
+  // puede estar abierto con la partida todavía 'futura' (por ejemplo, a la
+  // mañana para una partida de la noche).
+  const puedeCheckin = checkinAbierto(core);
 
-  const titulo =
-    estadoFx === "pasada"
+  const titulo = puedeCheckin
+    ? "Check-in"
+    : estadoFx === "pasada"
       ? "Resumen"
-      : estadoFx === "en_curso"
-        ? "Check-in"
-        : estadoFx === "cancelada"
-          ? "Cancelada"
-          : "Inscriptos";
+      : estadoFx === "cancelada"
+        ? "Cancelada"
+        : "Inscriptos";
 
   return (
     <div>
@@ -219,6 +223,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             partidaId={partida.id}
             estado={partida.estado}
             estadoFx={estadoFx}
+            checkinAbierto={puedeCheckin}
           />
         </div>
       </div>
@@ -234,8 +239,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {estadoFx === "futura" && <InscriptosPreview filas={filas} />}
-      {estadoFx === "en_curso" && (
+      {/* Futura y todavía sin ventana de check-in (partida de otro día). */}
+      {estadoFx === "futura" && !puedeCheckin && <InscriptosPreview filas={filas} />}
+      {puedeCheckin && (
         <CheckinList
           partidaId={partida.id}
           inscripciones={filas}
