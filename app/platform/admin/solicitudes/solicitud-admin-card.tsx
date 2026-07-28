@@ -7,6 +7,7 @@ import { aprobarPrivadaAction, rechazarPrivadaAction } from "../../privada/actio
 import { formatFechaHora } from "@/lib/format";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
+import { ContactoWa } from "../../components/contacto-wa";
 
 type Props = {
   solicitud: {
@@ -34,11 +35,9 @@ const ESTADO_STYLES: Record<string, string> = {
   cancelada: "bg-smoke/40 text-ash",
 };
 
-/** Link wa.me al solicitante con un mensaje pre-armado sobre su reserva. */
-function waLink(s: Props["solicitud"]): string {
-  const num = s.user.celular.replace(/\D/g, "");
-  const msg = `Hola ${s.user.nombre}! Sobre tu reserva de privada para ${s.fecha} ${s.hora} hs (${s.cupo} personas).`;
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+/** Mensaje pre-armado al solicitante sobre su reserva. */
+function waMensaje(s: Props["solicitud"]): string {
+  return `Hola ${s.user.nombre}! Sobre tu reserva de privada para ${s.fecha} ${s.hora} hs (${s.cupo} personas).`;
 }
 
 export function SolicitudAdminCard({ solicitud: s }: Props) {
@@ -115,14 +114,13 @@ export function SolicitudAdminCard({ solicitud: s }: Props) {
       </p>
       <div className="mt-1 flex items-center gap-3 flex-wrap font-mono fluid-xs">
         {s.user.celular && (
-          <a
-            href={waLink(s)}
-            target="_blank"
-            rel="noopener"
-            className="text-orange hover:underline"
-          >
-            WhatsApp {s.user.celular}
-          </a>
+          <ContactoWa
+            celular={s.user.celular}
+            nombre={s.user.nombre}
+            mensaje={waMensaje(s)}
+            variant="inline"
+            className="text-orange"
+          />
         )}
         {s.user.email && (
           <a href={`mailto:${s.user.email}`} className="text-ash hover:text-orange">

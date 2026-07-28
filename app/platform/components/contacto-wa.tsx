@@ -1,13 +1,26 @@
+"use client";
+
 /**
  * Botón de contacto por WhatsApp para el admin.
  *
  * Abre el chat con el jugador y un mensaje ya escrito. Solo se renderiza si
  * hay un celular cargado (los guests/invitados agregados a mano no tienen).
  *
- * `data-ga-skip`: el listener global de analytics ignora este link. Dos
- * razones: (1) el número del jugador viaja en la URL y es dato personal que
- * no puede salir hacia Google; (2) son contactos internos del negocio, no
- * conversiones de marketing — contarlos inflaría `whatsapp_click`.
+ * ⚠️ POR QUÉ ES UN <button> Y NO UN <a href="wa.me/...">
+ * El Pixel de Meta trae "detección automática de eventos": ante cualquier
+ * click manda a Facebook las características del elemento, incluido el
+ * `destination` (el href) y su texto. Verificado en red: con un anchor, el
+ * CELULAR DEL JUGADOR viajaba a Facebook dentro de la URL de wa.me. Con un
+ * <button> sin href el mismo evento sale con `destination: ""`.
+ *
+ * De ahí las dos reglas de este componente:
+ *   1. nunca un href con el número → se abre con window.open;
+ *   2. el número nunca va DENTRO del botón (Meta manda el innerText) —
+ *      cuando se muestra, va en un <span> hermano.
+ *
+ * `data-ga-skip` cubre lo mismo del lado de Google Analytics: nuestro
+ * listener global ignora estos clicks (son contactos internos del negocio,
+ * no conversiones de marketing).
  */
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -24,7 +37,8 @@ export function celularContactable(celular: string | null | undefined): boolean 
   return celular.replace(/\D/g, "").length >= 8;
 }
 
-function waHref(celular: string, mensaje: string): string {
+/** URL de chat de WhatsApp. Nunca se usa como href (ver docstring del módulo). */
+export function waHref(celular: string, mensaje: string): string {
   // wa.me quiere solo dígitos, en formato internacional sin '+'.
   const num = celular.replace(/\D/g, "");
   return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`;
@@ -34,6 +48,7 @@ export function ContactoWa({
   celular,
   nombre,
   contexto,
+  mensaje: mensajeProp,
   variant = "boton",
   className = "",
 }: {
@@ -42,9 +57,11 @@ export function ContactoWa({
   nombre?: string | null;
   /** Cola del mensaje, p. ej. "la partida del sábado 19:00 hs". */
   contexto?: string;
+  /** Mensaje completo, si el llamador quiere armarlo él (pisa `contexto`). */
+  mensaje?: string;
   /**
    * "boton"  → pastilla con ícono (listados donde el número no se muestra).
-   * "inline" → el número como link (donde ya figuraba como texto).
+   * "inline" → ícono + el número al lado (donde ya figuraba como texto).
    */
   variant?: "boton" | "inline";
   className?: string;
@@ -56,38 +73,50 @@ export function ContactoWa({
   }
 
   const saludo = nombre?.trim() ? `Hola ${nombre.trim()}!` : "Hola!";
-  const mensaje = contexto
-    ? `${saludo} Te escribo de Experiencia Airsoft por ${contexto}.`
-    : `${saludo} Te escribo de Experiencia Airsoft.`;
-  const href = waHref(celular as string, mensaje);
+  const mensaje =
+    mensajeProp ??
+    (contexto
+      ? `${saludo} Te escribo de Experiencia Airsoft por ${contexto}.`
+      : `${saludo} Te escribo de Experiencia Airsoft.`);
+
+  const abrir = () => {
+    window.open(waHref(celular as string, mensaje), "_blank", "noopener,noreferrer");
+  };
+
+  // aria-label / title llevan el nombre pero NUNCA el número: Meta manda el
+  // texto del botón y no queremos el celular ahí.
+  const etiqueta = `Escribirle a ${nombre?.trim() || "este jugador"} por WhatsApp`;
 
   if (variant === "inline") {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-ga-skip
-        title={`Escribirle a ${nombre ?? "este jugador"} por WhatsApp`}
-        className={`inline-flex items-center gap-1 text-ash hover:text-orange transition-colors ${className}`}
-      >
-        <WhatsAppIcon className="w-3.5 h-3.5 shrink-0" />
-        {celular}
-      </a>
+      <span className={`inline-flex items-center gap-1.5 ${className}`}>
+        <button
+          type="button"
+          onClick={abrir}
+          data-ga-skip
+          aria-label={etiqueta}
+          title={etiqueta}
+          className="inline-flex items-center text-ash hover:text-orange transition-colors cursor-pointer"
+        >
+          <WhatsAppIcon className="w-3.5 h-3.5 shrink-0" />
+        </button>
+        {/* El número va FUERA del botón: si estuviera adentro, Meta lo
+            mandaría como texto del elemento clickeado. */}
+        <span>{celular}</span>
+      </span>
     );
   }
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      type="button"
+      onClick={abrir}
       data-ga-skip
-      aria-label={`Escribirle a ${nombre ?? "este jugador"} por WhatsApp`}
-      title={`WhatsApp ${celular}`}
-      className={`shrink-0 inline-flex items-center justify-center w-8 h-8 border border-rail/60 text-ash hover:border-orange hover:text-orange transition-colors ${className}`}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className={`shrink-0 inline-flex items-center justify-center w-8 h-8 border border-rail/60 text-ash hover:border-orange hover:text-orange transition-colors cursor-pointer ${className}`}
     >
       <WhatsAppIcon className="w-4 h-4" />
-    </a>
+    </button>
   );
 }

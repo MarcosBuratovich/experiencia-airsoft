@@ -8,6 +8,7 @@ import { formatFechaHora, formatFechaLarga, formatHora, modalidadLabel } from "@
 import type { EstadoEfectivo } from "@/lib/partidas";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "@/app/_components/error-banner";
+import { ContactoWa } from "../../components/contacto-wa";
 import { useModalA11y } from "../../components/use-modal-a11y";
 import {
   editarPartidaAction,
@@ -75,11 +76,9 @@ function diaNumero(iso: string): number {
   return Number(iso.split("-")[2]);
 }
 
-/** Link wa.me al solicitante con mensaje pre-armado sobre su reserva. */
-function waLinkSol(it: ItemSolicitud): string {
-  const num = (it.celular ?? "").replace(/\D/g, "");
-  const msg = `Hola ${it.solicitante}! Sobre tu reserva de privada para ${formatFechaLarga(it.fecha)} ${formatHora(it.hora)} hs (~${it.cupoEstimado} personas).`;
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+/** Mensaje pre-armado al solicitante sobre su reserva. */
+function waMensajeSol(it: ItemSolicitud): string {
+  return `Hola ${it.solicitante}! Sobre tu reserva de privada para ${formatFechaLarga(it.fecha)} ${formatHora(it.hora)} hs (~${it.cupoEstimado} personas).`;
 }
 
 function colorPartida(it: ItemPartida): string {
@@ -696,14 +695,13 @@ function SolicitudModal({
         <p>Solicita: <span className="text-bone">{it.solicitante}</span></p>
         {it.celular && (
           <p>
-            <a
-              href={waLinkSol(it)}
-              target="_blank"
-              rel="noopener"
-              className="text-orange hover:underline"
-            >
-              WhatsApp {it.celular}
-            </a>
+            <ContactoWa
+              celular={it.celular}
+              nombre={it.solicitante}
+              mensaje={waMensajeSol(it)}
+              variant="inline"
+              className="text-orange"
+            />
           </p>
         )}
         <p className="text-smoke">Solicitada el {formatFechaHora(it.createdAt)}</p>
