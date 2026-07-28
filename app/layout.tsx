@@ -107,6 +107,14 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  verification: {
+    other: {
+      // Verificación del dominio en Meta Business (Configuración del negocio
+      // → Dominios). Habilita la medición agregada de eventos en iOS y el
+      // control de qué cuentas pueden usar el dominio en sus anuncios.
+      "facebook-domain-verification": "ysrwo2z6tpr7h0rjtwgxn3k8orlzrs",
+    },
+  },
 };
 
 export const viewport: Viewport = {

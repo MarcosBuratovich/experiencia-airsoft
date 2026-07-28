@@ -11,7 +11,7 @@ import {
   type SolicitarPrivadaState,
 } from "../actions";
 import type { FriendlyError } from "@/lib/errors";
-import { track } from "@/lib/ga";
+import { nuevoEventId, track } from "@/lib/ga";
 import { ErrorBanner } from "../../../_components/error-banner";
 import { useModalA11y } from "../../components/use-modal-a11y";
 
@@ -289,6 +289,9 @@ function FormSolicitar({
 }) {
   const [cant, setCant] = useState(String(PRIVADA_CUPO_MIN));
   const [notas, setNotas] = useState("");
+  // Un id por formulario: lo mandamos al server (input oculto, para la API de
+  // Conversiones) y al Pixel del navegador, así Meta cuenta un solo lead.
+  const [eventId] = useState(nuevoEventId);
   const [state, action, pending] = useActionState(
     solicitarPrivadaAction,
     initialReq,
@@ -310,11 +313,15 @@ function FormSolicitar({
     // Lead clave (privadas/cumples/corporativos). El ref garantiza
     // exactamente 1 evento por solicitud; se dispara ANTES del window.open
     // para que el hit salga aunque el handoff a WhatsApp mate la página.
-    track("generate_lead", {
-      lead_type: "partida_privada",
-      fecha: slot.fecha,
-      cupo_estimado: cantNum,
-    });
+    track(
+      "generate_lead",
+      {
+        lead_type: "partida_privada",
+        fecha: slot.fecha,
+        cupo_estimado: cantNum,
+      },
+      { eventId },
+    );
     if (typeof window !== "undefined") {
       window.open(state.hrefWA, "_blank", "noopener,noreferrer");
     }
@@ -353,6 +360,7 @@ function FormSolicitar({
     <form action={action}>
       <input type="hidden" name="fecha_propuesta" value={slot.fecha} />
       <input type="hidden" name="hora_inicio" value={slot.hora} />
+      <input type="hidden" name="eventId" value={eventId} />
 
       <div className="p-5 space-y-4">
         <div className="border border-orange/40 bg-orange/5 clip-notch p-3">

@@ -21,6 +21,7 @@ import {
   type FriendlyError,
 } from "@/lib/errors";
 import { WHATSAPP_URL } from "@/app/_components/site-constants";
+import { enviarEventoMeta } from "@/lib/meta-capi";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -46,6 +47,10 @@ const crearSchema = z.object({
     .min(PRIVADA_CUPO_MIN, `Mínimo ${PRIVADA_CUPO_MIN} personas para armar una privada`)
     .max(PRIVADA_CUPO_MAX, `Máximo ${PRIVADA_CUPO_MAX}`),
   notas: z.string().trim().max(500).optional(),
+  // Id de analytics generado por el cliente: viaja en un input oculto para
+  // que el Pixel del navegador y la API de Conversiones manden el MISMO id
+  // y Meta cuente un solo lead.
+  eventId: z.string().max(80).optional(),
 });
 
 export type SolicitarPrivadaState =
@@ -62,6 +67,7 @@ export async function solicitarPrivadaAction(
     hora_inicio: formData.get("hora_inicio"),
     cupo_estimado: formData.get("cupo_estimado"),
     notas: formData.get("notas") || undefined,
+    eventId: formData.get("eventId") || undefined,
   });
   if (!parsed.success) {
     return actionFieldErrors(z.flattenError(parsed.error).fieldErrors);
@@ -128,6 +134,15 @@ export async function solicitarPrivadaAction(
   revalidatePath("/mis-solicitudes");
   revalidatePath("/admin/solicitudes");
   revalidatePath("/privada/solicitar");
+
+  // Espejo server-side hacia Meta (lo que pierden bloqueadores e iOS).
+  if (v.eventId) {
+    await enviarEventoMeta({
+      eventName: "Lead",
+      eventId: v.eventId,
+      customData: { content_category: "partida_privada" },
+    });
+  }
 
   return {
     ok: true,

@@ -11,6 +11,7 @@ import {
 import { inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
+import { enviarEventoMeta } from "@/lib/meta-capi";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -21,6 +22,13 @@ export type AnotarmeInput = {
   /** Si tipo=alquiler, elige el tier avanzado (marcadora avanzada) en vez del básico. */
   alquiler_avanzado?: boolean;
   alquila_chaleco?: boolean;
+  /**
+   * Id del evento de analytics, generado por el cliente ANTES de llamar acá.
+   * El mismo id se manda al Pixel del navegador y a la API de Conversiones,
+   * para que Meta cuente una sola conversión. Opcional: sin él, solo mide el
+   * navegador.
+   */
+  eventId?: string;
 };
 
 export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
@@ -135,6 +143,23 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
 
   revalidatePath(`/partidas/${partidaId}`);
   revalidatePath("/partidas");
+
+  // Espejo server-side hacia Meta (recupera lo que pierden los bloqueadores
+  // y iOS). Solo cuenta como conversión el lugar confirmado: en lista de
+  // espera todavía no hay reserva, igual que el value que manda el cliente.
+  if (input.eventId && estado === "confirmado") {
+    await enviarEventoMeta({
+      eventName: "Schedule",
+      eventId: input.eventId,
+      customData: {
+        currency: "ARS",
+        value: transf.total,
+        content_type: "product",
+        content_ids: [partidaId],
+      },
+    });
+  }
+
   return { ok: true, estado };
 }
 

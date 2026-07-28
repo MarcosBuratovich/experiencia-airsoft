@@ -70,7 +70,18 @@ type Params = Record<string, unknown>;
  * siempre: si gtag no cargó (ad blocker, script aún no listo) es un no-op —
  * NUNCA condicionar lógica de negocio al resultado de un track().
  */
-export function track(evento: string, params?: Params): void {
+export function track(
+  evento: string,
+  params?: Params,
+  opts?: {
+    /**
+     * ID único del hecho medido. Si el MISMO evento se manda también desde
+     * el servidor (API de Conversiones de Meta), ambos tienen que llevar
+     * este id para que Meta los cuente una sola vez.
+     */
+    eventId?: string;
+  },
+): void {
   if (typeof window === "undefined") return;
   window.gtag?.("event", evento, params);
 
@@ -81,6 +92,19 @@ export function track(evento: string, params?: Params): void {
       fbParams.value = params.value;
       fbParams.currency = params.currency ?? "ARS";
     }
-    (window as { fbq?: (...a: unknown[]) => void }).fbq?.("track", fb, fbParams);
+    (window as { fbq?: (...a: unknown[]) => void }).fbq?.(
+      "track",
+      fb,
+      fbParams,
+      opts?.eventId ? { eventID: opts.eventId } : undefined,
+    );
   }
+}
+
+/** ID de evento para deduplicar navegador ↔ servidor (Meta CAPI). */
+export function nuevoEventId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }

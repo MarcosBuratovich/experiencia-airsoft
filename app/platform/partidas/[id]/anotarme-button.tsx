@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anotarmeAction, desanotarmeAction } from "./actions";
-import { track } from "@/lib/ga";
+import { nuevoEventId, track } from "@/lib/ga";
 import type { PrecioDual, TipoJugador } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
@@ -183,11 +183,15 @@ export function AnotarmeButton({
 
   const onAnotarme = () => {
     setError(null);
+    // Un solo id para las dos vías de medición (Pixel del navegador + API de
+    // Conversiones desde la action): Meta deduplica y cuenta una conversión.
+    const eventId = nuevoEventId();
     startTransition(async () => {
       const res = await anotarmeAction(partidaId, {
         tipo_jugador: tipo,
         alquiler_avanzado: tipo === "alquiler" && tier === "avanzado",
         alquila_chaleco: tipo === "alquiler" && chaleco,
+        eventId,
       });
       if ("error" in res && res.error) {
         setError(res.error);
@@ -196,16 +200,20 @@ export function AnotarmeButton({
         // (transferencia) en ARS, ya calculado arriba para el botón.
         // En lista de espera todavía no aseguró lugar: value 0 para no
         // inflar el valor de conversión de Ads (el param waitlist lo marca).
-        track("anotarse_partida", {
-          partida_id: partidaId,
-          tipo_jugador: tipo,
-          alquiler_tier: esAlquiler ? tier : undefined,
-          chaleco: esAlquiler ? chaleco : undefined,
-          es_socio: aplicaBeneficio,
-          waitlist: lleno,
-          value: lleno ? 0 : totalTr,
-          currency: "ARS",
-        });
+        track(
+          "anotarse_partida",
+          {
+            partida_id: partidaId,
+            tipo_jugador: tipo,
+            alquiler_tier: esAlquiler ? tier : undefined,
+            chaleco: esAlquiler ? chaleco : undefined,
+            es_socio: aplicaBeneficio,
+            waitlist: lleno,
+            value: lleno ? 0 : totalTr,
+            currency: "ARS",
+          },
+          { eventId },
+        );
         router.refresh();
       }
     });
