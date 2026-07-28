@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { hoyEnArgentina } from "@/lib/semana";
 import { estadoEfectivo } from "@/lib/partidas";
+import { getAutoriaPorPartida } from "@/lib/autoria-partida";
 import { restarMeses, nombreMes } from "@/lib/socios";
 import { CalendarioAdmin, type ItemDia } from "./calendario-admin";
 
@@ -35,7 +36,7 @@ export default async function CalendarioAdminPage({
     supabase
       .from("partidas")
       .select(
-        "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, visibilidad, estado, private_token, organizador_id, notas, inscripciones(count)",
+        "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, visibilidad, estado, private_token, creado_por, organizador_id, created_at, notas, inscripciones(count)",
       )
       .gte("fecha", desde)
       .lt("fecha", hasta)
@@ -69,6 +70,15 @@ export default async function CalendarioAdminPage({
       };
   const perfilById = new Map((perfiles ?? []).map((p) => [p.id, p] as const));
 
+  // Autoría de las privadas (una consulta para todas).
+  const autoria = await getAutoriaPorPartida(supabase, (partidas ?? []).map((p) => ({
+    id: p.id,
+    visibilidad: p.visibilidad,
+    creado_por: p.creado_por,
+    organizador_id: p.organizador_id,
+    created_at: p.created_at,
+  })));
+
   const items: ItemDia[] = [];
   for (const p of partidas ?? []) {
     items.push({
@@ -94,6 +104,7 @@ export default async function CalendarioAdminPage({
       privateToken: p.private_token,
       organizadorId: p.organizador_id,
       notas: p.notas,
+      autoria: autoria.get(p.id)?.label ?? null,
     });
   }
   for (const s of solicitudes ?? []) {

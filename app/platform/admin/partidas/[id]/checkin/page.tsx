@@ -5,6 +5,7 @@ import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { checkinAbierto, estadoEfectivo } from "@/lib/partidas";
 import { getPreciosConfig } from "@/lib/precios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
+import { getAutoriaPorPartida } from "@/lib/autoria-partida";
 import { CheckinList } from "./checkin-list";
 import { InscriptosPreview } from "./inscriptos-preview";
 import { ResumenPartida } from "./resumen-partida";
@@ -16,7 +17,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
 
   const { data: partida } = await supabase
     .from("partidas")
-    .select("id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado")
+    .select("id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, visibilidad, creado_por, organizador_id, created_at")
     .eq("id", id)
     .maybeSingle();
   if (!partida) notFound();
@@ -186,6 +187,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   // cualquiera de las listas de abajo.
   const contextoWa = `la partida del ${formatFechaLarga(partida.fecha)} a las ${formatHora(partida.hora_inicio)}`;
 
+  // Privadas: quién está detrás y desde cuándo.
+  const autoria = (await getAutoriaPorPartida(supabase, [partida])).get(partida.id);
+
   const titulo = puedeCheckin
     ? "Check-in"
     : estadoFx === "pasada"
@@ -213,6 +217,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             {formatFechaLarga(partida.fecha)} · {formatHora(partida.hora_inicio)} ·{" "}
             {filas.length} anotados
           </p>
+          {autoria && (
+            <p className="mt-1 font-mono fluid-xs text-smoke">{autoria.label}</p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           {(estadoFx === "en_curso" || estadoFx === "pasada") && (

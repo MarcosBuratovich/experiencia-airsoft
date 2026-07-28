@@ -7,6 +7,7 @@ import { getPreciosConfig } from "@/lib/precios";
 import { estadoEfectivo, inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
+import { getAutoriaPorPartida } from "@/lib/autoria-partida";
 import { NombreConClanes } from "../../components/nombre-con-clanes";
 import { ContactoWa } from "../../components/contacto-wa";
 import { TrackEvent } from "@/app/_components/track-event";
@@ -29,7 +30,7 @@ export default async function PartidaDetail({
       supabase
         .from("partidas")
         .select(
-          "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, notas, visibilidad, organizador_id, private_token",
+          "id, titulo, fecha, hora_inicio, duracion_min, modalidad, cupo_max, estado, notas, visibilidad, creado_por, organizador_id, created_at, private_token",
         )
         .eq("id", id)
         .maybeSingle(),
@@ -127,6 +128,9 @@ export default async function PartidaDetail({
   // Cola del mensaje de WhatsApp que el admin le manda a un anotado.
   const contextoPartida = `la partida del ${formatFechaLarga(partida.fecha)} a las ${formatHora(partida.hora_inicio)}`;
 
+  // Privadas: quién está detrás y desde cuándo.
+  const autoria = (await getAutoriaPorPartida(supabase, [partida])).get(partida.id);
+
   const cuota = computarEstadoCuota(
     {
       socio: !!profile?.socio,
@@ -176,6 +180,16 @@ export default async function PartidaDetail({
             <span className="k">Estado</span>
             <span className="v">{partida.estado}</span>
           </div>
+          {autoria && (
+            <div className="spec-row">
+              <span className="k">
+                {autoria.desdeSolicitud ? "Solicitada por" : "Creada por"}
+              </span>
+              <span className="v">
+                {autoria.nombre} · {autoria.creadaEl}
+              </span>
+            </div>
+          )}
         </dl>
         {partida.notas && <p className="mt-4 font-sans fluid-sm text-ash">{partida.notas}</p>}
       </div>

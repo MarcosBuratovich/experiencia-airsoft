@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatFechaLarga, formatHora, modalidadLabel } from "@/lib/format";
 import { checkinAbierto, estadoEfectivo, type EstadoEfectivo } from "@/lib/partidas";
+import { getAutoriaPorPartida } from "@/lib/autoria-partida";
 import { GenerarSemanaButton } from "./generar-semana-button";
 
 type Row = {
@@ -17,6 +18,8 @@ type Row = {
   estadoFx: EstadoEfectivo;
   /** Check-in habilitado (desde las 00:00 del día de la partida). */
   checkinAbierto: boolean;
+  /** Solo privadas: "Solicitada/Creada por X · fecha y hora". */
+  autoria: string | null;
 };
 
 export default async function AdminPartidas() {
@@ -24,11 +27,21 @@ export default async function AdminPartidas() {
   const { data: partidas } = await supabase
     .from("partidas")
     .select(
-      "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, visibilidad, estado, inscripciones(count)",
+      "id, fecha, hora_inicio, duracion_min, modalidad, cupo_max, visibilidad, estado, creado_por, organizador_id, created_at, inscripciones(count)",
     )
     .order("fecha", { ascending: false })
     .order("hora_inicio", { ascending: false })
     .limit(60);
+
+  // Autoría de las privadas: quién está detrás y desde cuándo (una consulta
+  // para todas las filas).
+  const autoria = await getAutoriaPorPartida(supabase, (partidas ?? []).map((p) => ({
+    id: p.id,
+    visibilidad: p.visibilidad,
+    creado_por: p.creado_por,
+    organizador_id: p.organizador_id,
+    created_at: p.created_at,
+  })));
 
   const rows: Row[] = (partidas ?? []).map((p) => ({
     id: p.id,
@@ -52,6 +65,7 @@ export default async function AdminPartidas() {
       duracion_min: p.duracion_min,
       estado: p.estado,
     }),
+    autoria: autoria.get(p.id)?.label ?? null,
   }));
 
   const futuras = rows.filter((r) => r.estadoFx === "futura");
@@ -195,6 +209,11 @@ function PartidaAdminRow({ r }: { r: Row }) {
         <p className="mt-1 font-mono fluid-xs uppercase tracking-[.18em] text-smoke hidden sm:block">
           {r.inscriptos}/{r.cupo_max} anotados
         </p>
+        {r.autoria && (
+          <p className="mt-1 font-mono fluid-xs text-smoke normal-case tracking-normal">
+            {r.autoria}
+          </p>
+        )}
       </div>
 
       <div className="shrink-0 flex items-center gap-3 flex-wrap justify-end">

@@ -41,6 +41,8 @@ export type ItemPartida = {
   privateToken: string | null;
   organizadorId: string | null;
   notas: string | null;
+  /** Solo privadas: "Solicitada/Creada por X · fecha y hora". */
+  autoria: string | null;
 };
 
 export type ItemSolicitud = {
@@ -435,6 +437,7 @@ function PartidaView({
           {modalidadLabel(it.modalidad)} {it.visibilidad === "privada" ? "· privada" : ""}
         </p>
         <p>{formatFechaLarga(it.fecha)} · {formatHora(it.hora)} hs · {it.duracionMin} min</p>
+        {it.autoria && <p className="text-bone">{it.autoria}</p>}
         <p>Cupo: {it.inscriptos}/{it.cupoMax} · Estado: {it.estado} ({it.estadoFx})</p>
         {it.organizadorId && <p className="text-orange">Tiene organizador asignado</p>}
         {it.notas && <p className="text-smoke normal-case tracking-normal font-sans">{it.notas}</p>}
