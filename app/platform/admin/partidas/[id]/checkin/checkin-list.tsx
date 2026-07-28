@@ -9,6 +9,7 @@ import {
   type WalkinAdded,
 } from "./agregar-walkin";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import { ContactoWa } from "../../../../components/contacto-wa";
 import { ErrorBanner } from "@/app/_components/error-banner";
 import type { ClanChip } from "@/lib/clanes";
 import type { PrecioDual } from "@/lib/precios";
@@ -101,11 +102,14 @@ export function CheckinList({
   inscripciones,
   preciosRecargas,
   precios,
+  contextoWa,
 }: {
   partidaId: string;
   inscripciones: Inscripcion[];
   preciosRecargas: PreciosRecargas;
   precios: PreciosEntrada;
+  /** Cola del mensaje de WhatsApp al jugador (fecha/hora de la partida). */
+  contextoWa?: string;
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -389,6 +393,7 @@ export function CheckinList({
             onPatch={update}
             onUpdateRecargas={updateRecargas}
             preciosRecargas={preciosRecargas}
+            contextoWa={contextoWa}
           />
         ))}
       </ul>
@@ -416,7 +421,13 @@ export function CheckinList({
                     <td className="px-3 py-3 align-top">
                       <JugadorBadges r={r} />
                       <div className="font-mono fluid-xs text-smoke mt-1">
-                        DNI {r.dni} · {r.celular}
+                        DNI {r.dni} ·{" "}
+                        <ContactoWa
+                          celular={r.celular}
+                          nombre={r.nombre}
+                          contexto={contextoWa}
+                          variant="inline"
+                        />
                       </div>
                       {equipo && (
                         <div className="font-mono fluid-xs text-ash mt-1">Equipo: {equipo}</div>
@@ -494,6 +505,7 @@ function MobileCheckinCard({
   onPatch,
   onUpdateRecargas,
   preciosRecargas,
+  contextoWa,
 }: {
   r: Inscripcion;
   pending: boolean;
@@ -504,6 +516,7 @@ function MobileCheckinCard({
     recargas: { tracer100: number; conv200: number },
   ) => void;
   preciosRecargas: PreciosRecargas;
+  contextoWa?: string;
 }) {
   const equipo = equipoLabel(r);
   return (
@@ -514,7 +527,13 @@ function MobileCheckinCard({
         <div className="flex-1 min-w-0">
           <JugadorBadges r={r} />
           <div className="font-mono fluid-xs text-smoke mt-1">
-            DNI {r.dni} · {r.celular}
+            DNI {r.dni} ·{" "}
+            <ContactoWa
+              celular={r.celular}
+              nombre={r.nombre}
+              contexto={contextoWa}
+              variant="inline"
+            />
           </div>
           {equipo && (
             <div className="font-mono fluid-xs text-ash mt-0.5">Equipo: {equipo}</div>

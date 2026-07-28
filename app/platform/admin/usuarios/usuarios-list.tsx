@@ -9,6 +9,7 @@ import {
   setPlayerNumberAction,
 } from "./actions";
 import { Select } from "../../components/select";
+import { ContactoWa } from "../../components/contacto-wa";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "../../../_components/error-banner";
 
@@ -147,7 +148,13 @@ export function UsuariosList({
               </div>
               <div className="font-mono fluid-xs text-ash space-y-0.5 mb-3">
                 <p className="truncate">{u.email}</p>
-                <p className="text-smoke">{u.celular}</p>
+                <p className="text-smoke">
+                  <ContactoWa
+                    celular={u.celular}
+                    nombre={u.nombre}
+                    variant="inline"
+                  />
+                </p>
               </div>
               <div className="mb-3">
                 <span className="sect-label mb-1 block">N° de jugador</span>

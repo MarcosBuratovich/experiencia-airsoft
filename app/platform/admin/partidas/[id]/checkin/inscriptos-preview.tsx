@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import { ContactoWa } from "../../../../components/contacto-wa";
 import type { ClanChip } from "@/lib/clanes";
 
 type Fila = {
@@ -43,7 +44,14 @@ function equipoLabel(f: Fila): string | null {
   return bits.join(" · ");
 }
 
-export function InscriptosPreview({ filas }: { filas: Fila[] }) {
+export function InscriptosPreview({
+  filas,
+  contextoWa,
+}: {
+  filas: Fila[];
+  /** Cola del mensaje de WhatsApp al jugador (fecha/hora de la partida). */
+  contextoWa?: string;
+}) {
   const totales = useMemo(() => {
     const confirmados = filas.filter((f) => f.estado === "confirmado");
     const waitlist = filas.filter((f) => f.estado === "waitlist");
@@ -102,7 +110,13 @@ export function InscriptosPreview({ filas }: { filas: Fila[] }) {
                     )}
                   </div>
                   <div className="font-mono fluid-xs text-smoke mt-1">
-                    DNI {f.dni} · {f.celular}
+                    DNI {f.dni} ·{" "}
+                    <ContactoWa
+                      celular={f.celular}
+                      nombre={f.nombre}
+                      contexto={contextoWa}
+                      variant="inline"
+                    />
                   </div>
                   {equipo && (
                     <div className="font-mono fluid-xs text-ash mt-0.5">

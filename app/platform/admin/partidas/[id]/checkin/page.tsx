@@ -182,6 +182,10 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   // mañana para una partida de la noche).
   const puedeCheckin = checkinAbierto(core);
 
+  // Cola del mensaje de WhatsApp que el admin le manda a un jugador desde
+  // cualquiera de las listas de abajo.
+  const contextoWa = `la partida del ${formatFechaLarga(partida.fecha)} a las ${formatHora(partida.hora_inicio)}`;
+
   const titulo = puedeCheckin
     ? "Check-in"
     : estadoFx === "pasada"
@@ -240,7 +244,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* Futura y todavía sin ventana de check-in (partida de otro día). */}
-      {estadoFx === "futura" && !puedeCheckin && <InscriptosPreview filas={filas} />}
+      {estadoFx === "futura" && !puedeCheckin && (
+        <InscriptosPreview filas={filas} contextoWa={contextoWa} />
+      )}
       {puedeCheckin && (
         <CheckinList
           partidaId={partida.id}
@@ -255,10 +261,15 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             alquiler_marcadora: precios.alquiler_marcadora,
             alquiler_premium: precios.alquiler_premium,
           }}
+          contextoWa={contextoWa}
         />
       )}
       {estadoFx === "pasada" && (
-        <ResumenPartida partidaId={partida.id} filas={filas} />
+        <ResumenPartida
+          partidaId={partida.id}
+          filas={filas}
+          contextoWa={`${contextoWa} — quedó un saldo pendiente`}
+        />
       )}
       {estadoFx === "cancelada" && (
         <div className="border border-orange-300/40 bg-orange-300/5 clip-notch p-5">
@@ -270,7 +281,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             inscriptos para referencia.
           </p>
           <div className="mt-5">
-            <InscriptosPreview filas={filas} />
+            <InscriptosPreview filas={filas} contextoWa={contextoWa} />
           </div>
         </div>
       )}

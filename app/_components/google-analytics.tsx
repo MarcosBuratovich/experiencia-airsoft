@@ -72,6 +72,10 @@ function ClickTracker() {
 
       const a = (e.target as Element | null)?.closest?.("a[href]");
       if (!(a instanceof HTMLAnchorElement)) return;
+      // Links marcados para NO trackear: hoy los botones de contacto del
+      // admin, cuya URL lleva el celular del jugador (dato personal que no
+      // puede salir a GA) y que además no son conversiones de marketing.
+      if (a.dataset.gaSkip !== undefined) return;
       const href = a.href;
       const ctx = {
         page_context: window.location.pathname,

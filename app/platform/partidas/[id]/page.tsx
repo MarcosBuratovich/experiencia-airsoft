@@ -8,6 +8,7 @@ import { estadoEfectivo, inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { getClanesPorProfileIds } from "@/lib/clanes";
 import { NombreConClanes } from "../../components/nombre-con-clanes";
+import { ContactoWa } from "../../components/contacto-wa";
 import { TrackEvent } from "@/app/_components/track-event";
 import { AnotarmeButton } from "./anotarme-button";
 import { OrganizadorPanel } from "./organizador-panel";
@@ -87,6 +88,22 @@ export default async function PartidaDetail({
     (pubProfiles ?? []).map((p) => [p.id, p] as const),
   );
 
+  // Celulares SOLO para admin: el roster de arriba sale de `profiles_publicos`
+  // (vista sin datos sensibles) para que un jugador vea quién viene sin
+  // acceder al contacto de los demás. El admin sí necesita poder escribirle a
+  // alguien que se anotó y no conoce, así que para él pedimos el celular
+  // aparte contra `profiles` (su RLS ya permite leerlo siendo admin).
+  const celularPorUser = new Map<string, string>();
+  if (isAdmin && userIds.length) {
+    const { data: contactos } = await supabase
+      .from("profiles")
+      .select("id, celular")
+      .in("id", userIds);
+    for (const c of (contactos ?? []) as { id: string; celular: string | null }[]) {
+      if (c.celular) celularPorUser.set(c.id, c.celular);
+    }
+  }
+
   const mine = inscriptos?.find((i) => i.user_id === user.id) ?? null;
   const confirmados = inscriptos?.filter((i) => i.estado === "confirmado") ?? [];
   const waitlist = inscriptos?.filter((i) => i.estado === "waitlist") ?? [];
@@ -106,6 +123,9 @@ export default async function PartidaDetail({
     estado: partida.estado,
   });
   const mostrarScoreboard = estadoFx === "en_curso" || estadoFx === "pasada";
+
+  // Cola del mensaje de WhatsApp que el admin le manda a un anotado.
+  const contextoPartida = `la partida del ${formatFechaLarga(partida.fecha)} a las ${formatHora(partida.hora_inicio)}`;
 
   const cuota = computarEstadoCuota(
     {
@@ -278,6 +298,15 @@ export default async function PartidaDetail({
                     (Por: {addedByLabel})
                   </span>
                 )}
+                {/* Contacto directo: solo lo ve un admin (ver celularPorUser). */}
+                {isAdmin && i.user_id && (
+                  <ContactoWa
+                    celular={celularPorUser.get(i.user_id)}
+                    nombre={perfil?.nombre}
+                    contexto={contextoPartida}
+                    className="ml-auto"
+                  />
+                )}
               </li>
             );
           })}
@@ -318,6 +347,14 @@ export default async function PartidaDetail({
                       <span className="text-smoke normal-case tracking-normal font-sans">
                         (Por: {addedByLabel})
                       </span>
+                    )}
+                    {isAdmin && i.user_id && (
+                      <ContactoWa
+                        celular={celularPorUser.get(i.user_id)}
+                        nombre={perfil?.nombre}
+                        contexto={contextoPartida}
+                        className="ml-auto"
+                      />
                     )}
                   </li>
                 );

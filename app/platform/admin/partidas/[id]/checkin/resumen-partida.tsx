@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertCheckinAction } from "./actions";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
+import { ContactoWa } from "../../../../components/contacto-wa";
 import { ErrorBanner } from "@/app/_components/error-banner";
 import type { ClanChip } from "@/lib/clanes";
 import type { FriendlyError } from "@/lib/errors";
@@ -65,9 +66,12 @@ function equipoLabel(f: Fila): string | null {
 export function ResumenPartida({
   partidaId: _partidaId,
   filas,
+  contextoWa,
 }: {
   partidaId: string;
   filas: Fila[];
+  /** Cola del mensaje de WhatsApp al deudor (fecha/hora de la partida). */
+  contextoWa?: string;
 }) {
   const [rows, setRows] = useState(filas);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -182,7 +186,13 @@ export function ResumenPartida({
                         )}
                       </div>
                       <p className="font-mono fluid-xs text-smoke mt-1">
-                        DNI {d.dni} · {d.celular}
+                        DNI {d.dni} ·{" "}
+                        <ContactoWa
+                          celular={d.celular}
+                          nombre={d.nombre}
+                          contexto={contextoWa}
+                          variant="inline"
+                        />
                       </p>
                     </div>
                     <p className="font-display fluid-lg text-orange">{ars(monto)}</p>
