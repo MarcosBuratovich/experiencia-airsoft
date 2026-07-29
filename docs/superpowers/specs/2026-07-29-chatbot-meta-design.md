@@ -2,6 +2,8 @@
 
 **Fecha:** 2026-07-29
 **Estado:** aprobado por el dueño del producto (Marcos), pendiente de plan de implementación.
+**Revisión 2 (2026-07-29):** incorpora la devolución del cliente final —
+segmentación de contactos, reglas anti-repetición y la decisión sobre Kommo.
 
 ## Problema
 
@@ -127,6 +129,14 @@ del diseño y lo que hace aceptable el riesgo de prompt injection.
 - No negocia: descuentos y precios especiales escalan.
 - Mensajes cortos, 2–3 líneas, tono de la marca (voseo, directo, sin
   corporativo).
+- **Sin plantilla de salida y sin repetición.** No se le impone una estructura
+  fija (saludo + respuesta + CTA): es la causa principal de que un bot con un
+  buen modelo atrás igual suene mecánico. Reglas explícitas: no volver a
+  saludar ni presentarse dentro de un hilo ya iniciado, no repetir una línea ya
+  dicha en esa conversación, y no re-ofrecer un link que ya pasó. El historial
+  persistido es lo que hace verificables estas tres reglas.
+- Sin frase de fallback. Cuando no sabe, escala (ver abajo); no existe un
+  "no entendí, ¿podés reformular?" al que volver en loop.
 
 ### Política de escalado
 
@@ -141,13 +151,79 @@ seguridad o lesiones, y cualquier caso donde no sepa o haya dado muchas vueltas.
 **Al escalar deja un resumen** de qué quiere la persona y dónde quedó la charla,
 para que el humano retome sin leer el hilo completo.
 
+## Segmentación de contactos
+
+Requisito agregado por el cliente: necesita segmentar a quien consulta, tanto
+para remarketing como porque **la duda aclarada a tiempo es lo que convierte**,
+y hoy eso no se mide.
+
+El modelo ya está leyendo cada mensaje para responderlo. Pedirle además una
+clasificación estructurada cuesta un puñado de tokens de salida, no un round
+trip extra. Se emite junto con la respuesta, no en una segunda llamada.
+
+| Campo | Valores |
+|---|---|
+| `intencion` | `partida_abierta` · `privada_cumple` · `privada_corp` · `tienda` · `socio` · `otro` |
+| `grupo_tam`, `fecha_tentativa` | Solo si la persona los menciona; nulos por defecto |
+| `duda_principal` | `precio` · `dolor` · `edad` · `ubicacion` · `equipo` · `clima` · `pago` · `otro` |
+| `primera_vez` | `si` · `no` · `desconocido` |
+| `desenlace` | `link_enviado` · `se_anoto` · `frio` · `escalada` |
+
+**Se guarda en `bot_conversaciones`, no en una tabla nueva.** Es una propiedad
+de la conversación y se sobreescribe con cada mensaje: la clasificación del
+último turno es la buena.
+
+`desenlace = se_anoto` no lo decide el modelo: se cruza contra `inscripciones`
+y `solicitudes_privada` por ventana temporal. El bot no tiene forma de saber si
+la persona efectivamente se anotó.
+
+### Qué se hace con eso, en tres niveles
+
+1. **Tablero (inmediato, sin dependencias).** Consultas del mes por intención,
+   dudas ordenadas por frecuencia, y tasa de cierre por intención. La lista de
+   dudas es el mapa de qué falta explicar en la web.
+2. **Conversions API de mensajería.** Meta acepta eventos de business messaging
+   identificando a la persona con `page_id` + `page_scoped_user_id` en
+   `user_data` — el PSID que ya nos llega por el webhook. Al confirmarse una
+   reserva se emite el evento, y las campañas optimizan hacia conversaciones que
+   cierran en vez de conversaciones que existen. Misma lógica que las
+   conversiones offline de Google Ads ya implementadas (`lib/gclid.ts`,
+   `/admin/conversiones`). Reutiliza `lib/meta-capi.ts`.
+3. **Audiencias por lista.** Requiere teléfono o mail hasheado. Instagram y
+   Messenger no los entregan (ver *Limitación conocida*). Llega con WhatsApp en
+   la fase 2.
+
+**Métrica principal del proyecto, revisada.** Deja de ser "proporción resuelta
+por el bot vs. escalada" y pasa a ser **cierre por intención sobre las
+conversaciones que el bot resolvió**. La primera mide actividad; la segunda mide
+plata.
+
+## CRM externo (Kommo) — decisión
+
+El cliente está evaluando Kommo para lo mismo. **No compiten:** Kommo es la
+bandeja, el embudo y el fichero de contactos; este diseño es quién redacta la
+respuesta.
+
+**Decisión (2026-07-29): seguimos con conexión directa a Meta.** Kommo está en
+evaluación, no en producción, así que no hay inversión que respetar ni bandeja
+que aprovechar, y evitamos una suscripción por usuario con mínimo de 6 meses.
+
+**La puerta queda abierta y es barata.** Kommo expone en Salesbot el handler
+`widget_request`: POST firmado con JWT a un servicio externo, que debe responder
+200 en menos de 2 s y luego devolver la respuesta al `return_url` recibido. Ese
+patrón asincrónico encaja con la arquitectura de adaptadores — sería un
+adaptador más, sin tocar el motor.
+
+**Restricción a respetar si algún día entra:** un solo sistema puede ser dueño
+de cada canal. Dos bots suscritos al mismo Instagram se pisan.
+
 ## Modelo de datos
 
 Cuatro tablas nuevas más una configuración. Nada de lo existente se modifica.
 
 | Tabla | Contenido |
 |---|---|
-| `bot_conversaciones` | Una por contacto+canal: identificador externo, nombre, estado (`bot`/`humano`/`cerrada`), motivo y resumen del escalado, timestamps |
+| `bot_conversaciones` | Una por contacto+canal: identificador externo (PSID), nombre, estado (`bot`/`humano`/`cerrada`), motivo y resumen del escalado, **campos de segmentación** (ver sección anterior), timestamps |
 | `bot_mensajes` | Rol (`usuario`/`bot`/`humano`), texto, **id de mensaje de Meta (único, para deduplicar)**, tokens de entrada/salida para costo real |
 | `bot_conocimiento` | Entradas de la base: título, contenido, activo, orden |
 | `bot_pendientes` | Preguntas que el bot no supo responder, con estado |
@@ -183,9 +259,10 @@ Bajo `Admin → Bot`, cuatro pantallas:
 4. **Preguntas pendientes** — lo que el bot no supo, con acción directa para
    convertir cada una en una entrada de la base. Es el circuito de mejora.
 
-Más un tablero con: conversaciones del mes, **proporción resuelta por el bot vs.
-escalada** (la métrica que justifica el proyecto), costo real del mes, e
-interruptor general.
+Más un tablero con: conversaciones del mes desglosadas por intención,
+**cierre por intención sobre lo que el bot resolvió** (la métrica que justifica
+el proyecto), dudas ordenadas por frecuencia, proporción resuelta vs. escalada,
+costo real del mes e interruptor general.
 
 **Decisión: panel de supervisión, no bandeja de respuesta.** El humano responde
 en Business Suite, que ya tiene notificaciones push, multimedia y audios.
@@ -237,6 +314,16 @@ de descuento, consulta sobre algo inexistente, intento de manipulación. Se corr
 ante cada cambio de instrucciones o de la base, comparando contra lo esperado. Es
 el equivalente a los tests del resto del sistema.
 
+**Chequeo de repetición.** Además de las respuestas sueltas, el banco incluye
+**hilos de 5+ mensajes** donde se verifica que no re-saluda, no repite líneas ni
+re-ofrece el mismo link. Es la regresión que protege la regla de arriba: un
+cambio de instrucciones puede volver mecánico al bot sin que ninguna respuesta
+individual esté mal.
+
+**Clasificación.** Sobre el mismo banco se compara la segmentación emitida
+contra la esperada. Una intención mal clasificada ensucia el tablero y, peor,
+manda un evento equivocado a Meta.
+
 ## Costos estimados
 
 Conversación típica (3 intercambios, con consulta de disponibilidad), con prompt
@@ -264,3 +351,5 @@ Sin infraestructura nueva: corre en el Vercel y el Supabase existentes.
 - La tienda como fuente de datos del bot (se puede sumar como herramienta).
 - Identificación de socios en Instagram/Messenger (imposible sin teléfono).
 - Bandeja de respuesta propia (se usa Business Suite).
+- Audiencias de remarketing por lista (requieren teléfono/mail — fase WhatsApp).
+- Integración con Kommo u otro CRM externo (evaluada y pospuesta, ver arriba).

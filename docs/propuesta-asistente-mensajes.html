@@ -461,7 +461,65 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">06</span><h2>Cuándo contesta solo y cuándo te llama</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Por qué no suena a los bots que probaste</h2></div>
+    <p>Es la objeción más común y es justa: casi todos los asistentes automáticos contestan siempre igual. Vale la pena entender por qué, porque las causas son concretas.</p>
+
+    <div class="grid two" style="margin-top:1.2rem">
+      <div class="card" style="border-color:var(--warn)">
+        <span class="label" style="color:var(--warn)">Causa 1</span>
+        <h3>La mayoría no escribe nada</h3>
+        <p>Son árboles de decisión: <em>si el mensaje dice «precio», mandá este texto</em>. La respuesta número 1 y la número 50 son el mismo texto guardado, palabra por palabra.</p>
+        <p style="color:var(--smoke)">Y los que sí usan inteligencia artificial, muchas veces solo buscan la pregunta frecuente más parecida y la pegan tal cual.</p>
+      </div>
+      <div class="card" style="border-color:var(--warn)">
+        <span class="label" style="color:var(--warn)">Causa 2</span>
+        <h3>No se acuerdan de la charla</h3>
+        <p>Tratan cada mensaje como si fuera el primero. Por eso te vuelven a saludar y presentarse en el cuarto mensaje, y ofrecen el mismo link cinco veces seguidas.</p>
+        <p style="color:var(--smoke)">Y cuando no saben, repiten siempre la misma frase: <em>«no te entendí, ¿podés reformular?»</em>.</p>
+      </div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <caption>La diferencia, en situaciones concretas.</caption>
+        <thead>
+          <tr><th>Situación</th><th>Un bot de los comunes</th><th>Este</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cuarto mensaje de la misma persona</td>
+            <td>«¡Hola! Soy el asistente de…», otra vez</td>
+            <td>Sigue la charla donde iba</td>
+          </tr>
+          <tr>
+            <td>«¿Queda lugar para el sábado?»</td>
+            <td>«Consultá disponibilidad en la web»</td>
+            <td>«Para el sábado 9 quedan 4 lugares»</td>
+          </tr>
+          <tr>
+            <td>Preguntan algo que no está cargado</td>
+            <td>«No te entendí, ¿podés reformular?»</td>
+            <td>Te pasa la conversación con el resumen</td>
+          </tr>
+          <tr>
+            <td>Tres personas preguntan el precio</td>
+            <td>La misma frase, tres veces</td>
+            <td>Tres respuestas distintas, según qué preguntó cada uno</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="statement">
+      <p><strong>Seamos honestos:</strong> si al asistente le imponemos un molde —saludo, respuesta, link— va a sonar tan mecánico como los otros, por buena que sea la tecnología atrás.</p>
+      <p>La diferencia no es «usa inteligencia artificial». Es que <b>no lo encajonamos</b>: le damos tu tono, los datos reales y la libertad de contestar como contestarías vos. Entre las reglas fijas hay una explícita: nunca repetir una línea que ya dijo en esa charla, ni volver a saludar.</p>
+    </div>
+
+    <p>Y no hace falta que nos creas de entrada. Arranca en <b>modo sombra</b> (etapa 1 de la puesta en marcha): lee mensajes reales, escribe la respuesta que habría dado, la guarda al lado de la tuya, y <b>no le contesta a nadie</b>. Comparás una o dos semanas y lo prendés recién cuando las respuestas sean las que vos habrías dado.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Cuándo contesta solo y cuándo te llama</h2></div>
     <div class="split">
       <div class="solo">
         <h3>Resuelve solo</h3>
@@ -498,7 +556,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">07</span><h2>Cómo lo frenás</h2></div>
+    <div class="sec-head"><span class="sec-num">08</span><h2>Cómo lo frenás</h2></div>
     <p>Cuatro maneras, de la más automática a la más contundente.</p>
     <div class="grid two" style="margin-top:1.2rem">
       <div class="card" style="border-color:var(--orange)">
@@ -527,7 +585,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">08</span><h2>Tu panel</h2></div>
+    <div class="sec-head"><span class="sec-num">09</span><h2>Tu panel</h2></div>
     <p>Cuatro pantallas nuevas dentro del sistema que ya usás.</p>
     <div class="grid two" style="margin-top:1.2rem">
       <div class="card">
@@ -553,7 +611,54 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">09</span><h2>Qué pasa si algo falla</h2></div>
+    <div class="sec-head"><span class="sec-num">10</span><h2>Lo que te deja además de las respuestas</h2></div>
+    <p>El asistente ya está leyendo cada mensaje para poder contestarlo. Pedirle además que <b>clasifique la consulta</b> no cuesta prácticamente nada — y es justo lo que un bot de árbol de decisión no puede hacer, porque para clasificar hay que entender.</p>
+    <p>Cada conversación queda etiquetada sola, sin que toques nada:</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Se etiqueta</th><th>Ejemplos</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Qué vino a buscar</td><td>Partida abierta · Cumpleaños · Corporativo · Tienda · Socio</td></tr>
+          <tr><td>Cuántos son y para cuándo</td><td>«somos 8» · «primer finde de septiembre»</td></tr>
+          <tr><td>La duda que lo frenó</td><td>Precio · Si duele · Edad · Cómo llegar · Equipo propio · Lluvia</td></tr>
+          <tr><td>Si ya jugó o es la primera vez</td><td>Según lo que cuente en la charla</td></tr>
+          <tr><td>Cómo terminó</td><td>Se anotó · Quedó frío · Te la pasó a vos</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid three" style="margin-top:1.3rem">
+      <div class="card">
+        <span class="label">Desde el día uno</span>
+        <h3>En tu tablero</h3>
+        <p>«Este mes: 23 consultas, 9 por cumpleaños, 5 cerraron». Y las dudas ordenadas por cuántas veces aparecieron.</p>
+        <p style="color:var(--smoke)">Eso te dice qué falta explicar en la web y qué objeción te está costando plata.</p>
+      </div>
+      <div class="card">
+        <span class="label">Fase siguiente</span>
+        <h3>Para tus anuncios</h3>
+        <p>Instagram y Facebook aceptan que les avisemos cuándo una charla terminó en reserva. Con eso las campañas empiezan a buscar <b>gente que reserva</b> en vez de gente que pregunta.</p>
+        <p style="color:var(--smoke)">Es lo mismo que ya está funcionando con Google Ads para las privadas.</p>
+      </div>
+      <div class="card">
+        <span class="label">Requiere WhatsApp</span>
+        <h3>Para remarketing por lista</h3>
+        <p>Armar una audiencia con estos contactos necesita teléfono o mail, e Instagram no los entrega: solo un identificador interno.</p>
+        <p style="color:var(--smoke)">El teléfono llega con WhatsApp — otro motivo para que sea la fase 2.</p>
+      </div>
+    </div>
+
+    <div class="statement">
+      <p><strong>Y cambia la métrica que importa.</strong> Deja de ser «cuántas consultas contestó el asistente» y pasa a ser <b>de las dudas que resolvió, cuántas terminaron en una reserva</b>.</p>
+      <p>Porque la duda aclarada a tiempo es la que convierte — y hasta ahora eso no se podía medir.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">11</span><h2>Qué pasa si algo falla</h2></div>
     <div class="tablewrap">
       <table>
         <tr><th scope="col">Situación</th><th scope="col">Qué hace el asistente</th></tr>
@@ -572,7 +677,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">10</span><h2>Cuánto cuesta</h2></div>
+    <div class="sec-head"><span class="sec-num">12</span><h2>Cuánto cuesta</h2></div>
     <p>Instagram, Messenger y comentarios <b>no cobran nada por mensajería</b>. Lo único que se paga es la inteligencia artificial, por conversación.</p>
     <div class="tablewrap">
       <caption>Estimación para una consulta típica de tres idas y vueltas.</caption>
@@ -593,7 +698,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">11</span><h2>Cómo se pone en marcha</h2></div>
+    <div class="sec-head"><span class="sec-num">13</span><h2>Cómo se pone en marcha</h2></div>
     <p>En tres etapas, para que nunca llegue a un cliente algo que no revisaste antes.</p>
     <div class="stages">
       <div class="stage">
@@ -634,7 +739,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">12</span><h2>Preguntas frecuentes</h2></div>
+    <div class="sec-head"><span class="sec-num">14</span><h2>Preguntas frecuentes</h2></div>
 
     <details>
       <summary>¿El asistente se entrena solo con el uso?</summary>
@@ -660,6 +765,12 @@
     <details>
       <summary>¿Puedo cambiar cómo responde?</summary>
       <p>Sí. El tono, el largo de las respuestas y qué temas escala son ajustables. La base de conocimiento la editás vos cuando quieras; los cambios más de fondo se hacen y se prueban contra un banco de preguntas reales antes de activarse.</p>
+    </details>
+
+    <details>
+      <summary>¿Y si ya uso un CRM tipo Kommo?</summary>
+      <p><b>No se pisan, son dos capas distintas.</b> Un CRM es la bandeja y el fichero: unifica canales, arma el embudo, guarda los contactos. Esto es <em>quién escribe la respuesta</em> — que suele ser la parte que no termina de convencer.</p>
+      <p>Se pueden combinar. Kommo, por ejemplo, permite que un servicio externo conteste dentro de su propio bot, así que el asistente puede vivir adentro del CRM que ya usás, con acceso a tus precios y tu disponibilidad reales. La única decisión que hay que tomar antes es cuál de los dos sistemas es el dueño de cada canal: dos bots conectados al mismo Instagram se pisan.</p>
     </details>
 
     <details>
