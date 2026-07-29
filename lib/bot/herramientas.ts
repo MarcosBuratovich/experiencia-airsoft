@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPreciosConfig } from "@/lib/precios";
+import { getPreciosConfigResultado } from "@/lib/precios";
 import { getSlotsEstado, rangoDeFechasAhora } from "@/lib/slots-privada";
 
 /**
@@ -148,13 +148,21 @@ async function proximasPartidas(
 }
 
 async function precios(supabase: Cliente): Promise<ResultadoHerramienta> {
-  const cfg = await getPreciosConfig(supabase as never);
+  const resultado = await getPreciosConfigResultado(supabase as never);
+
+  // Si esto falla no sabemos los precios reales: devolver los defaults acá
+  // sería inventar un precio (podría regalar algo que se cobra, o
+  // sobrecotizar). Mejor escalar que mentir sobre plata.
+  if (!resultado.ok) {
+    return { ok: false, error: "No pude ver los precios." };
+  }
+
   return {
     ok: true,
     datos: {
       moneda: "ARS",
       nota: "Cada ítem tiene dos precios: efectivo y transferencia.",
-      items: cfg,
+      items: resultado.config,
     },
   };
 }

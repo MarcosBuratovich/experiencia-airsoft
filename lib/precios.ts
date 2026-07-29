@@ -100,9 +100,26 @@ type PrecioRow = {
   valor_transferencia: number | null;
 };
 
-export async function getPreciosConfig(
+export type ResultadoPrecios =
+  | { ok: true; config: PreciosConfig }
+  | { ok: false };
+
+/**
+ * Igual que `getPreciosConfig`, pero expone la falla en vez de degradar en
+ * silencio a los defaults. `ok:false` SOLO cuando fallan las dos consultas
+ * (columnas nuevas y legacy) — no cuando falta la columna nueva (caso
+ * esperado y sano: pre-migración fase-17), que sigue resuelto por la
+ * consulta legacy.
+ *
+ * Por qué existe: un precio default silencioso es un dato inventado (puede
+ * regalar algo que se cobra, o sobrecotizar). El bot necesita saber cuándo
+ * eso pasó para escalar en vez de decirlo. Los ~10 call-sites de UI que ya
+ * usan `getPreciosConfig` no necesitan ese detalle — siguen con el
+ * envoltorio de abajo, sin cambios.
+ */
+export async function getPreciosConfigResultado(
   supabase: ServerSupabase,
-): Promise<PreciosConfig> {
+): Promise<ResultadoPrecios> {
   const out = clonarDefaults();
 
   // Intento con las columnas nuevas; si no existen (pre-migración fase-17),
@@ -121,16 +138,33 @@ export async function getPreciosConfig(
         };
       }
     }
-    return out;
+    return { ok: true, config: out };
   }
 
   const legacy = await supabase.from("precios_config").select("key, valor");
+  if (legacy.error) {
+    return { ok: false };
+  }
   for (const row of (legacy.data ?? []) as { key: string; valor: number }[]) {
     if (row.key in out) {
       out[row.key as PreciosKey] = { efectivo: row.valor, transferencia: row.valor };
     }
   }
-  return out;
+  return { ok: true, config: out };
+}
+
+/**
+ * Envoltorio delgado sobre `getPreciosConfigResultado`: firma y
+ * comportamiento IDÉNTICOS a antes (si falla, cae a los defaults). No
+ * romper esto — los ~10 call-sites existentes (admin/precios, checkin,
+ * organizador-actions, etc.) dependen de que nunca rechace y siempre
+ * devuelva un `PreciosConfig` utilizable.
+ */
+export async function getPreciosConfig(
+  supabase: ServerSupabase,
+): Promise<PreciosConfig> {
+  const resultado = await getPreciosConfigResultado(supabase);
+  return resultado.ok ? resultado.config : clonarDefaults();
 }
 
 export type AlquilerItems = {

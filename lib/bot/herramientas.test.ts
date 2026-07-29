@@ -99,6 +99,21 @@ describe("ejecutarHerramienta", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("la herramienta precios escala si getPreciosConfigResultado falla del todo, no inventa un precio", async () => {
+    // Ambas consultas de precios_config fallan (columnas nuevas y legacy):
+    // no hay forma de saber el precio real. Devolver PRECIOS_DEFAULT acá
+    // sería inventar un precio — y puede regalar cosas que se cobran o
+    // sobrecotizar otras.
+    const supabase = {
+      from: () => ({
+        select: () => ({ data: null, error: { message: "boom" } }),
+      }),
+    } as never;
+
+    const r = await ejecutarHerramienta(supabase, "precios", {});
+    expect(r.ok).toBe(false);
+  });
+
   it("nunca pide partidas privadas", async () => {
     // Una partida privada es el cumpleaños de alguien. El bot no la menciona.
     const filtros: Record<string, string> = {};
