@@ -50,4 +50,62 @@ describe("getBotConfig", () => {
     expect(cfg.modelo).toBe(CONFIG_DEFAULT.modelo);
     expect(cfg.topeDiarioUsd).toBe(CONFIG_DEFAULT.topeDiarioUsd);
   });
+
+  // topeDiarioUsd edge cases: Number() puede devolver NaN, 0 o Infinity
+  it("rechaza tope_diario_usd inválido ('abc') y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { tope_diario_usd: "abc" }, error: null }),
+    );
+    expect(cfg.topeDiarioUsd).toBe(CONFIG_DEFAULT.topeDiarioUsd);
+  });
+
+  it("rechaza tope_diario_usd vacío ('') y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { tope_diario_usd: "" }, error: null }),
+    );
+    expect(cfg.topeDiarioUsd).toBe(CONFIG_DEFAULT.topeDiarioUsd);
+  });
+
+  it("rechaza tope_diario_usd literal 'NaN' y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { tope_diario_usd: "NaN" }, error: null }),
+    );
+    expect(cfg.topeDiarioUsd).toBe(CONFIG_DEFAULT.topeDiarioUsd);
+  });
+
+  it("rechaza tope_diario_usd negativo y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { tope_diario_usd: "-5" }, error: null }),
+    );
+    expect(cfg.topeDiarioUsd).toBe(CONFIG_DEFAULT.topeDiarioUsd);
+  });
+
+  // maxMensajesConversacion edge cases: must be integer >= 1
+  it("rechaza maxMensajesConversacion=NaN y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { max_mensajes_conversacion: NaN }, error: null }),
+    );
+    expect(cfg.maxMensajesConversacion).toBe(CONFIG_DEFAULT.maxMensajesConversacion);
+  });
+
+  it("rechaza maxMensajesConversacion=0 (no es >= 1) y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { max_mensajes_conversacion: 0 }, error: null }),
+    );
+    expect(cfg.maxMensajesConversacion).toBe(CONFIG_DEFAULT.maxMensajesConversacion);
+  });
+
+  it("rechaza maxMensajesConversacion negativo y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { max_mensajes_conversacion: -3 }, error: null }),
+    );
+    expect(cfg.maxMensajesConversacion).toBe(CONFIG_DEFAULT.maxMensajesConversacion);
+  });
+
+  it("rechaza maxMensajesConversacion no-entero (2.5) y usa el default", async () => {
+    const cfg = await getBotConfig(
+      supabaseFake({ data: { max_mensajes_conversacion: 2.5 }, error: null }),
+    );
+    expect(cfg.maxMensajesConversacion).toBe(CONFIG_DEFAULT.maxMensajesConversacion);
+  });
 });

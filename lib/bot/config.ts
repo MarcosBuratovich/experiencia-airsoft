@@ -45,13 +45,20 @@ export async function getBotConfig(
         ? fila.modelo
         : CONFIG_DEFAULT.modelo,
     // numeric de Postgres llega como string por el driver.
-    topeDiarioUsd:
-      fila.tope_diario_usd != null
-        ? Number(fila.tope_diario_usd)
-        : CONFIG_DEFAULT.topeDiarioUsd,
-    maxMensajesConversacion:
-      typeof fila.max_mensajes_conversacion === "number"
-        ? fila.max_mensajes_conversacion
-        : CONFIG_DEFAULT.maxMensajesConversacion,
+    // Validar que sea un número finito positivo (rechaza NaN, Infinity, 0, negativos, strings inválidos).
+    topeDiarioUsd: (() => {
+      if (fila.tope_diario_usd == null) return CONFIG_DEFAULT.topeDiarioUsd;
+      const n = Number(fila.tope_diario_usd);
+      return Number.isFinite(n) && n > 0 ? n : CONFIG_DEFAULT.topeDiarioUsd;
+    })(),
+    // Debe ser un entero >= 1 para evitar bucles infinitos o escaladas sin fin.
+    maxMensajesConversacion: (() => {
+      if (typeof fila.max_mensajes_conversacion !== "number")
+        return CONFIG_DEFAULT.maxMensajesConversacion;
+      const n = fila.max_mensajes_conversacion;
+      return Number.isInteger(n) && n >= 1
+        ? n
+        : CONFIG_DEFAULT.maxMensajesConversacion;
+    })(),
   };
 }
