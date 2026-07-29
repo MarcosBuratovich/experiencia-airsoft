@@ -22,6 +22,7 @@ import {
 } from "@/lib/errors";
 import { WHATSAPP_URL } from "@/app/_components/site-constants";
 import { enviarEventoMeta } from "@/lib/meta-capi";
+import { leerGclid } from "@/lib/gclid";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -108,7 +109,13 @@ export async function solicitarPrivadaAction(
     );
   }
 
-  const { error } = await supabase.from("solicitudes_privada").insert({
+  // Si la persona llegó por un anuncio de Google, guardamos el id del clic
+  // para poder devolverle a Ads la venta cuando la privada se cierre por
+  // WhatsApp (conversión offline). Si la columna todavía no existe porque
+  // falta correr la migración, reintentamos sin ella: una solicitud jamás se
+  // puede perder por un tema de analytics.
+  const gclid = await leerGclid();
+  const base = {
     user_id: user.id,
     fecha_propuesta: v.fecha_propuesta,
     hora_inicio: v.hora_inicio,
@@ -116,7 +123,17 @@ export async function solicitarPrivadaAction(
     cupo_estimado: v.cupo_estimado,
     modalidad: "dinamica",
     notas: v.notas || null,
-  });
+  };
+  let { error } = await supabase.from("solicitudes_privada").insert(
+    gclid ? { ...base, gclid, gclid_at: new Date().toISOString() } : base,
+  );
+  if (error && gclid) {
+    console.error(
+      "[solicitarPrivadaAction] insert con gclid falló, reintento sin él:",
+      error.message,
+    );
+    ({ error } = await supabase.from("solicitudes_privada").insert(base));
+  }
   if (error) {
     console.error("[solicitarPrivadaAction] insert falló:", error);
     return actionError(error);

@@ -123,6 +123,11 @@ export function PlatformNav({
       title: "Análisis",
       links: [
         { href: "/admin/analytics", label: "Analytics", subtitle: "Métricas del mes" },
+        {
+          href: "/admin/conversiones",
+          label: "Conversiones",
+          subtitle: "Ventas cerradas → Google Ads",
+        },
         { href: "/admin/eventos", label: "Eventos", subtitle: "Diagnóstico y carga" },
       ],
     },
