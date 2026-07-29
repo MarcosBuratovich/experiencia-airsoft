@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Espacio de trabajo del flujo de subagentes (scratch, no versionado)
+.superpowers/
