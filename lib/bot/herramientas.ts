@@ -113,13 +113,21 @@ async function proximasPartidas(
   const ids = (data as { id: string }[]).map((p) => p.id);
   const ocupacion = new Map<string, number>();
   if (ids.length) {
-    const { data: inscs } = await supabase
+    const { data: inscs, error: errorInscs } = await supabase
       .from("inscripciones")
       .select("partida_id")
       .in("partida_id", ids)
       // Solo confirmados: los de lista de espera no ocupan lugar.
       .eq("estado", "confirmado");
-    for (const i of (inscs ?? []) as { partida_id: string }[]) {
+
+    // Si esta consulta falla no sabemos la ocupación real: devolver la
+    // partida igual sería inventar "lugares_disponibles" (p.ej. decir que
+    // hay 20 lugares en una partida llena). Mejor escalar que mentir.
+    if (errorInscs || !inscs) {
+      return { ok: false, error: "No pude ver la ocupación de las partidas." };
+    }
+
+    for (const i of inscs as { partida_id: string }[]) {
       ocupacion.set(i.partida_id, (ocupacion.get(i.partida_id) ?? 0) + 1);
     }
   }

@@ -55,6 +55,50 @@ describe("ejecutarHerramienta", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("si la partida se pudo leer pero falla el cálculo de ocupación, no inventa lugares_disponibles", async () => {
+    // La partida se lee bien, pero la segunda consulta (inscripciones, para
+    // saber cuántos lugares quedan) falla. Devolver la partida con ocupación
+    // 0 acá sería inventar "lugares_disponibles": el bot diría que sobran
+    // lugares en una partida que puede estar llena.
+    const partida = {
+      id: "p1",
+      fecha: "2026-08-01",
+      hora_inicio: "19:00:00",
+      modalidad: "dinamica",
+      cupo_max: 50,
+    };
+    const supabase = {
+      from: (tabla: string) => {
+        if (tabla === "partidas") {
+          return {
+            select: () => ({
+              gte: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    order: () => ({
+                      limit: async () => ({ data: [partida], error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        // "inscripciones": falla al calcular la ocupación real.
+        return {
+          select: () => ({
+            in: () => ({
+              eq: async () => ({ data: null, error: { message: "boom" } }),
+            }),
+          }),
+        };
+      },
+    } as never;
+
+    const r = await ejecutarHerramienta(supabase, "proximas_partidas", {});
+    expect(r.ok).toBe(false);
+  });
+
   it("nunca pide partidas privadas", async () => {
     // Una partida privada es el cumpleaños de alguien. El bot no la menciona.
     const filtros: Record<string, string> = {};
