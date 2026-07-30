@@ -81,6 +81,31 @@ const THINKING_DESACTIVADO: Anthropic.ThinkingConfigParam = { type: "disabled" }
 // escalada silenciosa "no usó ninguna herramienta" de forma evitable.
 const TOOL_CHOICE_CUALQUIERA: Anthropic.ToolChoice = { type: "any" };
 
+// Defensa en el borde (revisión tarea 10): visto UNA vez en una corrida real
+// y nunca más reproducido a demanda — el campo `texto` trajo pegado un
+// fragmento de sintaxis de function-calling (`</parameter><parameter
+// name="escalar">false`). No hay causa raíz confirmada y es intermitente,
+// así que la defensa va acá, en el único punto por donde pasa TODO texto
+// camino al cliente, en vez de perseguir la causa en el modelo.
+//
+// El `\b` después del nombre de la etiqueta es lo que evita falsos
+// positivos con usos legítimos de "<" seguido de un número ("el grupo va de
+// 8 a <12"): ahí no hay letra pegada al "<", así que ningún patrón matchea.
+const PATRONES_FUGA_SINTAXIS: RegExp[] = [
+  // Etiquetas de function-calling (las nuestras hacia el modelo, o alguna
+  // que el modelo mezcla): <parameter>, </parameter>, <function>, <invoke>,
+  // <antml...>, con o sin la barra de cierre.
+  /<\/?(?:parameter|function|invoke|antml)\b/i,
+  // Nombres de nuestros propios campos del esquema de "responder"
+  // apareciendo con forma de atributo de marcado — por si el fragmento que
+  // se filtra no incluye la etiqueta <parameter completa.
+  /name\s*=\s*["'](?:texto|escalar|motivo|resumen|clasificacion)["']/i,
+];
+
+function tieneFugaDeSintaxis(texto: string): boolean {
+  return PATRONES_FUGA_SINTAXIS.some((patron) => patron.test(texto));
+}
+
 /** Clasificación de descarte cuando no hay una válida del modelo. */
 const CLASIF_DESCONOCIDA: Clasificacion = {
   intencion: "otro",
@@ -315,6 +340,19 @@ function interpretarRespuesta(input: unknown, uso: UsoTokens): RespuestaBot {
   } else {
     clasificacionValida = false;
     clasificacion = { ...CLASIF_DESCONOCIDA };
+  }
+
+  // Defensa en el borde: chequea ANTES de bifurcar entre los dos caminos
+  // (escalar o no) porque los dos mandan `texto` tal cual al cliente. No se
+  // intenta limpiar y mandar el resto — una respuesta parcialmente corrupta
+  // es tan mala como una cortada por max_tokens (B-2): se descarta entera.
+  if (texto && tieneFugaDeSintaxis(texto)) {
+    return escalarEnSilencio(
+      "Respuesta con sintaxis interna filtrada",
+      "El asistente generó una respuesta con marcado técnico interno (parece sintaxis de function-calling). Se descartó antes de mandarla.",
+      uso,
+      clasificacion,
+    );
   }
 
   if (o.escalar === true) {

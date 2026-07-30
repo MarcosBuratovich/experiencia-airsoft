@@ -672,4 +672,85 @@ describe("generarRespuesta", () => {
       expect(r.clasificacion.intencion).toBe("otro");
     }
   });
+
+  // --- Defensa en el borde (revisión tarea 10): sintaxis interna filtrada -
+  // Hallazgo real, no reproducible a demanda: una corrida trajo
+  // `</parameter><parameter name="escalar">false` pegado al final de un
+  // texto por lo demás normal. Es basura técnica que jamás debe llegar a un
+  // cliente real. No se intenta limpiar y mandar el resto — una respuesta
+  // parcialmente corrupta es tan mala como una cortada por max_tokens (B-2):
+  // se escala en silencio, con un motivo que el panel pueda mostrar.
+
+  describe("defensa contra sintaxis interna filtrada en el texto", () => {
+    async function generarConTexto(texto: string, escalar = false) {
+      const input = escalar
+        ? {
+            texto,
+            escalar: true,
+            motivo: "cumpleaños",
+            resumen: "Quiere un cumple de 15.",
+            clasificacion: { ...CLASIF_OK, intencion: "privada_cumple" },
+          }
+        : { texto, escalar: false, clasificacion: CLASIF_OK };
+
+      const { cliente } = anthropicFake([
+        {
+          stop_reason: "tool_use",
+          usage: USO,
+          content: [{ type: "tool_use", id: "t1", name: "responder", input }],
+        },
+      ]);
+      return generarRespuesta(deps(cliente), entrada);
+    }
+
+    it("detecta el caso real observado: </parameter><parameter name=escalar>false", async () => {
+      const r = await generarConTexto(
+        '¿Van con equipo o precisan alquilar?</parameter>\n    <parameter name="escalar">false',
+      );
+      expect(r.tipo).toBe("escalar");
+      if (r.tipo === "escalar") {
+        expect(r.texto).toBeNull();
+        expect(r.motivo).toMatch(/sintaxis interna/i);
+      }
+    });
+
+    it("detecta <function y <invoke (otra sintaxis de function-calling)", async () => {
+      const r = await generarConTexto(
+        'Dale, ya te confirmo <function_calls><invoke name="precios">',
+      );
+      expect(r.tipo).toBe("escalar");
+      if (r.tipo === "escalar") expect(r.texto).toBeNull();
+    });
+
+    it("detecta <antml", async () => {
+      const r = await generarConTexto("El precio es $20.000 <parameter>");
+      expect(r.tipo).toBe("escalar");
+      if (r.tipo === "escalar") expect(r.texto).toBeNull();
+    });
+
+    it('detecta name="clasificacion" aunque no venga la etiqueta <parameter completa', async () => {
+      const r = await generarConTexto('Dale, te confirmo. name="clasificacion" listo');
+      expect(r.tipo).toBe("escalar");
+      if (r.tipo === "escalar") expect(r.texto).toBeNull();
+    });
+
+    it("aplica también al camino de escalada de política, no solo al de responder", async () => {
+      const r = await generarConTexto("Te paso con el equipo.</parameter>", true);
+      expect(r.tipo).toBe("escalar");
+      if (r.tipo === "escalar") {
+        expect(r.texto).toBeNull();
+        expect(r.motivo).toMatch(/sintaxis interna/i);
+      }
+    });
+
+    it("NO marca por error un texto legítimo que usa el signo de menor (<)", async () => {
+      const r = await generarConTexto(
+        "Dale, somos más de 10 personas: el grupo va de 8 a <12 según cómo confirmen.",
+      );
+      expect(r.tipo).toBe("responder");
+      if (r.tipo === "responder") {
+        expect(r.texto).toContain("<12");
+      }
+    });
+  });
 });
