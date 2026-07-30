@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { ESQUEMAS_HERRAMIENTAS, ejecutarHerramienta } from "./herramientas";
 
 describe("ESQUEMAS_HERRAMIENTAS", () => {
-  it("declara exactamente las tres herramientas de lectura", () => {
+  it("declara exactamente las dos herramientas de lectura", () => {
+    // agenda_privadas se sacó: la política de escalado manda escalar apenas
+    // alguien menciona privadas/cumpleaños/corporativos, así que el modelo
+    // nunca llegaba a usarla (decisión de producto, no un defecto).
     expect(ESQUEMAS_HERRAMIENTAS.map((h) => h.name).sort()).toEqual([
-      "agenda_privadas",
       "precios",
       "proximas_partidas",
     ]);
@@ -160,57 +162,6 @@ describe("ejecutarHerramienta", () => {
       const datos = r.datos as { partidas: unknown[] };
       expect(datos.partidas).toEqual([]);
     }
-  });
-
-  it("H1: agenda_privadas no trunca en silencio — con dias=21 (default) la última fecha del rango tiene que aparecer", async () => {
-    // Con las 3 tablas que usa getSlotsEstado vacías (sin partidas, sin
-    // solicitudes, sin overrides), cada día tiene A LO SUMO 1 de sus 4 slots
-    // reservado por el horario recurrente de públicas (HORARIOS_RECURRENTES
-    // solo pisa Mié/Jue 19:00 y Sáb/Dom 9:00) — el resto queda "disponible".
-    // Con dias=21 hay ~70 slots libres. La lista plana vieja los cortaba a
-    // 20 y perdía todo lo posterior a los primeros días.
-    const vacio = { data: [], error: null };
-    const supabase = {
-      from: (tabla: string) => {
-        if (tabla === "partidas") {
-          return {
-            select: () => ({
-              gte: () => ({ lte: () => ({ neq: async () => vacio }) }),
-            }),
-          };
-        }
-        if (tabla === "solicitudes_privada") {
-          return {
-            select: () => ({
-              gte: () => ({ lte: () => ({ eq: async () => vacio }) }),
-            }),
-          };
-        }
-        // "slots_privada_overrides"
-        return { select: () => ({ gte: () => ({ lte: async () => vacio }) }) };
-      },
-    } as never;
-
-    const ahora = new Date("2026-07-29T10:00:00-03:00");
-    const r = await ejecutarHerramienta(supabase, "agenda_privadas", {}, ahora);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-
-    const datos = r.datos as {
-      cobertura_hasta: string;
-      dias_con_lugar: { fecha: string; horas: string[] }[];
-    };
-
-    // La última fecha de un rango de 21 días desde 2026-07-29 es 2026-08-18.
-    // Cualquiera sea su día de semana, tiene como mucho 1 slot reservado de
-    // 4 — nunca puede faltar de la respuesta.
-    const ultimaFecha = "2026-08-18";
-    expect(datos.cobertura_hasta).toBe(ultimaFecha);
-    const entradaUltimoDia = datos.dias_con_lugar.find(
-      (d) => d.fecha === ultimaFecha,
-    );
-    expect(entradaUltimoDia).toBeDefined();
-    expect(entradaUltimoDia!.horas.length).toBeGreaterThanOrEqual(3);
   });
 
   it("nunca pide partidas privadas", async () => {

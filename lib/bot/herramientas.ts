@@ -2,7 +2,6 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { inscripcionAbierta } from "@/lib/partidas";
 import { getPreciosConfigResultado } from "@/lib/precios";
-import { getSlotsEstado, rangoDeFechasAhora } from "@/lib/slots-privada";
 
 /**
  * Herramientas del asistente. TODAS son de solo lectura, y esa es la
@@ -42,21 +41,6 @@ export const ESQUEMAS_HERRAMIENTAS: Anthropic.Tool[] = [
       "Devuelve la lista de precios vigente: entrada con equipo propio, entrada de socio, alquiler, chaleco, recargas y cuota. Cada ítem tiene precio en efectivo y por transferencia. Usala siempre que pregunten cuánto sale algo; nunca digas un precio de memoria.",
     input_schema: { type: "object", properties: {}, required: [] },
   },
-  {
-    name: "agenda_privadas",
-    description:
-      "Devuelve los horarios libres para partidas privadas (cumpleaños, corporativos) en los próximos días, agrupados por fecha. Sirve para decir qué días hay lugar, no para reservar. La respuesta trae cobertura_hasta: no asumas que no hay lugar en fechas posteriores a esa, hay que volver a consultar con más días.",
-    input_schema: {
-      type: "object",
-      properties: {
-        dias: {
-          type: "integer",
-          description: "Cuántos días hacia adelante mirar. Por defecto 21.",
-        },
-      },
-      required: [],
-    },
-  },
 ];
 
 export async function ejecutarHerramienta(
@@ -71,8 +55,6 @@ export async function ejecutarHerramienta(
         return await proximasPartidas(supabase, input, ahora);
       case "precios":
         return await precios(supabase);
-      case "agenda_privadas":
-        return await agendaPrivadas(supabase, input, ahora);
       default:
         return { ok: false, error: `La herramienta "${nombre}" no existe.` };
     }
@@ -187,46 +169,6 @@ async function precios(supabase: Cliente): Promise<ResultadoHerramienta> {
       moneda: "ARS",
       nota: "Cada ítem tiene dos precios: efectivo y transferencia.",
       items: resultado.config,
-    },
-  };
-}
-
-async function agendaPrivadas(
-  supabase: Cliente,
-  input: Record<string, unknown>,
-  ahora: Date,
-): Promise<ResultadoHerramienta> {
-  const dias = Math.min(Math.max(Number(input.dias) || 21, 1), 60);
-  const fechas = rangoDeFechasAhora(dias, ahora);
-  const estados = await getSlotsEstado(supabase, fechas);
-
-  // H1: agrupar por fecha en vez de por slot individual. Con dias tope 60 y
-  // 4 slots fijos por día, esto entra entero (máx. 60 entradas) sin cortar
-  // nada — la lista plana anterior se truncaba a 20 slots y, con el default
-  // de 21 días, ocultaba en silencio todo lo posterior a los primeros días.
-  // El modelo no puede concluir "no hay lugar" de una lista que no vio
-  // completa.
-  const porFecha = new Map<string, string[]>();
-  for (const [clave, estado] of estados) {
-    if (estado !== "disponible") continue;
-    const [fecha, hora] = clave.split("|");
-    const horas = porFecha.get(fecha) ?? [];
-    horas.push(hora.slice(0, 5));
-    porFecha.set(fecha, horas);
-  }
-
-  const diasConLugar = [...porFecha.entries()]
-    .map(([fecha, horas]) => ({ fecha, horas: horas.sort() }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-  return {
-    ok: true,
-    datos: {
-      dias_consultados: dias,
-      // Última fecha efectivamente representada: el modelo no debe asumir
-      // "no hay lugar" para fechas posteriores a esta, solo "no se consultó".
-      cobertura_hasta: fechas[fechas.length - 1] ?? null,
-      dias_con_lugar: diasConLugar,
     },
   };
 }
