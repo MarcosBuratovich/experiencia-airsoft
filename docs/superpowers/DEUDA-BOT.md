@@ -143,13 +143,16 @@ caso de tipo/enum).
   comportamiento esperado y buscado.
 - **Sembrar las 7 entradas de `bot_conocimiento`** (el SQL vivía en el
   informe de la tarea 5, `task-5-report.md`, bajo `.superpowers/` — si ese
-  archivo ya no existe, reconstruir con el dueño: edad mínima, qué duele, qué
+  archivo ya no existe, reconstruir con el dueño. OJO: la edad mínima es
+  **18 años, sin excepciones para menores** — confirmado por Marcos el
+  2026-07-30 y consistente con las 5 menciones del sitio de marketing. Un
+  seed anterior decía 14 por error mío. Los demás temas: qué duele, qué
   llevar, instalaciones, lluvia, cómo llegar, duración de la partida).
 - Con la migración corrida y la KB sembrada, el banco de regresión (`pnpm
   banco` — cuesta dinero real de API, no correr sin necesidad real) debería
   subir del 24/30 medido en la última corrida: las 6 fallas actuales son
   escaladas limpias por falta de KB (edad, cómo llegar, lluvia, duración,
-  autorización de menores, y el último mensaje del caso de no-repetirse).
+  el caso de edad, y el último mensaje del caso de no-repetirse).
 
 ---
 

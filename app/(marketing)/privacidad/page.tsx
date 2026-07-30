@@ -255,10 +255,14 @@ export default function PrivacidadPage() {
 
         <Seccion n="08" titulo="Menores de edad">
           <p>
-            El acceso al predio y el uso de la plataforma tienen restricciones
-            de edad. Si sos menor, necesitás la autorización de una persona
-            adulta responsable, que es también quien puede ejercer los derechos
-            sobre tus datos.
+            Para jugar hay que tener <b>18 años cumplidos</b>, y pedimos DNI en
+            el ingreso. Por eso la plataforma está dirigida a personas mayores
+            de edad y no recopilamos datos de menores a sabiendas.
+          </p>
+          <p>
+            Si detectamos que una cuenta pertenece a un menor, la damos de baja
+            y borramos sus datos. Si sos madre, padre o tutor y creés que tenemos
+            datos de un menor a tu cargo, escribinos y los eliminamos.
           </p>
         </Seccion>
 
