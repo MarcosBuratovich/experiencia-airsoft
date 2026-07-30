@@ -14,6 +14,42 @@ import { DUDAS, INTENCIONES, PRIMERA_VEZ } from "./tipos";
  * mecánico. Le damos tono, hechos y libertad.
  */
 
+/**
+ * ADVERTENCIA DE FRAGILIDAD (revisión final antes de merge, tarea 10 rondas
+ * 2-3) — sobre la sección "# Datos" del template de abajo:
+ *
+ * Generalizar la prohibición de inventar datos del lugar en "# Datos" rompió
+ * DOS VECES reglas de "# Cuándo escalar" que nadie tocó — no por lógica
+ * contradictoria entre las dos secciones, sino solo por POSICIÓN y EXTENSIÓN
+ * del texto nuevo dentro del mismo prompt (mismo bloque de sistema, mismo
+ * cache_control). Pasó en la corrida real contra la API, no en teoría:
+ *   - "descuento" dejó de escalar: el modelo pasó a dar el precio real (ya
+ *     lo tenía por la herramienta) y decir que no había descuento, sin
+ *     escalar — técnicamente no estaba "negociando", así que a su manera
+ *     cumplía la regla vieja de todos modos.
+ *   - "ropa" empezó a escalar de más: hasta "¿puedo ir en short?" pasó a
+ *     escalarse, un dato universal del deporte (las bolitas pegan, hace
+ *     falta ropa que cubra) que antes contestaba bien solo, sin ayuda.
+ *
+ * Los dos se arreglaron (ver prompt.test.ts), pero la lección es sobre el
+ * PRÓXIMO cambio, no sobre este: cualquier edición futura a "# Datos" —o a
+ * cualquier sección grande de este prompt— tiene que re-correr como mínimo
+ * estos tres casos de prompt.test.ts antes de darse por terminada, aunque el
+ * cambio no los mencione ni parezca tocarlos:
+ *   - descuento: "un pedido de descuento escala aunque el precio real ya se
+ *     sepa por la herramienta (no alcanza con decir que no hay)"
+ *   - socio: "el alta de socio escala (compromiso de pago recurrente)"
+ *   - ropa: "puede responder sobre ropa/calzado sin escalar (física del
+ *     deporte, no dato de este lugar en particular)"
+ *
+ * No alcanza con probar el caso que motivó el cambio: los tres de arriba no
+ * tienen relación de negocio con "# Datos" y aun así se rompieron dos veces.
+ * Detalle completo (4 rondas de iteración contra la API real, banco de 30
+ * preguntas) en .superpowers/sdd/2026-07-29-bot-motor/progress.md, tarea 10
+ * — ese archivo no está trackeado y puede desaparecer; este comentario, en
+ * el archivo que la gente realmente abre para editar, es lo que tiene que
+ * sobrevivir.
+ */
 const INSTRUCCIONES = `Sos el asistente de Experiencia Airsoft, una cancha de airsoft en Buenos Aires. Contestás mensajes de Instagram y Messenger.
 
 # Tono

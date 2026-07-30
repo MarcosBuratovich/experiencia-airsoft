@@ -6,6 +6,40 @@ import type { BotConfig } from "./config";
  * Control de gasto. El daño máximo de cualquier descontrol —un loop, una
  * campaña que dispara mensajes, un error nuestro— tiene que ser un número
  * definido de antemano.
+ *
+ * REQUIERE SERVICE ROLE (revisión final antes de merge, IMPORTANTE). Las
+ * cinco tablas de fase-19 (bot_conversaciones, bot_mensajes,
+ * bot_conocimiento, bot_pendientes, bot_config — ver db/schema-phase-19.sql)
+ * tienen policy `for all using (public.is_admin())`. Un cliente que no sea
+ * service role —anónimo, o un usuario autenticado que no sea admin— no ve
+ * NADA de estas tablas, y Postgres/PostgREST no lo reportan como error: la
+ * respuesta es 200 con `data: []` y `error: null`. Es indistinguible, mirando
+ * solo la forma de la respuesta, de "la tabla está legítimamente vacía".
+ *
+ * Esa ambigüedad es la raíz de un fail-open real: `gastoDelDia` no tiene
+ * forma de distinguir "no se gastó nada hoy" (0 filas reales en
+ * bot_mensajes) de "no puedo ver bot_mensajes" (0 filas por RLS) — las dos
+ * producen el mismo `data: []`. Sin más, eso hacía que `gastoDelDia`
+ * devolviera 0 en vez de `Infinity`: el tope diario de gasto (`debeFrenar`)
+ * nunca dispara. Lo que lo vuelve una trampa y no un fallo cualquiera: las
+ * herramientas de DATOS del bot (`proximas_partidas`, `precios`, en
+ * herramientas.ts) viven en otras tablas con policies más permisivas y
+ * siguen funcionando con ese mismo cliente — el bot parece sano mientras
+ * gasta sin techo.
+ *
+ * `verificarAccesoAdmin` (más abajo) cierra ese agujero con un canario:
+ * `bot_config` es una fila SINGLETON sembrada por la migración
+ * (`insert ... on conflict (id) do nothing`), así que — a diferencia de
+ * `bot_mensajes`, donde 0 filas puede ser perfectamente legítimo— un cliente
+ * con acceso real SIEMPRE tiene que ver exactamente 1 fila ahí. Verla en 0
+ * no es ambiguo: o el cliente no es service role, o no se corrió
+ * db/schema-phase-19.sql. Cualquiera de los dos motivos amerita frenar todo
+ * ANTES de fingir que el bot puede operar con datos que en realidad no ve.
+ * `gastoDelDia` la llama automáticamente (ver más abajo): así ningún futuro
+ * adaptador (el webhook de Instagram/Messenger, todavía sin escribir en este
+ * repo) puede desplegarse con el cliente equivocado sin que algo reviente de
+ * forma ruidosa y explícita en los logs — no depende de que alguien se
+ * acuerde de llamar a un chequeo aparte antes de usar este módulo.
  */
 
 /** USD por millón de tokens. Tabla de Anthropic, junio 2026. */
@@ -58,13 +92,77 @@ function inicioDelDiaArg(ahora: Date): Date {
 type ClienteLectura = Pick<SupabaseClient, "from">;
 
 /**
+ * Tabla canario: la fila singleton de fase-19 (`id boolean primary key
+ * default true`, sembrada con `on conflict (id) do nothing`). Por
+ * construcción SIEMPRE tiene exactamente 1 fila para cualquier cliente con
+ * acceso real — ver el docstring largo más arriba.
+ */
+const TABLA_CANARIO_ADMIN = "bot_config";
+
+/**
+ * Chequeo en runtime, ruidoso a propósito: falla (lanza) si `supabase` no
+ * puede ver la fila singleton de `bot_config`. Ver el docstring del módulo
+ * (arriba) para el porqué completo. Puntos de diseño:
+ *
+ * - LANZA, no devuelve un booleano ni un `Infinity` silencioso: esto NO es
+ *   un fallo transitorio de red como los que el resto de este módulo
+ *   tolera devolviendo un valor por defecto seguro — es un error de
+ *   despliegue/configuración (cliente equivocado, o migración no corrida)
+ *   que tiene que frenar todo de forma imposible de ignorar, no degradar
+ *   en silencio a "total gastado: 0".
+ * - Además de lanzar, hace `console.error` del mismo mensaje: si algo río
+ *   arriba llegara a tragarse la excepción, el mensaje igual queda en los
+ *   logs del servidor.
+ * - Se llama SOLO desde `gastoDelDia` (abajo), nunca por su cuenta: así
+ *   cualquier código nuevo que use este módulo como está pensado —para
+ *   aplicar el tope diario— quede cubierto automáticamente, sin depender de
+ *   que quien lo integre se acuerde de invocar un chequeo aparte.
+ */
+export async function verificarAccesoAdmin(
+  supabase: ClienteLectura,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from(TABLA_CANARIO_ADMIN)
+    .select("id")
+    .limit(1);
+
+  const filas = Array.isArray(data) ? data.length : 0;
+  if (error || filas === 0) {
+    const detalle = error
+      ? `error: ${JSON.stringify(error)}`
+      : "0 filas (se esperaba exactamente 1, es una fila singleton)";
+    const mensaje =
+      `[bot] ACCESO ADMIN AUSENTE sobre "${TABLA_CANARIO_ADMIN}" (${detalle}). ` +
+      "Las 5 tablas de fase-19 (bot_conversaciones, bot_mensajes, " +
+      "bot_conocimiento, bot_pendientes, bot_config) solo son visibles con " +
+      "un cliente service role (policy `for all using (public.is_admin())`" +
+      " en db/schema-phase-19.sql). Con el cliente equivocado esto NO tira " +
+      "error igual — RLS filtra en silencio y el tope diario de gasto queda " +
+      "muerto (gastoDelDia vería 0 filas y devolvería 0 en vez de Infinity, " +
+      "sin techo real). Usá createServiceRoleClient() de " +
+      "lib/supabase/admin.ts para todo lo que lea o escriba estas tablas, y " +
+      "confirmá que se corrió db/schema-phase-19.sql.";
+    console.error(mensaje);
+    throw new Error(mensaje);
+  }
+}
+
+/**
  * Gasto acumulado del día. Devuelve Infinity si no se puede calcular: sin
  * saber cuánto llevamos gastado, el bot no debe seguir contestando.
+ *
+ * Antes de leer nada, verifica que el cliente tenga acceso admin real (ver
+ * `verificarAccesoAdmin` y el docstring del módulo) — si no lo tiene, esta
+ * función LANZA en vez de devolver un número: la ambigüedad "0 filas
+ * legítimas" vs "0 filas por RLS" no se puede resolver mirando solo
+ * `bot_mensajes`, así que hace falta el canario aparte.
  */
 export async function gastoDelDia(
   supabase: ClienteLectura,
   ahora: Date = new Date(),
 ): Promise<number> {
+  await verificarAccesoAdmin(supabase);
+
   const desde = inicioDelDiaArg(ahora).toISOString();
   const { data, error } = await supabase
     .from("bot_mensajes")

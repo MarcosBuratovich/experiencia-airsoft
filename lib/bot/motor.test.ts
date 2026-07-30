@@ -132,7 +132,19 @@ describe("generarRespuesta", () => {
     ]);
 
     const supabase = {
-      from: () => ({ select: async () => ({ data: [], error: null }) }),
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
     } as never;
 
     const r = await generarRespuesta(
@@ -198,7 +210,19 @@ describe("generarRespuesta", () => {
     });
     const cliente = { messages: { create } } as never;
     const supabase = {
-      from: () => ({ select: async () => ({ data: [], error: null }) }),
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
     } as never;
 
     const r = await generarRespuesta(
@@ -403,8 +427,189 @@ describe("generarRespuesta", () => {
 
     await generarRespuesta(deps(cliente), entrada);
 
+    // CRÍTICO (revisión final antes de merge): "any" solo no alcanza. Sin
+    // disable_parallel_tool_use:true (default `false` en el SDK) el modelo
+    // puede emitir en el MISMO turno [tool_use precios, tool_use responder],
+    // y "responder" traería un precio escrito sin haber visto el resultado
+    // real de "precios" — el bot inventando un dato. Este assert confirma
+    // que el request efectivamente lo lleva (no alcanza con el código
+    // "pareciendo" correcto).
     const params = create.mock.calls[0][0] as { tool_choice?: unknown };
-    expect(params.tool_choice).toEqual({ type: "any" });
+    expect(params.tool_choice).toEqual({
+      type: "any",
+      disable_parallel_tool_use: true,
+    });
+  });
+
+  // --- CRÍTICO (revisión final): el agujero de raíz que tool_choice.any ---
+  // ---   sin disable_parallel_tool_use dejaba abierto -----------------------
+  //
+  // Ninguno de los fixtures de este archivo tenía dos tool_use en el mismo
+  // array de `content` — con tool_choice:{type:"any"} (sin el flag) el
+  // modelo podía mandar [tool_use precios, tool_use responder] en UN solo
+  // turno, y el motor viejo hacía `usos.find(u => u.name === "responder")` y
+  // devolvía ESO directo, sin ejecutar nunca la herramienta hermana. Es "el
+  // bot inventa un precio": interpretarRespuesta recibe un `input.texto` que
+  // el modelo escribió sin haber visto el dato real.
+  //
+  // Decisión de diseño (pedida explícitamente en la revisión): ante ese
+  // turno, el motor NO escala en silencio — ejecuta la herramienta de datos
+  // hermana y sigue la conversación (acotado por maxVueltas, que ya escala
+  // si nunca converge). Se prefiere esto a escalar de entrada porque: (a) es
+  // el mismo criterio que ya usa el resto del motor con fallas recuperables
+  // (una herramienta que falla no fuerza escalada; se le da al modelo la
+  // chance de decidir con el error en mano — ver el test de
+  // "is_error true" más arriba); (b) descartar la vuelta entera tiraría a la
+  // basura una herramienta que el modelo pidió de buena fe y que cuesta
+  // tokens reales; (c) sigue siendo imposible mandar texto sin el dato,
+  // porque la "responder" prematura NUNCA se trata como final — solo cambia
+  // si el motor lo intenta resolver una vuelta más o se rinde al agotar
+  // maxVueltas (fail closed de cualquier forma).
+  it("CRÍTICO: un tool_use de 'responder' junto a otra herramienta en el mismo turno no cierra la respuesta sin haber ejecutado esa herramienta", async () => {
+    const { create, cliente } = anthropicFake([
+      {
+        // El modelo pide precios Y responde EN EL MISMO turno — el caso que
+        // tool_choice:any sin disable_parallel_tool_use permitía.
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          { type: "tool_use", id: "h1", name: "precios", input: {} },
+          {
+            type: "tool_use",
+            id: "t1",
+            name: "responder",
+            input: {
+              texto: "La entrada sale $999.999 (inventado, sin consultar precios).",
+              escalar: false,
+              clasificacion: CLASIF_OK,
+            },
+          },
+        ],
+      },
+      {
+        // Segunda vuelta: ahora "responder" llega SOLA, ya informada por el
+        // resultado real de "precios".
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: "responder",
+            input: { texto: "La entrada sale $20.000.", escalar: false, clasificacion: CLASIF_OK },
+          },
+        ],
+      },
+    ]);
+    const supabase = {
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    } as never;
+
+    const r = await generarRespuesta(
+      { anthropic: cliente, supabase, modelo: "claude-sonnet-5" },
+      entrada,
+    );
+
+    // Tuvo que haber una segunda vuelta: la "responder" prematura no cerró sola.
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(r.tipo).toBe("responder");
+    if (r.tipo === "responder") {
+      // Se manda el texto de la vuelta que llegó SOLA — nunca el que vino
+      // pegado a "precios" sin haber visto su resultado.
+      expect(r.texto).toBe("La entrada sale $20.000.");
+      expect(r.texto).not.toContain("999.999");
+    }
+
+    // La herramienta de datos SÍ se ejecutó en la primera vuelta (no se
+    // descartó junto con la "responder" prematura): su tool_result vuelve
+    // sin error.
+    const segundaLlamada = create.mock.calls[1][0] as {
+      messages: Array<{ role: string; content: unknown }>;
+    };
+    const mensajeConResultados =
+      segundaLlamada.messages[segundaLlamada.messages.length - 1];
+    const resultados = mensajeConResultados.content as Array<{
+      tool_use_id: string;
+      is_error?: boolean;
+    }>;
+    const resultadoPrecios = resultados.find((x) => x.tool_use_id === "h1");
+    expect(resultadoPrecios?.is_error).toBe(false);
+
+    // La "responder" prematura también recibió su propio tool_result (la API
+    // exige uno por cada tool_use del turno), marcado como error — para que
+    // el modelo sepa que esa llamada puntual no valió.
+    const resultadoResponderPrematura = resultados.find(
+      (x) => x.tool_use_id === "t1",
+    );
+    expect(resultadoResponderPrematura?.is_error).toBe(true);
+  });
+
+  it("CRÍTICO: onVuelta señala la 'responder' prematura sin contarla como herramienta de datos", async () => {
+    const { cliente } = anthropicFake([
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          { type: "tool_use", id: "h1", name: "precios", input: {} },
+          {
+            type: "tool_use",
+            id: "t1",
+            name: "responder",
+            input: { texto: "inventado", escalar: false, clasificacion: CLASIF_OK },
+          },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: "responder",
+            input: { texto: "Sale $20.000.", escalar: false, clasificacion: CLASIF_OK },
+          },
+        ],
+      },
+    ]);
+    const supabase = {
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    } as never;
+
+    const vueltas: { nota: string; herramientas: { nombre: string; ok: boolean }[] }[] = [];
+    await generarRespuesta(
+      { anthropic: cliente, supabase, modelo: "claude-sonnet-5", onVuelta: (info) => vueltas.push(info) },
+      entrada,
+    );
+
+    // Solo "precios" cuenta como herramienta de datos de la vuelta 0 — la
+    // "responder" prematura no se reporta como si lo fuera.
+    expect(vueltas[0].herramientas).toEqual([{ nombre: "precios", ok: true }]);
+    expect(vueltas[0].nota).toMatch(/responder.*junto a otra herramienta/i);
   });
 
   // --- H1 (revisión tarea 10): onVuelta, observabilidad sin efecto ---------
@@ -430,7 +635,19 @@ describe("generarRespuesta", () => {
       },
     ]);
     const supabase = {
-      from: () => ({ select: async () => ({ data: [], error: null }) }),
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
     } as never;
 
     const vueltas: unknown[] = [];
@@ -627,7 +844,19 @@ describe("generarRespuesta", () => {
     });
     const cliente = { messages: { create } } as never;
     const supabase = {
-      from: () => ({ select: async () => ({ data: [], error: null }) }),
+      from: () => ({
+        select: async () => ({
+          data: [
+            {
+              key: "entrada_byop",
+              valor: 20000,
+              valor_efectivo: 20000,
+              valor_transferencia: 20000,
+            },
+          ],
+          error: null,
+        }),
+      }),
     } as never;
 
     const r = await generarRespuesta(

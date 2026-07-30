@@ -106,16 +106,26 @@ export type ResultadoPrecios =
 
 /**
  * Igual que `getPreciosConfig`, pero expone la falla en vez de degradar en
- * silencio a los defaults. `ok:false` SOLO cuando fallan las dos consultas
- * (columnas nuevas y legacy) — no cuando falta la columna nueva (caso
- * esperado y sano: pre-migración fase-17), que sigue resuelto por la
- * consulta legacy.
+ * silencio a los defaults. `ok:false` cuando fallan las dos consultas
+ * (columnas nuevas y legacy) O cuando alguna de las dos "tiene éxito" pero
+ * devuelve CERO filas — no cuando falta la columna nueva (caso esperado y
+ * sano: pre-migración fase-17), que sigue resuelto por la consulta legacy.
  *
- * Por qué existe: un precio default silencioso es un dato inventado (puede
- * regalar algo que se cobra, o sobrecotizar). El bot necesita saber cuándo
- * eso pasó para escalar en vez de decirlo. Los ~10 call-sites de UI que ya
- * usan `getPreciosConfig` no necesitan ese detalle — siguen con el
- * envoltorio de abajo, sin cambios.
+ * Por qué el chequeo de filas (revisión final antes de merge, IMPORTANTE):
+ * la policy real de `precios_config` es `for select using (auth.uid() is
+ * not null)`. Un cliente sin sesión (el caso "anónimo" del bot si alguna vez
+ * corriera con el cliente equivocado) no rompe la consulta — PostgREST
+ * responde 200 con `data: [], error: null`, exactamente el mismo shape que
+ * una tabla legítimamente vacía. `!dual.error` por sí solo NO distingue esos
+ * dos casos, y antes de este fix aceptaba el segundo como si fuera el
+ * primero.
+ *
+ * Por qué existe esta función (no solo el chequeo): un precio default
+ * silencioso es un dato inventado (puede regalar algo que se cobra, o
+ * sobrecotizar). El bot necesita saber cuándo eso pasó para escalar en vez
+ * de decirlo. Los ~10 call-sites de UI que ya usan `getPreciosConfig` no
+ * necesitan ese detalle — siguen con el envoltorio de abajo, sin cambios de
+ * firma ni de comportamiento.
  */
 export async function getPreciosConfigResultado(
   supabase: ServerSupabase,
@@ -128,8 +138,15 @@ export async function getPreciosConfigResultado(
     .from("precios_config")
     .select("key, valor, valor_efectivo, valor_transferencia");
 
-  if (!dual.error) {
-    for (const row of (dual.data ?? []) as PrecioRow[]) {
+  // `!dual.error && filas > 0`: una lectura vacía SIN error cuenta como
+  // fallo, no como "no hay precios" — ver el porqué en el docstring de
+  // arriba. No tiene sentido reintentar con la consulta legacy en ese caso:
+  // es la MISMA tabla y la MISMA fila (0 de ellas visibles), así que
+  // devolvería el mismo vacío por el mismo motivo (RLS o tabla realmente
+  // vacía) — solo gastaría una consulta más para llegar a la misma
+  // conclusión.
+  if (!dual.error && (dual.data?.length ?? 0) > 0) {
+    for (const row of dual.data as PrecioRow[]) {
       if (row.key in out) {
         const k = row.key as PreciosKey;
         out[k] = {
@@ -140,12 +157,20 @@ export async function getPreciosConfigResultado(
     }
     return { ok: true, config: out };
   }
-
-  const legacy = await supabase.from("precios_config").select("key, valor");
-  if (legacy.error) {
+  if (!dual.error) {
+    // Sin error pero vacía: mismo caso de arriba.
     return { ok: false };
   }
-  for (const row of (legacy.data ?? []) as { key: string; valor: number }[]) {
+
+  // Acá sí vale reintentar: dual.error es un error REAL (p.ej. "no existe la
+  // columna valor_efectivo" pre-migración fase-17), no una lectura vacía —
+  // las columnas legacy son una consulta genuinamente distinta que puede
+  // tener éxito donde la de columnas nuevas no.
+  const legacy = await supabase.from("precios_config").select("key, valor");
+  if (legacy.error || (legacy.data?.length ?? 0) === 0) {
+    return { ok: false };
+  }
+  for (const row of legacy.data as { key: string; valor: number }[]) {
     if (row.key in out) {
       out[row.key as PreciosKey] = { efectivo: row.valor, transferencia: row.valor };
     }

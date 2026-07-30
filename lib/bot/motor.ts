@@ -79,7 +79,23 @@ const THINKING_DESACTIVADO: Anthropic.ThinkingConfigParam = { type: "disabled" }
 // (el default de la API si no se manda tool_choice) el modelo puede
 // contestar en texto plano en cualquier turno; eso es lo que dejaba pasar la
 // escalada silenciosa "no usó ninguna herramienta" de forma evitable.
-const TOOL_CHOICE_CUALQUIERA: Anthropic.ToolChoice = { type: "any" };
+//
+// CRÍTICO (revisión final antes de merge): "any" sin `disable_parallel_tool_use`
+// no alcanza. El default de ese campo en el SDK es `false`, así que el
+// modelo puede emitir en el MISMO turno [tool_use precios, tool_use
+// responder] — "any" fija SOLO cuál herramienta usar (alguna), no CUÁNTAS a
+// la vez. Con eso, `responder` podía traer un precio escrito sin haber visto
+// el resultado de `precios` de ese mismo turno: el bot inventando un dato,
+// justo lo que el diseño prohíbe. Nombre y ubicación del campo verificados
+// contra node_modules/@anthropic-ai/sdk/resources/messages/messages.d.ts
+// (interfaces ToolChoiceAny/ToolChoiceAuto/ToolChoiceTool), no de memoria.
+// Ver también la defensa en profundidad más abajo en el loop (usos.length
+// === 1 antes de aceptar "responder" como final) para el caso de que este
+// campo alguna vez no alcance a aplicarse.
+const TOOL_CHOICE_CUALQUIERA: Anthropic.ToolChoice = {
+  type: "any",
+  disable_parallel_tool_use: true,
+};
 
 // Defensa en el borde (revisión tarea 10): visto UNA vez en una corrida real
 // y nunca más reproducido a demanda — el campo `texto` trajo pegado un
@@ -245,8 +261,20 @@ export async function generarRespuesta(
       (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
     );
 
-    // ¿Llamó a responder? Ahí termina.
-    const final = usos.find((u) => u.name === "responder");
+    // ¿Llamó a responder, y SOLA en el turno? Ahí termina. El `usos.length
+    // === 1` es la defensa real (CRÍTICO, revisión final): con
+    // disable_parallel_tool_use:true de arriba el SDK ya fuerza como mucho un
+    // tool_use por turno, pero esta condición NO depende ciegamente de eso.
+    // Si "responder" llegara igual acompañada de otra herramienta en el
+    // mismo array (paralelo), esa "responder" no vio el resultado de la
+    // herramienta hermana todavía — tratarla como final mandaría al cliente
+    // un texto que pudo haberse armado con un precio o una fecha inventados,
+    // exactamente lo que el diseño prohíbe. En ese caso cae al camino de
+    // abajo, que ejecuta la(s) herramienta(s) de datos de esta vuelta y
+    // sigue la conversación (acotado por maxVueltas, que ya escala en
+    // silencio si nunca converge — nunca queda en un loop infinito).
+    const final =
+      usos.length === 1 ? usos.find((u) => u.name === "responder") : undefined;
     if (final) {
       deps.onVuelta?.({ vuelta, nota: "", herramientas: [] });
       return interpretarRespuesta(final.input, uso);
@@ -271,7 +299,27 @@ export async function generarRespuesta(
     mensajes.push({ role: "assistant", content: bloques });
     const resultados: Anthropic.ToolResultBlockParam[] = [];
     const herramientasInfo: { nombre: string; ok: boolean }[] = [];
+    let huboResponderPrematura = false;
     for (const u of usos) {
+      if (u.name === "responder") {
+        // Llegó junto a otra herramienta en este mismo turno (ver el chequeo
+        // de arriba): no es una herramienta de DATOS —no se ejecuta, no
+        // cuenta en `herramientasInfo`— ni se puede tratar como la respuesta
+        // final. Se le devuelve un error propio (distinto del "no existe" de
+        // ejecutarHerramienta, que sería engañoso: la herramienta existe, lo
+        // que no vale es haberla llamado ya) para que el modelo la reintente
+        // en la próxima vuelta, ahora con el resultado de la herramienta
+        // hermana en la mano.
+        huboResponderPrematura = true;
+        resultados.push({
+          type: "tool_result",
+          tool_use_id: u.id,
+          content:
+            "Todavía no se puede responder: falta el resultado de otra herramienta pedida en este mismo turno. Esperá ese resultado y después llamá a responder sola.",
+          is_error: true,
+        });
+        continue;
+      }
       const r = await ejecutarHerramienta(
         deps.supabase,
         u.name,
@@ -287,7 +335,13 @@ export async function generarRespuesta(
       herramientasInfo.push({ nombre: u.name, ok: r.ok });
     }
     mensajes.push({ role: "user", content: resultados });
-    deps.onVuelta?.({ vuelta, nota: "", herramientas: herramientasInfo });
+    deps.onVuelta?.({
+      vuelta,
+      nota: huboResponderPrematura
+        ? "\"responder\" llegó junto a otra herramienta en el mismo turno (paralelo); se descartó sin mandar texto y se ejecutaron las herramientas de datos"
+        : "",
+      herramientas: herramientasInfo,
+    });
   }
 
   return escalarEnSilencio(

@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { costoDeUso, debeFrenar, gastoDelDia, PRECIOS_MODELO } from "./topes";
+import {
+  costoDeUso,
+  debeFrenar,
+  gastoDelDia,
+  PRECIOS_MODELO,
+  verificarAccesoAdmin,
+} from "./topes";
+
+/**
+ * Doble de Supabase para `gastoDelDia`: `bot_config` (la tabla canario del
+ * chequeo de acceso admin) responde con la fila singleton de siempre —así
+ * el canario pasa y se llega a ejercitar la lectura real de `bot_mensajes`,
+ * que es lo que cada test de abajo quiere probar—, y `bot_mensajes` responde
+ * lo que le pida cada test.
+ */
+function supabaseGasto(resultadoMensajes: { data: unknown; error: unknown }) {
+  return {
+    from: (tabla: string) => {
+      if (tabla === "bot_config") {
+        return {
+          select: () => ({
+            limit: async () => ({ data: [{ id: true }], error: null }),
+          }),
+        };
+      }
+      return { select: () => ({ gte: async () => resultadoMensajes }) };
+    },
+  } as never;
+}
 
 describe("costoDeUso", () => {
   it("cobra entrada y salida al precio del modelo", () => {
@@ -52,28 +80,101 @@ describe("costoDeUso", () => {
 
 describe("gastoDelDia", () => {
   it("suma los costos del día", async () => {
-    const supabase = {
-      from: () => ({
-        select: () => ({
-          gte: async () => ({
-            data: [{ costo_usd: "0.010000" }, { costo_usd: "0.004000" }],
-            error: null,
-          }),
-        }),
-      }),
-    } as never;
+    const supabase = supabaseGasto({
+      data: [{ costo_usd: "0.010000" }, { costo_usd: "0.004000" }],
+      error: null,
+    });
     expect(await gastoDelDia(supabase)).toBeCloseTo(0.014, 6);
   });
 
   it("si no puede leer el gasto devuelve Infinity para que el bot no siga", async () => {
+    const supabase = supabaseGasto({ data: null, error: { message: "boom" } });
+    expect(await gastoDelDia(supabase)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  // --- IMPORTANTE (revisión final antes de merge): fail-open por RLS -------
+  // Las 5 tablas de fase-19 (incluida bot_mensajes) son `for all using
+  // (public.is_admin())`. Un cliente anónimo o de usuario común no ve NADA
+  // ahí, y eso NO es un error para PostgREST: `data: [], error: null`,
+  // idéntico a "hoy todavía no se gastó nada". Sin el canario, gastoDelDia
+  // devolvía 0 en ese caso — el tope diario nunca se cumplía porque
+  // `gastoHoy >= topeDiarioUsd` jamás daba cierto. Estos tests fallarían
+  // (esperarían Infinity/rechazo y recibirían 0) contra el código viejo.
+
+  it("RECHAZA (no devuelve 0 ni Infinity en silencio) si el cliente no tiene acceso admin — bot_config filtrado a 0 filas por RLS", async () => {
+    const supabase = {
+      from: (tabla: string) => {
+        if (tabla === "bot_config") {
+          // RLS filtrando en silencio: 0 filas, sin error. Mismo shape que
+          // vería un cliente anónimo o un usuario autenticado no-admin.
+          return { select: () => ({ limit: async () => ({ data: [], error: null }) }) };
+        }
+        // Si el canario funcionara mal y esto se llegara a consultar de
+        // todos modos, que NO parezca "0 gastado" — así el test no puede
+        // pasar por accidente por la razón equivocada.
+        return {
+          select: () => ({
+            gte: async () => ({
+              data: [{ costo_usd: "999" }],
+              error: null,
+            }),
+          }),
+        };
+      },
+    } as never;
+
+    await expect(gastoDelDia(supabase)).rejects.toThrow(/acceso admin/i);
+  });
+
+  it("RECHAZA si bot_config responde con un error (p.ej. la migración de fase-19 no corrió)", async () => {
+    const supabase = {
+      from: (tabla: string) => {
+        if (tabla === "bot_config") {
+          return {
+            select: () => ({
+              limit: async () => ({ data: null, error: { code: "PGRST205", message: "no existe" } }),
+            }),
+          };
+        }
+        return { select: () => ({ gte: async () => ({ data: [], error: null }) }) };
+      },
+    } as never;
+
+    await expect(gastoDelDia(supabase)).rejects.toThrow();
+  });
+});
+
+describe("verificarAccesoAdmin", () => {
+  it("no lanza cuando el cliente ve la fila singleton de bot_config", async () => {
+    const supabase = {
+      from: () => ({ select: () => ({ limit: async () => ({ data: [{ id: true }], error: null }) }) }),
+    } as never;
+    await expect(verificarAccesoAdmin(supabase)).resolves.toBeUndefined();
+  });
+
+  it("lanza con un mensaje accionable cuando bot_config devuelve 0 filas", async () => {
+    const supabase = {
+      from: () => ({ select: () => ({ limit: async () => ({ data: [], error: null }) }) }),
+    } as never;
+    await expect(verificarAccesoAdmin(supabase)).rejects.toThrow(
+      /service role|bot_config/i,
+    );
+  });
+
+  it("lanza cuando bot_config devuelve un error", async () => {
     const supabase = {
       from: () => ({
-        select: () => ({
-          gte: async () => ({ data: null, error: { message: "boom" } }),
-        }),
+        select: () => ({ limit: async () => ({ data: null, error: { message: "boom" } }) }),
       }),
     } as never;
-    expect(await gastoDelDia(supabase)).toBe(Number.POSITIVE_INFINITY);
+    await expect(verificarAccesoAdmin(supabase)).rejects.toThrow();
+  });
+
+  it("lanza cuando data no es un array (shape defensivo)", async () => {
+    const supabase = {
+      from: () => ({ select: () => ({ limit: async () => ({ data: null, error: null }) }) }),
+    } as never;
+    await expect(verificarAccesoAdmin(supabase)).rejects.toThrow();
   });
 });
 
