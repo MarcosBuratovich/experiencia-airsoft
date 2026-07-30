@@ -114,6 +114,105 @@ describe("ejecutarHerramienta", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("H3: no ofrece una partida de hoy si ya cerró la inscripción, aunque 'fecha' siga siendo hoy", async () => {
+    // Hoy 29/7 a las 21:00. La partida es hoy a las 19:00 (ya pasó el
+    // margen de INSCRIPCION_CIERRE_MIN, 30 min). "fecha >= hoy" no alcanza
+    // para filtrarla: hay que mirar si todavía se puede anotar.
+    const ahora = new Date("2026-07-29T21:00:00-03:00");
+    const partida = {
+      id: "p1",
+      fecha: "2026-07-29",
+      hora_inicio: "19:00:00",
+      duracion_min: 180,
+      modalidad: "dinamica",
+      cupo_max: 50,
+    };
+    const supabase = {
+      from: (tabla: string) => {
+        if (tabla === "partidas") {
+          return {
+            select: () => ({
+              gte: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    order: () => ({
+                      limit: async () => ({ data: [partida], error: null }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        // "inscripciones": sin inscriptos. Si esto se llega a consultar
+        // para esta partida ya cerrada, algo está mal, pero que no explote.
+        return {
+          select: () => ({
+            in: () => ({ eq: async () => ({ data: [], error: null }) }),
+          }),
+        };
+      },
+    } as never;
+
+    const r = await ejecutarHerramienta(supabase, "proximas_partidas", {}, ahora);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const datos = r.datos as { partidas: unknown[] };
+      expect(datos.partidas).toEqual([]);
+    }
+  });
+
+  it("H1: agenda_privadas no trunca en silencio — con dias=21 (default) la última fecha del rango tiene que aparecer", async () => {
+    // Con las 3 tablas que usa getSlotsEstado vacías (sin partidas, sin
+    // solicitudes, sin overrides), cada día tiene A LO SUMO 1 de sus 4 slots
+    // reservado por el horario recurrente de públicas (HORARIOS_RECURRENTES
+    // solo pisa Mié/Jue 19:00 y Sáb/Dom 9:00) — el resto queda "disponible".
+    // Con dias=21 hay ~70 slots libres. La lista plana vieja los cortaba a
+    // 20 y perdía todo lo posterior a los primeros días.
+    const vacio = { data: [], error: null };
+    const supabase = {
+      from: (tabla: string) => {
+        if (tabla === "partidas") {
+          return {
+            select: () => ({
+              gte: () => ({ lte: () => ({ neq: async () => vacio }) }),
+            }),
+          };
+        }
+        if (tabla === "solicitudes_privada") {
+          return {
+            select: () => ({
+              gte: () => ({ lte: () => ({ eq: async () => vacio }) }),
+            }),
+          };
+        }
+        // "slots_privada_overrides"
+        return { select: () => ({ gte: () => ({ lte: async () => vacio }) }) };
+      },
+    } as never;
+
+    const ahora = new Date("2026-07-29T10:00:00-03:00");
+    const r = await ejecutarHerramienta(supabase, "agenda_privadas", {}, ahora);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    const datos = r.datos as {
+      cobertura_hasta: string;
+      dias_con_lugar: { fecha: string; horas: string[] }[];
+    };
+
+    // La última fecha de un rango de 21 días desde 2026-07-29 es 2026-08-18.
+    // Cualquiera sea su día de semana, tiene como mucho 1 slot reservado de
+    // 4 — nunca puede faltar de la respuesta.
+    const ultimaFecha = "2026-08-18";
+    expect(datos.cobertura_hasta).toBe(ultimaFecha);
+    const entradaUltimoDia = datos.dias_con_lugar.find(
+      (d) => d.fecha === ultimaFecha,
+    );
+    expect(entradaUltimoDia).toBeDefined();
+    expect(entradaUltimoDia!.horas.length).toBeGreaterThanOrEqual(3);
+  });
+
   it("nunca pide partidas privadas", async () => {
     // Una partida privada es el cumpleaños de alguien. El bot no la menciona.
     const filtros: Record<string, string> = {};

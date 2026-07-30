@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { inscripcionAbierta } from "@/lib/partidas";
 import { getPreciosConfigResultado } from "@/lib/precios";
 import { getSlotsEstado, rangoDeFechasAhora } from "@/lib/slots-privada";
 
@@ -44,7 +45,7 @@ export const ESQUEMAS_HERRAMIENTAS: Anthropic.Tool[] = [
   {
     name: "agenda_privadas",
     description:
-      "Devuelve los horarios libres para partidas privadas (cumpleaños, corporativos) en los próximos días. Sirve para decir qué días hay lugar, no para reservar.",
+      "Devuelve los horarios libres para partidas privadas (cumpleaños, corporativos) en los próximos días, agrupados por fecha. Sirve para decir qué días hay lugar, no para reservar. La respuesta trae cobertura_hasta: no asumas que no hay lugar en fechas posteriores a esa, hay que volver a consultar con más días.",
     input_schema: {
       type: "object",
       properties: {
@@ -94,10 +95,14 @@ async function proximasPartidas(
   ahora: Date,
 ): Promise<ResultadoHerramienta> {
   const limite = Math.min(Math.max(Number(input.limite) || 5, 1), 10);
+  // Sobrepedimos: la partida de HOY puede tener la inscripción ya cerrada
+  // (se descarta más abajo con inscripcionAbierta) y no debe robarle el
+  // cupo a una futura real que quedaría fuera del límite pedido.
+  const limiteConsulta = limite + 10;
 
   const { data, error } = await supabase
     .from("partidas")
-    .select("id, fecha, hora_inicio, modalidad, cupo_max")
+    .select("id, fecha, hora_inicio, duracion_min, modalidad, cupo_max")
     .gte("fecha", isoDeFecha(ahora))
     // Valores reales de la tabla: 'abierta' | 'cancelada'.
     .eq("estado", "abierta")
@@ -106,11 +111,30 @@ async function proximasPartidas(
     // que escriba por Instagram.
     .eq("visibilidad", "publica")
     .order("fecha", { ascending: true })
-    .limit(limite);
+    .limit(limiteConsulta);
 
   if (error || !data) return { ok: false, error: "No pude ver la agenda." };
 
-  const ids = (data as { id: string }[]).map((p) => p.id);
+  // H3: "fecha >= hoy" no alcanza — una partida de hoy puede haber cerrado
+  // inscripción (o hasta haber terminado) horas atrás. inscripcionAbierta()
+  // de lib/partidas es el criterio real de "todavía se puede anotar"
+  // (incluye el margen de INSCRIPCION_CIERRE_MIN tras el inicio); no
+  // alcanza con "todavía no empezó".
+  const abiertas = (data as Record<string, unknown>[])
+    .filter((p) =>
+      inscripcionAbierta(
+        {
+          fecha: String(p.fecha),
+          hora_inicio: String(p.hora_inicio),
+          duracion_min: Number(p.duracion_min) || 0,
+          estado: "abierta", // ya filtrado en la query de arriba.
+        },
+        ahora,
+      ),
+    )
+    .slice(0, limite);
+
+  const ids = abiertas.map((p) => p.id as string);
   const ocupacion = new Map<string, number>();
   if (ids.length) {
     const { data: inscs, error: errorInscs } = await supabase
@@ -132,7 +156,7 @@ async function proximasPartidas(
     }
   }
 
-  const partidas = (data as Record<string, unknown>[]).map((p) => {
+  const partidas = abiertas.map((p) => {
     const cupo = Number(p.cupo_max) || 0;
     const tomados = ocupacion.get(p.id as string) ?? 0;
     return {
@@ -148,7 +172,7 @@ async function proximasPartidas(
 }
 
 async function precios(supabase: Cliente): Promise<ResultadoHerramienta> {
-  const resultado = await getPreciosConfigResultado(supabase as never);
+  const resultado = await getPreciosConfigResultado(supabase);
 
   // Si esto falla no sabemos los precios reales: devolver los defaults acá
   // sería inventar un precio (podría regalar algo que se cobra, o
@@ -174,15 +198,35 @@ async function agendaPrivadas(
 ): Promise<ResultadoHerramienta> {
   const dias = Math.min(Math.max(Number(input.dias) || 21, 1), 60);
   const fechas = rangoDeFechasAhora(dias, ahora);
-  const estados = await getSlotsEstado(supabase as never, fechas);
+  const estados = await getSlotsEstado(supabase, fechas);
 
-  const libres: { fecha: string; hora: string }[] = [];
+  // H1: agrupar por fecha en vez de por slot individual. Con dias tope 60 y
+  // 4 slots fijos por día, esto entra entero (máx. 60 entradas) sin cortar
+  // nada — la lista plana anterior se truncaba a 20 slots y, con el default
+  // de 21 días, ocultaba en silencio todo lo posterior a los primeros días.
+  // El modelo no puede concluir "no hay lugar" de una lista que no vio
+  // completa.
+  const porFecha = new Map<string, string[]>();
   for (const [clave, estado] of estados) {
     if (estado !== "disponible") continue;
     const [fecha, hora] = clave.split("|");
-    libres.push({ fecha, hora: hora.slice(0, 5) });
+    const horas = porFecha.get(fecha) ?? [];
+    horas.push(hora.slice(0, 5));
+    porFecha.set(fecha, horas);
   }
-  libres.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
 
-  return { ok: true, datos: { slots_libres: libres.slice(0, 20) } };
+  const diasConLugar = [...porFecha.entries()]
+    .map(([fecha, horas]) => ({ fecha, horas: horas.sort() }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  return {
+    ok: true,
+    datos: {
+      dias_consultados: dias,
+      // Última fecha efectivamente representada: el modelo no debe asumir
+      // "no hay lugar" para fechas posteriores a esta, solo "no se consultó".
+      cobertura_hasta: fechas[fechas.length - 1] ?? null,
+      dias_con_lugar: diasConLugar,
+    },
+  };
 }
