@@ -134,6 +134,16 @@ export function MarketingFooter() {
 
         <div className="mt-10 pt-6 border-t border-bone/10 flex flex-wrap items-center justify-between gap-3 font-mono fluid-xs uppercase tracking-[.25em] text-smoke">
           <span>© {year} · Experiencia Airsoft</span>
+          {/* Meta exige que estas dos sean públicas y encontrables para
+              aprobar el App Review de mensajería. */}
+          <span className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/privacidad" className="hover:text-bone transition">
+              Privacidad
+            </Link>
+            <Link href="/borrar-datos" className="hover:text-bone transition">
+              Borrar mis datos
+            </Link>
+          </span>
           <span>No es potencia. Es táctica.</span>
         </div>
       </div>

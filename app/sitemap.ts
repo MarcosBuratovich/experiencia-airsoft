@@ -17,6 +17,7 @@ const LAST_UPDATED = {
   airsoftVsPaintball: "2026-05-22",
   blogIndex: "2026-05-22",
   appLanding: "2026-05-26",
+  legales: "2026-07-30",
 } as const;
 
 const toDate = (iso: string) => new Date(`${iso}T00:00:00-03:00`);
@@ -71,6 +72,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: toDate(LAST_UPDATED.airsoftVsPaintball),
       changeFrequency: "monthly",
       priority: 0.7,
+    },
+    // Legales. Prioridad baja para buscadores, pero tienen que estar
+    // indexables: Meta las revisa durante el App Review de mensajeria.
+    {
+      url: `${SITE_URL}/privacidad`,
+      lastModified: toDate(LAST_UPDATED.legales),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${SITE_URL}/borrar-datos`,
+      lastModified: toDate(LAST_UPDATED.legales),
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
     {
       url: `${SITE_URL}/blog`,
