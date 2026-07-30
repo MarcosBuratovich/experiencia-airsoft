@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Espacio de trabajo del flujo de subagentes (scratch, no versionado)
 .superpowers/
+
+# Build temporal del motor del bot para el banco de regresión (scripts/banco-preguntas.mjs)
+.banco/
