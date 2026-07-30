@@ -16,6 +16,7 @@ Copiá esto en un lugar a mano antes de empezar:
 
 | Campo | Valor |
 |---|---|
+| URL de condiciones del servicio | `https://www.experienciaairsoft.com/terminos` |
 | URL de política de privacidad | `https://www.experienciaairsoft.com/privacidad` |
 | URL de eliminación de datos | `https://www.experienciaairsoft.com/borrar-datos` |
 | URL de devolución de llamada (webhook) | `https://app.experienciaairsoft.com/api/meta/webhook` |
@@ -85,7 +86,7 @@ Configuración → Básica. Acá van casi todas las URL.
 | Correo de contacto | El del negocio |
 | **URL de la política de privacidad** | `https://www.experienciaairsoft.com/privacidad` |
 | **URL de eliminación de datos** | `https://www.experienciaairsoft.com/borrar-datos` |
-| URL de las condiciones del servicio | *(ver nota abajo)* |
+| URL de las condiciones del servicio | `https://www.experienciaairsoft.com/terminos` |
 | Icono de la app | PNG de 1024×1024, el logo del negocio |
 | Categoría | Empresas y páginas / Deportes |
 | Dominios de la app | `experienciaairsoft.com` y `app.experienciaairsoft.com` |
@@ -94,9 +95,11 @@ Configuración → Básica. Acá van casi todas las URL.
 *instrucciones* y una de *devolución de llamada*. Elegí **instrucciones** y pegá
 la URL de arriba. La página ya está escrita para cumplir ese requisito.
 
-**Sobre las condiciones del servicio:** hoy el sitio no tiene una página de
-términos. Meta a veces la pide en el App Review. Si la piden, hay que
-escribirla — es un trabajo aparte, corto.
+**Sobre las condiciones del servicio:** la página existe y cubre edad, reservas,
+pagos, normas del predio, riesgos de la actividad y el asistente automático.
+Los montos de seña y los plazos de cancelación **no están clavados en el
+texto** a propósito: remite a la política vigente al momento de reservar, para
+que no quede desactualizada cada vez que se cambia un número.
 
 **La clave secreta de la app** está en esta misma pantalla, detrás de
 "Mostrar". Ese valor va a Vercel como `META_APP_SECRET`. No lo pegues en un

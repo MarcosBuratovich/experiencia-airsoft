@@ -137,6 +137,9 @@ export function MarketingFooter() {
           {/* Meta exige que estas dos sean públicas y encontrables para
               aprobar el App Review de mensajería. */}
           <span className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/terminos" className="hover:text-bone transition">
+              Términos
+            </Link>
             <Link href="/privacidad" className="hover:text-bone transition">
               Privacidad
             </Link>

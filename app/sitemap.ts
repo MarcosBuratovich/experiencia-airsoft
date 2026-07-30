@@ -76,6 +76,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Legales. Prioridad baja para buscadores, pero tienen que estar
     // indexables: Meta las revisa durante el App Review de mensajeria.
     {
+      url: `${SITE_URL}/terminos`,
+      lastModified: toDate(LAST_UPDATED.legales),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
       url: `${SITE_URL}/privacidad`,
       lastModified: toDate(LAST_UPDATED.legales),
       changeFrequency: "yearly",
