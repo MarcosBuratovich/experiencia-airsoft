@@ -383,6 +383,130 @@ describe("generarRespuesta", () => {
     expect(params.max_tokens).toBe(300);
   });
 
+  // --- H6 (revisión tarea 10): tool_choice fuerza usar alguna herramienta --
+
+  it("H6: manda tool_choice 'any' — el modelo no puede contestar en texto plano en ningún turno", async () => {
+    const { create, cliente } = anthropicFake([
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          {
+            type: "tool_use",
+            id: "t1",
+            name: "responder",
+            input: { texto: "hola", escalar: false, clasificacion: CLASIF_OK },
+          },
+        ],
+      },
+    ]);
+
+    await generarRespuesta(deps(cliente), entrada);
+
+    const params = create.mock.calls[0][0] as { tool_choice?: unknown };
+    expect(params.tool_choice).toEqual({ type: "any" });
+  });
+
+  // --- H1 (revisión tarea 10): onVuelta, observabilidad sin efecto ---------
+
+  it("H1: onVuelta se llama una vez por vuelta, con la herramienta de datos y si salió bien", async () => {
+    const { cliente } = anthropicFake([
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [{ type: "tool_use", id: "h1", name: "precios", input: {} }],
+      },
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: "responder",
+            input: { texto: "Sale $18.000.", escalar: false, clasificacion: CLASIF_OK },
+          },
+        ],
+      },
+    ]);
+    const supabase = {
+      from: () => ({ select: async () => ({ data: [], error: null }) }),
+    } as never;
+
+    const vueltas: unknown[] = [];
+    await generarRespuesta(
+      {
+        anthropic: cliente,
+        supabase,
+        modelo: "claude-sonnet-5",
+        onVuelta: (info) => vueltas.push(info),
+      },
+      entrada,
+    );
+
+    expect(vueltas).toEqual([
+      { vuelta: 0, nota: "", herramientas: [{ nombre: "precios", ok: true }] },
+      { vuelta: 1, nota: "", herramientas: [] },
+    ]);
+  });
+
+  it("H1: onVuelta reporta la herramienta como ok:false si la herramienta falla", async () => {
+    const { cliente } = anthropicFake([
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [{ type: "tool_use", id: "h1", name: "precios", input: {} }],
+      },
+      {
+        stop_reason: "tool_use",
+        usage: USO,
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: "responder",
+            input: {
+              texto: "Ahora no puedo confirmarte el precio.",
+              escalar: true,
+              motivo: "falló precios",
+              resumen: "no se pudo consultar",
+              clasificacion: CLASIF_OK,
+            },
+          },
+        ],
+      },
+    ]);
+    const supabase = {
+      from: () => ({ select: () => ({ data: null, error: { message: "boom" } }) }),
+    } as never;
+
+    const vueltas: { herramientas: { nombre: string; ok: boolean }[] }[] = [];
+    await generarRespuesta(
+      {
+        anthropic: cliente,
+        supabase,
+        modelo: "claude-sonnet-5",
+        onVuelta: (info) => vueltas.push(info),
+      },
+      entrada,
+    );
+
+    expect(vueltas[0].herramientas).toEqual([{ nombre: "precios", ok: false }]);
+  });
+
+  it("H1: onVuelta trae una nota no vacía cuando la vuelta escala (sin usar ninguna herramienta)", async () => {
+    const { cliente } = anthropicFake([
+      { stop_reason: "end_turn", usage: USO, content: [{ type: "text", text: "eh" }] },
+    ]);
+    const vueltas: { nota: string }[] = [];
+    await generarRespuesta(
+      { ...deps(cliente), onVuelta: (info) => vueltas.push(info) },
+      entrada,
+    );
+    expect(vueltas).toHaveLength(1);
+    expect(vueltas[0].nota).not.toBe("");
+  });
+
   // --- B-2: stop_reason nunca se ignora ------------------------------------
 
   it("B-2: si el turno se corta por max_tokens, escala en silencio aunque venga un tool_use de responder", async () => {

@@ -16,6 +16,34 @@ import { createClient } from "@supabase/supabase-js";
 process.loadEnvFile(".env.local");
 
 const casos = JSON.parse(readFileSync("scripts/banco-preguntas.json", "utf8"));
+
+// H5 (revisión tarea 10): si alguien escribe una clave que no existe en
+// "espera" (p.ej. "escla" en vez de "escala"), sin esto el chequeo
+// correspondiente simplemente no corre y el caso pasa en falso — en
+// silencio, nadie se entera. Cortar acá, ANTES de gastar un centavo en la
+// API, con el nombre del caso y la clave ofensora.
+const CLAVES_ESPERA_VALIDAS = new Set([
+  "escala",
+  "menciona",
+  "noMenciona",
+  "intencion",
+  "duda",
+  "grupo",
+  "primeraVez",
+  "sinRepetir",
+  "sinResaludar",
+]);
+for (const caso of casos) {
+  for (const clave of Object.keys(caso.espera ?? {})) {
+    if (!CLAVES_ESPERA_VALIDAS.has(clave)) {
+      throw new Error(
+        `Caso "${caso.id}": la clave "${clave}" de "espera" no existe (¿typo?). ` +
+          `Claves válidas: ${[...CLAVES_ESPERA_VALIDAS].join(", ")}.`,
+      );
+    }
+  }
+}
+
 const filtro = process.argv[2];
 const aCorrer = filtro ? casos.filter((c) => c.id.includes(filtro)) : casos;
 
@@ -26,10 +54,18 @@ const supabase = createClient(
 );
 
 // El motor es TypeScript. Se compila aparte a .banco/ (ver package.json).
-const { generarRespuesta } = await import("../.banco/motor.mjs");
+// esbuild recibe entry points de dos carpetas (lib/bot/ y lib/banco/), así
+// que con --outbase=lib la salida espeja esa estructura bajo .banco/.
+const { generarRespuesta } = await import("../.banco/bot/motor.mjs");
 const { getConocimiento, getConocimientoResultado, formatearConocimiento } =
-  await import("../.banco/conocimiento.mjs");
-const { costoDeUso } = await import("../.banco/topes.mjs");
+  await import("../.banco/bot/conocimiento.mjs");
+const { costoDeUso } = await import("../.banco/bot/topes.mjs");
+// H2/H3/H4 (revisión tarea 10): comparación insensible a mayúsculas, tolerante
+// al formato numérico, y consciente de negación para noMenciona. Ver
+// lib/banco/texto.ts (con test propio, sin costo de API) para el detalle.
+const { incluyeFragmento, incluyeFragmentoAfirmando } = await import(
+  "../.banco/banco/texto.mjs"
+);
 
 const resultadoConocimiento = await getConocimientoResultado(supabase);
 const conocimiento = formatearConocimiento(await getConocimiento(supabase));
@@ -67,11 +103,22 @@ for (const caso of aCorrer) {
   const dichos = [];
   let ultima = null;
   const usoCaso = { entrada: 0, salida: 0, cacheLectura: 0, cacheEscritura: 0 };
+  // H1 (revisión tarea 10): traza de cada vuelta de cada turno del caso —
+  // qué herramienta se llamó y si salió bien, o por qué no cerró. Es el
+  // diagnóstico que hubiera explicado el flake de "equipo-propio" gratis, en
+  // vez de gastar reintentos pagos reproduciéndolo por fuera.
+  const traza = [];
 
-  for (const texto of caso.mensajes) {
+  for (let i = 0; i < caso.mensajes.length; i++) {
+    const texto = caso.mensajes[i];
     historial.push({ rol: "usuario", texto, creado_at: new Date().toISOString() });
     ultima = await generarRespuesta(
-      { anthropic, supabase, modelo },
+      {
+        anthropic,
+        supabase,
+        modelo,
+        onVuelta: (info) => traza.push({ mensajeIdx: i, ...info }),
+      },
       { historial, conocimiento },
     );
 
@@ -100,10 +147,13 @@ for (const caso of aCorrer) {
     problemas.push(escalo ? "escaló y no debía" : "no escaló y debía");
   }
   for (const frag of e.menciona ?? []) {
-    if (!texto.includes(frag)) problemas.push(`no dijo "${frag}"`);
+    if (!incluyeFragmento(texto, frag)) problemas.push(`no dijo "${frag}"`);
   }
   for (const frag of e.noMenciona ?? []) {
-    if (texto.includes(frag)) problemas.push(`dijo "${frag}" y no debía`);
+    // H3: negado no cuenta ("la entrada no es gratis" no es afirmar "gratis").
+    if (incluyeFragmentoAfirmando(texto, frag)) {
+      problemas.push(`dijo "${frag}" y no debía`);
+    }
   }
   if (e.intencion && ultima.clasificacion.intencion !== e.intencion) {
     problemas.push(`intención ${ultima.clasificacion.intencion} ≠ ${e.intencion}`);
@@ -138,7 +188,16 @@ for (const caso of aCorrer) {
   }
 
   if (problemas.length) {
-    fallas.push({ id: caso.id, problemas, dichos });
+    fallas.push({
+      id: caso.id,
+      problemas,
+      dichos,
+      traza,
+      // H1: motivo/resumen ya los calcula el motor para TODA escalada — no
+      // hacía falta reproducir nada por fuera para tenerlos.
+      motivo: ultima.tipo === "escalar" ? ultima.motivo : undefined,
+      resumen: ultima.tipo === "escalar" ? ultima.resumen : undefined,
+    });
     console.log(`✗ ${caso.id} — ${problemas.join(" · ")}`);
   } else {
     pasaron++;
@@ -146,11 +205,32 @@ for (const caso of aCorrer) {
   }
 }
 
+/** Traza compacta: "m0v0[precios:ok] → m0v1[responder] → m1v0[no usó ninguna herramienta (texto suelto)]". */
+function formatearTraza(traza) {
+  return traza
+    .map((v) => {
+      const marca = `m${v.mensajeIdx}v${v.vuelta}`;
+      if (v.herramientas.length) {
+        const detalle = v.herramientas
+          .map((h) => `${h.nombre}:${h.ok ? "ok" : "error"}`)
+          .join(",");
+        return `${marca}[${detalle}]`;
+      }
+      return `${marca}[${v.nota || "responder"}]`;
+    })
+    .join(" → ");
+}
+
 console.log(`\n${pasaron}/${aCorrer.length} pasaron`);
 if (fallas.length) {
   console.log("\nDetalle de las fallas:\n");
   for (const f of fallas) {
     console.log(`— ${f.id}`);
+    if (f.motivo !== undefined) {
+      console.log(`    motivo (interno, no lo lee el cliente): ${f.motivo}`);
+      console.log(`    resumen: ${f.resumen}`);
+    }
+    if (f.traza.length) console.log(`    traza: ${formatearTraza(f.traza)}`);
     for (const d of f.dichos) console.log(`    ${d.replace(/\n/g, "\n    ")}`);
     console.log();
   }

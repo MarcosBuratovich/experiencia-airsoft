@@ -38,6 +38,19 @@ describe("construirSistema", () => {
     expect(txt).toMatch(/no.*estructura fija/i);
     expect(txt).toMatch(/no existe.*frase.*no te entendí/i);
   });
+
+  // --- Revisión tarea 10: dos zonas grises resueltas explícitamente --------
+
+  it("el alta de socio escala (compromiso de pago recurrente)", () => {
+    const txt = construirSistema("x").map((b) => b.text).join("\n");
+    expect(txt).toMatch(/dar(se)? de alta.*socio.*compromiso.*pago recurrente/i);
+  });
+
+  it("preguntar por un servicio que no se ofrece NO escala", () => {
+    const txt = construirSistema("x").map((b) => b.text).join("\n");
+    expect(txt).toMatch(/no escala.*algo que no ofrecemos/i);
+    expect(txt).toMatch(/paintball/i);
+  });
 });
 
 describe("ESQUEMA_RESPONDER", () => {

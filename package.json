@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "verificar:anthropic": "node scripts/verificar-anthropic.mjs",
-    "banco": "npx esbuild lib/bot/motor.ts lib/bot/conocimiento.ts lib/bot/topes.ts --bundle --platform=node --format=esm --outdir=.banco --out-extension:.js=.mjs --alias:@=. --external:@anthropic-ai/sdk --external:@supabase/supabase-js && node scripts/banco-preguntas.mjs",
+    "banco": "npx esbuild lib/bot/motor.ts lib/bot/conocimiento.ts lib/bot/topes.ts lib/banco/texto.ts --bundle --platform=node --format=esm --outdir=.banco --outbase=lib --out-extension:.js=.mjs --alias:@=. --external:@anthropic-ai/sdk --external:@supabase/supabase-js && node scripts/banco-preguntas.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

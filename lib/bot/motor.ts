@@ -32,6 +32,23 @@ export type DepsMotor = {
   /** Techo de tokens de salida por llamada a la API. */
   maxTokens?: number;
   ahora?: Date;
+  /**
+   * Observabilidad opcional, sin efecto en el comportamiento: se invoca una
+   * vez por vuelta del loop de herramientas, con qué pasó en esa vuelta
+   * (por qué no cerró, y qué herramientas de datos se llamaron y si salieron
+   * bien). Pensado para que quien llama (el banco de regresión, hoy) pueda
+   * diagnosticar una escalada sin tener que reproducirla por fuera gastando
+   * otra llamada a la API. Ningún llamador de producción lo necesita.
+   */
+  onVuelta?: (info: InfoVuelta) => void;
+};
+
+export type InfoVuelta = {
+  vuelta: number;
+  /** Por qué esta vuelta no cerró con una respuesta final. Vacío si sí cerró (llamó a "responder"). */
+  nota: string;
+  /** Herramientas de DATOS invocadas en esta vuelta (no incluye "responder", que no se ejecuta como herramienta de datos). */
+  herramientas: { nombre: string; ok: boolean }[];
 };
 
 export type EntradaMotor = {
@@ -55,6 +72,14 @@ const MAX_TOKENS_DEFAULT = 1536;
 // adaptativo por defecto del modelo, que comparte techo con max_tokens y
 // puede cortar la llamada a "responder" a mitad de camino (B-1/B-2).
 const THINKING_DESACTIVADO: Anthropic.ThinkingConfigParam = { type: "disabled" };
+
+// H6 (revisión tarea 10): "any" = usar ALGUNA herramienta, sin fijar cuál —
+// a diferencia de { type: "tool", name: "responder" } (que forzaría SIEMPRE
+// esa y rompería el paso previo por precios/proximas_partidas). Con "auto"
+// (el default de la API si no se manda tool_choice) el modelo puede
+// contestar en texto plano en cualquier turno; eso es lo que dejaba pasar la
+// escalada silenciosa "no usó ninguna herramienta" de forma evitable.
+const TOOL_CHOICE_CUALQUIERA: Anthropic.ToolChoice = { type: "any" };
 
 /** Clasificación de descarte cuando no hay una válida del modelo. */
 const CLASIF_DESCONOCIDA: Clasificacion = {
@@ -162,6 +187,7 @@ export async function generarRespuesta(
       respuesta = await llamarConUnReintento(deps, sistema, mensajes, maxTokens);
     } catch (err) {
       console.error("[bot] la API falló dos veces:", err);
+      deps.onVuelta?.({ vuelta, nota: "Falla técnica de la API", herramientas: [] });
       return escalarEnSilencio(
         "Falla técnica de la API",
         "No se pudo generar una respuesta. La consulta quedó sin contestar.",
@@ -177,6 +203,11 @@ export async function generarRespuesta(
       // alquiler sa" a medio terminar, ya visto en revisión). Una respuesta
       // a medias es peor que ninguna — no se interpreta ese contenido, se
       // escala en silencio directamente sin mirar `content`.
+      deps.onVuelta?.({
+        vuelta,
+        nota: "La respuesta se cortó por límite de tokens",
+        herramientas: [],
+      });
       return escalarEnSilencio(
         "La respuesta del modelo se cortó por límite de tokens",
         "El modelo no terminó de responder a tiempo. La consulta quedó sin contestar.",
@@ -191,11 +222,19 @@ export async function generarRespuesta(
 
     // ¿Llamó a responder? Ahí termina.
     const final = usos.find((u) => u.name === "responder");
-    if (final) return interpretarRespuesta(final.input, uso);
+    if (final) {
+      deps.onVuelta?.({ vuelta, nota: "", herramientas: [] });
+      return interpretarRespuesta(final.input, uso);
+    }
 
     if (!usos.length) {
       // Contestó texto suelto en vez de usar la herramienta. No mandamos eso
       // al cliente: no pasó por las reglas de formato ni trae clasificación.
+      deps.onVuelta?.({
+        vuelta,
+        nota: "No usó ninguna herramienta (texto suelto)",
+        herramientas: [],
+      });
       return escalarEnSilencio(
         "El modelo no usó la herramienta de respuesta",
         "Respuesta descartada por formato. La consulta quedó sin contestar.",
@@ -206,6 +245,7 @@ export async function generarRespuesta(
     // Ejecutar las herramientas pedidas y seguir la conversación.
     mensajes.push({ role: "assistant", content: bloques });
     const resultados: Anthropic.ToolResultBlockParam[] = [];
+    const herramientasInfo: { nombre: string; ok: boolean }[] = [];
     for (const u of usos) {
       const r = await ejecutarHerramienta(
         deps.supabase,
@@ -219,8 +259,10 @@ export async function generarRespuesta(
         content: r.ok ? JSON.stringify(r.datos) : r.error,
         is_error: !r.ok,
       });
+      herramientasInfo.push({ nombre: u.name, ok: r.ok });
     }
     mensajes.push({ role: "user", content: resultados });
+    deps.onVuelta?.({ vuelta, nota: "", herramientas: herramientasInfo });
   }
 
   return escalarEnSilencio(
@@ -245,6 +287,13 @@ async function llamarConUnReintento(
     tools: [...ESQUEMAS_HERRAMIENTAS, ESQUEMA_RESPONDER],
     messages: mensajes,
     thinking: THINKING_DESACTIVADO,
+    // H6 (revisión tarea 10): sin esto la API usa "auto" y el modelo puede
+    // contestar en texto plano en cualquier turno — la instrucción del
+    // prompt ("respondé SIEMPRE llamando a la herramienta") es lenguaje
+    // natural, no una restricción real. "any" obliga a usar ALGUNA
+    // herramienta (cualquiera) sin fijar cuál, así no rompe la secuencia
+    // normal precios/proximas_partidas → responder.
+    tool_choice: TOOL_CHOICE_CUALQUIERA,
   };
   try {
     return await deps.anthropic.messages.create(params);
