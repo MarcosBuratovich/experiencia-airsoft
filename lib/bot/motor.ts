@@ -23,8 +23,14 @@ export type DepsMotor = {
   anthropic: Anthropic;
   supabase: SupabaseClient;
   modelo: string;
-  /** Cuántas vueltas de herramienta se toleran antes de escalar. */
+  /**
+   * Cuántas vueltas de herramienta se tolera dar antes de escalar. El motor
+   * intenta como máximo maxVueltas + 1 veces en total (incluye el intento
+   * final con la vuelta 0) — ver el `<=` en el for de generarRespuesta.
+   */
   maxVueltas?: number;
+  /** Techo de tokens de salida por llamada a la API. */
+  maxTokens?: number;
   ahora?: Date;
 };
 
@@ -34,7 +40,21 @@ export type EntradaMotor = {
 };
 
 const MAX_VUELTAS_DEFAULT = 6;
-const MAX_TOKENS = 700;
+
+// Holgado a propósito: el texto (2-3 líneas) más el JSON completo de
+// "responder" (motivo + resumen de escalada + clasificación de 5 campos) ya
+// come varios cientos de tokens. Con thinking desactivado no hay presupuesto
+// de razonamiento que compita por el mismo techo, así que subir esto no
+// agrega costo real en el caso normal (el costo depende de lo que el modelo
+// genera, no del techo) — solo evita el corte en el caso más verboso.
+const MAX_TOKENS_DEFAULT = 1536;
+
+// Sin razonamiento extendido a propósito: para 2-3 líneas de chat con datos
+// ya resueltos por herramienta, "pensar" solo agrega latencia y costo que acá
+// no queremos. Mandarlo explícito evita quedar a merced del comportamiento
+// adaptativo por defecto del modelo, que comparte techo con max_tokens y
+// puede cortar la llamada a "responder" a mitad de camino (B-1/B-2).
+const THINKING_DESACTIVADO: Anthropic.ThinkingConfigParam = { type: "disabled" };
 
 /** Clasificación de descarte cuando no hay una válida del modelo. */
 const CLASIF_DESCONOCIDA: Clasificacion = {
@@ -53,7 +73,12 @@ function escalarEnSilencio(
   motivo: string,
   resumen: string,
   uso: UsoTokens,
-  clasificacion: Clasificacion = CLASIF_DESCONOCIDA,
+  // SIEMPRE una copia nueva: CLASIF_DESCONOCIDA es una constante compartida
+  // por todo el módulo. Si se devolviera por referencia, quien reciba esta
+  // RespuestaBot y mute su `clasificacion` (a mano, o en un test) contaminaría
+  // la próxima llamada que caiga en este mismo default. Mismo criterio que
+  // `{ ...USO_CERO }` más abajo.
+  clasificacion: Clasificacion = { ...CLASIF_DESCONOCIDA },
 ): RespuestaBot {
   return { tipo: "escalar", texto: null, motivo, resumen, clasificacion, uso };
 }
@@ -78,19 +103,63 @@ function aMensajesApi(historial: MensajeBot[]): Anthropic.MessageParam[] {
   }));
 }
 
+/**
+ * Valida y limpia la forma del historial ANTES de gastar una llamada a la
+ * API. La API de Anthropic exige que el primer mensaje sea de rol "user" y
+ * rechaza bloques de texto vacíos; y si no queda un turno de cliente al
+ * final (p.ej. el dueño contestó a mano y recién ahora se reactiva el bot)
+ * no hay nada nuevo que responder — inventar una respuesta ahí sería
+ * contestarle a la nada. `null` cuando no queda nada válido para pedirle al
+ * modelo: así se evita el 400 (y el reintento que le sigue) del todo, sin
+ * gastar inferencia en una llamada condenada de antemano.
+ */
+function historialUtilizable(historial: MensajeBot[]): MensajeBot[] | null {
+  const conTexto = historial.filter((m) => m.texto.trim().length > 0);
+  if (!conTexto.length) return null;
+  if (conTexto[0].rol !== "usuario") return null;
+  if (conTexto[conTexto.length - 1].rol !== "usuario") return null;
+  return conTexto;
+}
+
+/**
+ * Entero >= mínimo, o el default si lo que vino no sirve. Cubre NaN a
+ * propósito: `Number.isInteger(NaN)` es false, así que nunca se cuela (a
+ * diferencia de `v ?? default`, que deja pasar NaN porque no es
+ * null/undefined y después hace fallar todas las comparaciones `<=`/`>=`
+ * silenciosamente en false).
+ */
+function enteroValido(
+  v: number | undefined,
+  minimo: number,
+  porDefecto: number,
+): number {
+  if (v === undefined) return porDefecto;
+  return Number.isInteger(v) && v >= minimo ? v : porDefecto;
+}
+
 export async function generarRespuesta(
   deps: DepsMotor,
   entrada: EntradaMotor,
 ): Promise<RespuestaBot> {
-  const maxVueltas = deps.maxVueltas ?? MAX_VUELTAS_DEFAULT;
+  const historial = historialUtilizable(entrada.historial);
+  if (!historial) {
+    return escalarEnSilencio(
+      "El historial no tiene un turno de cliente pendiente de responder",
+      "No hay un mensaje nuevo del cliente para contestar todavía.",
+      { ...USO_CERO },
+    );
+  }
+
+  const maxVueltas = enteroValido(deps.maxVueltas, 0, MAX_VUELTAS_DEFAULT);
+  const maxTokens = enteroValido(deps.maxTokens, 1, MAX_TOKENS_DEFAULT);
   const sistema = construirSistema(entrada.conocimiento);
-  const mensajes: Anthropic.MessageParam[] = aMensajesApi(entrada.historial);
+  const mensajes: Anthropic.MessageParam[] = aMensajesApi(historial);
   let uso: UsoTokens = { ...USO_CERO };
 
   for (let vuelta = 0; vuelta <= maxVueltas; vuelta++) {
     let respuesta: Anthropic.Message;
     try {
-      respuesta = await llamarConUnReintento(deps, sistema, mensajes);
+      respuesta = await llamarConUnReintento(deps, sistema, mensajes, maxTokens);
     } catch (err) {
       console.error("[bot] la API falló dos veces:", err);
       return escalarEnSilencio(
@@ -101,6 +170,19 @@ export async function generarRespuesta(
     }
 
     uso = sumarUso(uso, respuesta.usage);
+
+    if (respuesta.stop_reason === "max_tokens") {
+      // El turno se cortó a mitad de camino: cualquier texto o tool_use que
+      // haya en `content` puede venir truncado (un "sale $18.000 y el
+      // alquiler sa" a medio terminar, ya visto en revisión). Una respuesta
+      // a medias es peor que ninguna — no se interpreta ese contenido, se
+      // escala en silencio directamente sin mirar `content`.
+      return escalarEnSilencio(
+        "La respuesta del modelo se cortó por límite de tokens",
+        "El modelo no terminó de responder a tiempo. La consulta quedó sin contestar.",
+        uso,
+      );
+    }
 
     const bloques = (respuesta.content ?? []) as Anthropic.ContentBlock[];
     const usos = bloques.filter(
@@ -152,24 +234,23 @@ async function llamarConUnReintento(
   deps: DepsMotor,
   sistema: Anthropic.TextBlockParam[],
   mensajes: Anthropic.MessageParam[],
+  maxTokens: number,
 ): Promise<Anthropic.Message> {
+  // Un solo objeto para las dos ramas: así no se puede editar una sin la
+  // otra (B-6) — antes eran dos literales duplicados a mano.
+  const params: Anthropic.MessageCreateParamsNonStreaming = {
+    model: deps.modelo,
+    max_tokens: maxTokens,
+    system: sistema,
+    tools: [...ESQUEMAS_HERRAMIENTAS, ESQUEMA_RESPONDER],
+    messages: mensajes,
+    thinking: THINKING_DESACTIVADO,
+  };
   try {
-    return await deps.anthropic.messages.create({
-      model: deps.modelo,
-      max_tokens: MAX_TOKENS,
-      system: sistema,
-      tools: [...ESQUEMAS_HERRAMIENTAS, ESQUEMA_RESPONDER],
-      messages: mensajes,
-    });
+    return await deps.anthropic.messages.create(params);
   } catch (primera) {
     console.warn("[bot] reintentando tras fallo de la API:", primera);
-    return await deps.anthropic.messages.create({
-      model: deps.modelo,
-      max_tokens: MAX_TOKENS,
-      system: sistema,
-      tools: [...ESQUEMAS_HERRAMIENTAS, ESQUEMA_RESPONDER],
-      messages: mensajes,
-    });
+    return await deps.anthropic.messages.create(params);
   }
 }
 
@@ -177,31 +258,36 @@ function interpretarRespuesta(input: unknown, uso: UsoTokens): RespuestaBot {
   const o = (input ?? {}) as Record<string, unknown>;
   const texto = typeof o.texto === "string" ? o.texto.trim() : "";
 
-  if (!esClasificacionValida(o.clasificacion)) {
-    // La clasificación alimenta el tablero y los eventos a Meta. Si vino mal,
-    // no confiamos tampoco en el resto de la respuesta.
-    return escalarEnSilencio(
-      "Clasificación inválida",
-      "El asistente devolvió una clasificación que no se pudo interpretar.",
-      uso,
-    );
-  }
-  const clasificacion = o.clasificacion;
-
-  if (!texto) {
-    return escalarEnSilencio(
-      "Respuesta vacía",
-      "El asistente no produjo texto para enviar.",
-      uso,
-      clasificacion,
-    );
+  let clasificacionValida: boolean;
+  let clasificacion: Clasificacion;
+  if (esClasificacionValida(o.clasificacion)) {
+    clasificacionValida = true;
+    clasificacion = o.clasificacion;
+  } else {
+    clasificacionValida = false;
+    clasificacion = { ...CLASIF_DESCONOCIDA };
   }
 
   if (o.escalar === true) {
+    // Escalada de política (privadas/cumpleaños, descuento, reclamo, pedido
+    // explícito de humano, seguridad, "no sé"/muchas vueltas, malos tratos):
+    // si el modelo ya se despidió con un texto usable, se lo mandamos igual
+    // aunque la clasificación haya venido mal (B-11). Perder la despedida
+    // por un campo que ni siquiera lee el cliente es peor que dejar el
+    // tablero sin ese dato puntual — acá sí importa más no dejar a la
+    // persona esperando una respuesta que nunca llega.
+    if (!texto) {
+      return escalarEnSilencio(
+        "Respuesta vacía",
+        "El asistente no produjo texto para enviar.",
+        uso,
+        clasificacion,
+      );
+    }
     return {
       tipo: "escalar",
-      // Escalada por política (cumpleaños, descuento, reclamo): sí se manda
-      // la despedida. Distinto de escalarEnSilencio, que es por falla.
+      // Escalada por política: sí se manda la despedida. Distinto de
+      // escalarEnSilencio, que es por falla.
       texto,
       motivo: typeof o.motivo === "string" && o.motivo ? o.motivo : "Sin motivo",
       resumen:
@@ -211,6 +297,26 @@ function interpretarRespuesta(input: unknown, uso: UsoTokens): RespuestaBot {
       clasificacion,
       uso,
     };
+  }
+
+  // Camino normal (no escalar): acá sí exigimos clasificación válida — es
+  // la única señal de que el resto de la respuesta (el texto que se manda
+  // tal cual al cliente) también es confiable.
+  if (!clasificacionValida) {
+    return escalarEnSilencio(
+      "Clasificación inválida",
+      "El asistente devolvió una clasificación que no se pudo interpretar.",
+      uso,
+    );
+  }
+
+  if (!texto) {
+    return escalarEnSilencio(
+      "Respuesta vacía",
+      "El asistente no produjo texto para enviar.",
+      uso,
+      clasificacion,
+    );
   }
 
   return { tipo: "responder", texto, clasificacion, uso };
