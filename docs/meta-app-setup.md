@@ -19,7 +19,7 @@ Copiá esto en un lugar a mano antes de empezar:
 | URL de condiciones del servicio | `https://www.experienciaairsoft.com/terminos` |
 | URL de política de privacidad | `https://www.experienciaairsoft.com/privacidad` |
 | URL de eliminación de datos | `https://www.experienciaairsoft.com/borrar-datos` |
-| URL de devolución de llamada (webhook) | `https://app.experienciaairsoft.com/api/meta/webhook` |
+| URL de devolución de llamada (webhook) | `https://www.experienciaairsoft.com/api/meta/webhook` |
 | Token de verificación | El que generes con `openssl rand -hex 32` |
 | Dominios de la app | `experienciaairsoft.com` · `app.experienciaairsoft.com` |
 | Correo de contacto | El del negocio, que alguien lea |
@@ -145,14 +145,28 @@ Messenger → Configuración → Webhooks, y lo mismo en Instagram.
 
 | Campo | Valor |
 |---|---|
-| URL de devolución de llamada | `https://app.experienciaairsoft.com/api/meta/webhook` |
+| URL de devolución de llamada | `https://www.experienciaairsoft.com/api/meta/webhook` |
 | Token de verificación | El mismo string que pusiste en Vercel |
 
 Al tocar "Verificar y guardar", Meta pega un GET a esa URL con el token. Si
 coincide, queda configurado.
 
-**Si falla:** casi siempre es que el token no coincide exactamente, o que no
-redeployaste Vercel después de agregar la variable.
+**Si falla:**
+
+1. **Fijate que el subdominio sea `www` y no `app`.** El proxy del proyecto
+   reescribe todo lo que entra por `app.` hacia `/platform/`, así que las rutas
+   de API son inalcanzables por ahí. Es el error más fácil de cometer, porque
+   el resto de la plataforma sí vive en `app.`.
+2. Que el token coincida carácter por carácter con el de Vercel.
+3. Que hayas redeployado después de agregar las variables.
+
+Probarlo desde afuera, sin depender del panel de Meta:
+
+```bash
+curl "https://www.experienciaairsoft.com/api/meta/webhook?hub.mode=subscribe&hub.verify_token=TU_TOKEN&hub.challenge=PRUEBA"
+```
+
+Tiene que devolver `PRUEBA` y HTTP 200. Con un token equivocado, 403.
 
 ### Campos a suscribir
 

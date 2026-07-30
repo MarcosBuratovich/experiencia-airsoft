@@ -9,6 +9,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * mensajes (adaptadores, motor, respuesta) es del plan 2; por ahora esto
  * acepta, valida y registra.
  *
+ * URL PÚBLICA: https://www.experienciaairsoft.com/api/meta/webhook
+ *
+ * Va en **www**, no en `app.`. El proxy reescribe todo lo que entra por el
+ * host de plataforma hacia /platform/*, así que por ahí esta ruta es
+ * inalcanzable y devuelve 404. Verificado contra producción el 2026-07-30.
+ *
  * Variables de entorno:
  *   META_WEBHOOK_VERIFY_TOKEN — string que uno inventa y pega igual en el
  *     panel de Meta. Solo se usa en el handshake inicial.
