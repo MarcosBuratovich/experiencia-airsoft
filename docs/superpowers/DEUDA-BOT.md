@@ -159,3 +159,53 @@ Fuente: extraído y agrupado de
 la revisión final antes de mergear la rama. Ese archivo no está trackeado —
 si todavía existe en el momento de leer esto, tiene el detalle completo
 tarea por tarea (incluida la evidencia empírica de cada hallazgo).
+
+---
+
+## Anotado en el gate final (2026-07-30)
+
+Tres puntos que la última revisión levantó y que se decidió **no** arreglar en
+esta rama. Ninguno bloquea el merge; los tres tienen que resolverse antes de
+que el bot hable con clientes reales o durante el plan 2.
+
+### 1. Un precio en 0 se cotiza como precio vigente — ACCIÓN DEL DUEÑO
+
+`getPreciosConfigResultado` ahora devuelve `ok:false` ante una lectura vacía,
+pero una lectura **parcial** sigue siendo `ok:true`: las keys que falten se
+rellenan con `PRECIOS_DEFAULT`.
+
+El agravante es que `db/schema-phase-3a.sql` y `db/schema-phase-5.sql` siembran
+las 8 keys **con valor 0**. Si nunca se editaron chaleco, las dos recargas y la
+cuota de socio, esas filas existen en 0 y el bot las cotizaría en $0 — con
+`ok:true`, sin ninguna señal de que algo anda mal. El prompt autoriza
+explícitamente cotizar la cuota de socio.
+
+**Antes de encender el bot:** confirmar en `/admin/precios` que chaleco, las dos
+recargas y la cuota de socio tengan valor > 0.
+
+**Arreglo de código pendiente:** tratar un precio en 0 como "no configurado" en
+la herramienta `precios`, o exigir el set completo de keys para dar `ok:true`.
+
+### 2. `gastoDelDia` ahora lanza en vez de devolver `Infinity`
+
+`verificarAccesoAdmin` (`lib/bot/topes.ts`) cierra bien el agujero del cliente
+sin permisos, pero cambió el contrato: el módulo entero fallaba cerrado **por
+valor** (`Infinity` → `debeFrenar` frena), y ahora esa garantía depende de que
+el llamador no atrape la excepción.
+
+**Trampa concreta para quien escriba el adaptador (plan 2):** un
+`try { g = await gastoDelDia() } catch { g = 0 }` reabre el fail-open que este
+arreglo cerró. **Mejor arreglo:** que `verificarAccesoAdmin` devuelva `Infinity`
+en lugar de lanzar, y que loguee — así el fail-closed no depende de nadie.
+
+Además, el docstring de `gastoDelDia` sigue diciendo "Devuelve Infinity si no se
+puede calcular", que ya no es toda la verdad.
+
+### 3. El test de privacidad mejoró menos de lo que dice su comentario
+
+El test nuevo asevera sobre la salida con un fixture de partidas públicas y
+privadas mezcladas — es mejor que el anterior. Pero como el doble deriva el
+filtrado de los argumentos que registra, **sigue sin poder detectar el caso
+"el filtro se manda pero la base no lo honra"**. Para eso hace falta una prueba
+de integración contra Supabase real. El comentario del test promete más de lo
+que da.
