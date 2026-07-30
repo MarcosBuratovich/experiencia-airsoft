@@ -131,6 +131,16 @@ export function PlatformNav({
         { href: "/admin/eventos", label: "Eventos", subtitle: "Diagnóstico y carga" },
       ],
     },
+    {
+      title: "Asistente",
+      links: [
+        {
+          href: "/admin/bot/conocimiento",
+          label: "Base de conocimiento",
+          subtitle: "Lo que sabe el bot",
+        },
+      ],
+    },
   ];
   const superGroup: AdminGroup | null = isSuperAdmin
     ? {
