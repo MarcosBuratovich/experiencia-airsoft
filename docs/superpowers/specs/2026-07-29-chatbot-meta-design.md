@@ -101,7 +101,6 @@ inactividad (propuesto: 24 hs) para que una consulta vieja no quede bloqueada.
 |---|---|---|
 | Próximas partidas | Fecha, hora, modalidad, lugares disponibles | `partidas` + conteo de `inscripciones` |
 | Precios | Entrada, alquiler básico/avanzado, chaleco, recargas, cuota — efectivo y transferencia | `precios_config` vía `lib/precios` |
-| Agenda de privadas | Slots libres para cumpleaños/corporativos | `lib/slots-privada` |
 
 ### Base de conocimiento (curada)
 
@@ -144,7 +143,10 @@ del diseño y lo que hace aceptable el riesgo de prompt injection.
 incluye el alquiler, qué llevar, edad, cómo llegar, si duele, medios de pago,
 cómo anotarse (con link a la partida).
 
-**Escala y enmudece:** privadas / cumpleaños / corporativos (ticket alto),
+**Escala y enmudece:** privadas / cumpleaños / corporativos (ticket alto —
+**sin decir siquiera qué días hay libres**: decisión de Marcos del 2026-07-29,
+tomada al detectar que una herramienta de agenda era inalcanzable bajo esta
+política. La disponibilidad de privadas la dice una persona),
 reclamos, pedidos de descuento, pedido explícito de hablar con alguien, temas de
 seguridad o lesiones, y cualquier caso donde no sepa o haya dado muchas vueltas.
 
