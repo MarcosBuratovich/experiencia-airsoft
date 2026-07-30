@@ -25,9 +25,15 @@ function tarifaDe(modelo: string) {
   if (conocido) return conocido;
   // Un modelo que no conocemos se cobra al más caro que conocemos: preferimos
   // sobreestimar el gasto y frenar de más, antes que gastar de más.
-  return Object.values(PRECIOS_MODELO).reduce((a, b) =>
-    b.entrada > a.entrada ? b : a,
+  // Tomamos el máximo de entrada y salida por separado para garantizar
+  // que nunca subvaloramos el costo, incluso con modelos nuevos inesperados.
+  const maxEntrada = Math.max(
+    ...Object.values(PRECIOS_MODELO).map((p) => p.entrada),
   );
+  const maxSalida = Math.max(
+    ...Object.values(PRECIOS_MODELO).map((p) => p.salida),
+  );
+  return { entrada: maxEntrada, salida: maxSalida };
 }
 
 export function costoDeUso(modelo: string, uso: UsoTokens): number {
@@ -127,6 +133,30 @@ export function debeFrenar(
     return {
       frenar: true,
       motivo: `Se alcanzó el tope diario de USD ${config.topeDiarioUsd}`,
+      apagarBot: true,
+    };
+  }
+
+  // Defensa en profundidad: maxMensajesConversacion debe ser un entero >= 1.
+  // Si es NaN, 0, negativo, o no entero, con la comparación fallaría abierto.
+  if (
+    !Number.isFinite(config.maxMensajesConversacion) ||
+    config.maxMensajesConversacion < 1 ||
+    !Number.isInteger(config.maxMensajesConversacion)
+  ) {
+    return {
+      frenar: true,
+      motivo: "El máximo de mensajes configurado no es un número válido",
+      apagarBot: true,
+    };
+  }
+
+  // mensajesDelBot debe ser un número finito >= 0. NaN aquí también
+  // hace fallar abierto la comparación de abajo.
+  if (!Number.isFinite(estado.mensajesDelBot) || estado.mensajesDelBot < 0) {
+    return {
+      frenar: true,
+      motivo: "El contador de mensajes no es un número válido",
       apagarBot: true,
     };
   }

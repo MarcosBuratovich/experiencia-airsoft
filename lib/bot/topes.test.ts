@@ -135,4 +135,67 @@ describe("debeFrenar", () => {
       if (f.frenar) expect(f.apagarBot).toBe(true);
     }
   });
+
+  it("frena si maxMensajesConversacion no es un entero válido", () => {
+    // NaN >= N es siempre false; mismo riesgo de fallo abierto que topeDiarioUsd.
+    for (const max of [Number.NaN, 0, -3, 2.5]) {
+      const f = debeFrenar({ ...config, maxMensajesConversacion: max }, {
+        gastoHoy: 0.1,
+        mensajesDelBot: 0,
+      });
+      expect(f.frenar).toBe(true);
+      if (f.frenar) {
+        expect(f.apagarBot).toBe(true);
+        expect(f.motivo).toMatch(/configurad/i);
+      }
+    }
+  });
+
+  it("frena si mensajesDelBot es NaN (número incalculable)", () => {
+    const f = debeFrenar(config, {
+      gastoHoy: 0.1,
+      mensajesDelBot: Number.NaN,
+    });
+    expect(f.frenar).toBe(true);
+    if (f.frenar) expect(f.apagarBot).toBe(true);
+  });
+});
+
+describe("costoDeUso — tarifa de respaldo", () => {
+  it("sobrestima entrada y salida máximas por separado al cobrar modelo desconocido", () => {
+    // La tarifa de respaldo debe dominar en AMBAS columnas, no solo una.
+    // Este test verifica que un modelo desconocido nunca cuesta menos que
+    // cualquier modelo conocido, incluso tras agregar más modelos.
+    const desconocido = costoDeUso("modelo-futuro-desconocido", {
+      entrada: 1_000_000,
+      salida: 1_000_000,
+      cacheLectura: 0,
+      cacheEscritura: 0,
+    });
+
+    const conocidos = [
+      costoDeUso("claude-opus-5", {
+        entrada: 1_000_000,
+        salida: 1_000_000,
+        cacheLectura: 0,
+        cacheEscritura: 0,
+      }),
+      costoDeUso("claude-sonnet-5", {
+        entrada: 1_000_000,
+        salida: 1_000_000,
+        cacheLectura: 0,
+        cacheEscritura: 0,
+      }),
+      costoDeUso("claude-haiku-4-5", {
+        entrada: 1_000_000,
+        salida: 1_000_000,
+        cacheLectura: 0,
+        cacheEscritura: 0,
+      }),
+    ];
+
+    for (const costo of conocidos) {
+      expect(desconocido).toBeGreaterThanOrEqual(costo);
+    }
+  });
 });
