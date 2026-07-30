@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { costoDeUso, debeFrenar, gastoDelDia } from "./topes";
+import { costoDeUso, debeFrenar, gastoDelDia, PRECIOS_MODELO } from "./topes";
 
 describe("costoDeUso", () => {
   it("cobra entrada y salida al precio del modelo", () => {
@@ -196,6 +196,55 @@ describe("costoDeUso — tarifa de respaldo", () => {
 
     for (const costo of conocidos) {
       expect(desconocido).toBeGreaterThanOrEqual(costo);
+    }
+  });
+
+  it("detecta fallo de tarifaDe cuando columnas divergen (entrada baja, salida alta)", () => {
+    // El código viejo ("máximo por entrada, adopto su par") fallaría aquí.
+    // Guardar estado original
+    const estadoOriginal = { ...PRECIOS_MODELO };
+
+    try {
+      // Agregar modelo hipotético con entrada baja, salida extremadamente alta
+      PRECIOS_MODELO["modelo-salida-alta"] = { entrada: 0.1, salida: 999 };
+
+      // Con el código viejo:
+      //   tarifaDe("desconocido") busca máx entrada → encuentra 5 (opus)
+      //   → adopta {entrada: 5, salida: 25} ← SUBVALOR la salida del modelo nuevo
+      //
+      // Con el código nuevo:
+      //   tarifaDe("desconocido") busca máx entrada (5) y máx salida (999)
+      //   → devuelve {entrada: 5, salida: 999} ← correctamente sobrestima ambas
+
+      const desconocido = costoDeUso("modelo-desconocido-nuevo", {
+        entrada: 1_000_000,
+        salida: 1_000_000,
+        cacheLectura: 0,
+        cacheEscritura: 0,
+      });
+
+      // Costo esperado con código nuevo: (1_000_000 / 1e6) * 5 + (1_000_000 / 1e6) * 999
+      //   = 5 + 999 = 1004
+      // Costo si modelo-salida-alta: (1_000_000 / 1e6) * 0.1 + (1_000_000 / 1e6) * 999
+      //   = 0.1 + 999 = 999.1
+      // Con el código viejo fallaría: devolvería 5 + 25 = 30, menor que 999.1
+
+      const modeloAltaSalida = costoDeUso("modelo-salida-alta", {
+        entrada: 1_000_000,
+        salida: 1_000_000,
+        cacheLectura: 0,
+        cacheEscritura: 0,
+      });
+
+      expect(desconocido).toBeGreaterThanOrEqual(modeloAltaSalida);
+    } finally {
+      // Restaurar estado original, limpiando la mutación
+      Object.keys(PRECIOS_MODELO).forEach((k) => {
+        if (!estadoOriginal.hasOwnProperty(k)) {
+          delete PRECIOS_MODELO[k];
+        }
+      });
+      Object.assign(PRECIOS_MODELO, estadoOriginal);
     }
   });
 });
