@@ -41,7 +41,7 @@ export async function guardarValorCerradoAction(
     .eq("id", solicitudId);
   if (error) return ERR(error);
 
-  revalidatePath("/admin/conversiones");
+  revalidatePath("/platform/admin/conversiones");
   return { ok: true };
 }
 
@@ -60,7 +60,7 @@ export async function marcarExportadasAction(ids: string[]) {
     .in("id", ids);
   if (error) return ERR(error);
 
-  revalidatePath("/admin/conversiones");
+  revalidatePath("/platform/admin/conversiones");
   return { ok: true };
 }
 
@@ -75,6 +75,6 @@ export async function desmarcarExportadaAction(solicitudId: string) {
     .eq("id", solicitudId);
   if (error) return ERR(error);
 
-  revalidatePath("/admin/conversiones");
+  revalidatePath("/platform/admin/conversiones");
   return { ok: true };
 }

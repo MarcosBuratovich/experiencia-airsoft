@@ -10,16 +10,17 @@ const ERR = (input: unknown): { error: FriendlyError } => ({
 });
 
 const idSchema = z.uuid("ID inválido");
+const activoSchema = z.boolean("El estado tiene que ser verdadero o falso");
 
 const entradaSchema = z.object({
   id: z.uuid("ID inválido").nullable(),
   titulo: z
-    .string()
+    .string("El título tiene que ser texto")
     .trim()
     .min(3, "El título es muy corto")
     .max(120, "El título es muy largo (máximo 120 caracteres)"),
   contenido: z
-    .string()
+    .string("La respuesta tiene que ser texto")
     .trim()
     .min(5, "La respuesta es muy corta")
     .max(4000, "La respuesta es muy larga (máximo 4000 caracteres)"),
@@ -73,7 +74,14 @@ export async function guardarEntradaAction(input: {
     : await ctx.supabase.from("bot_conocimiento").insert(campos);
 
   if (error) return ERR(error);
-  revalidatePath("/admin/bot/conocimiento");
+  // Path con prefijo /platform: es el destino real del rewrite de host que
+  // hace proxy.ts (ver revalidatePath.md — bajo rewrites hay que pasar el
+  // path destino, no el que ve el navegador). Hoy es un no-op: esta ruta lee
+  // cookies (createClient) así que no hay nada cacheado que invalidar, y lo
+  // que refresca la pantalla es el router.refresh() del client component. Se
+  // deja bien apuntado para no dejar una trampa latente si el día de mañana
+  // se agrega caching real acá.
+  revalidatePath("/platform/admin/bot/conocimiento");
   return { ok: true };
 }
 
@@ -82,17 +90,19 @@ export async function alternarActivaAction(
   activo: boolean,
 ): Promise<ResultadoAccion> {
   if (!idSchema.safeParse(id).success) return ERR("ID inválido");
+  const activoCheck = activoSchema.safeParse(activo);
+  if (!activoCheck.success) return ERR(activoCheck.error.issues[0]?.message);
 
   const ctx = await exigirAdmin();
   if ("error" in ctx) return ctx;
 
   const { error } = await ctx.supabase
     .from("bot_conocimiento")
-    .update({ activo, updated_at: new Date().toISOString() })
+    .update({ activo: activoCheck.data, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return ERR(error);
-  revalidatePath("/admin/bot/conocimiento");
+  revalidatePath("/platform/admin/bot/conocimiento");
   return { ok: true };
 }
 
@@ -104,6 +114,6 @@ export async function borrarEntradaAction(id: string): Promise<ResultadoAccion> 
 
   const { error } = await ctx.supabase.from("bot_conocimiento").delete().eq("id", id);
   if (error) return ERR(error);
-  revalidatePath("/admin/bot/conocimiento");
+  revalidatePath("/platform/admin/bot/conocimiento");
   return { ok: true };
 }

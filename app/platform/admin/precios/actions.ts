@@ -55,6 +55,6 @@ export async function updatePrecioAction(
 
   if (error) return ERR(error);
 
-  revalidatePath("/admin/precios");
+  revalidatePath("/platform/admin/precios");
   return { ok: true };
 }
