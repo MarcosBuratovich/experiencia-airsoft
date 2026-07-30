@@ -8,10 +8,11 @@ describe("construirSistema", () => {
     expect(bloques[1].text).toContain("Pica.");
   });
 
-  it("marca el prefijo para caché", () => {
+  it("marca ambos bloques para caché", () => {
     const bloques = construirSistema("x");
-    const cacheados = bloques.filter((b) => b.cache_control);
-    expect(cacheados.length).toBeGreaterThan(0);
+    expect(bloques).toHaveLength(2);
+    expect(bloques[0].cache_control).toBeDefined();
+    expect(bloques[1].cache_control).toBeDefined();
   });
 
   it("incluye la prohibición de repetirse", () => {
@@ -27,10 +28,15 @@ describe("construirSistema", () => {
     expect(txt).toMatch(/nunca.*invent/i);
   });
 
-  it("no impone una plantilla de respuesta", () => {
+  it("incluye reglas anti-repetición explícitas", () => {
     const txt = construirSistema("x").map((b) => b.text).join("\n");
     // Una plantilla fija es la causa principal de que un bot suene mecánico.
-    expect(txt).not.toMatch(/siempre respondé (con|así):/i);
+    // Verificar que están las reglas específicas que lo evitan:
+    expect(txt).toMatch(/no.*repita.*frase.*ya dijiste/i);
+    expect(txt).toMatch(/si.*ya saludaste.*no vuelvas.*saludar/i);
+    expect(txt).toMatch(/si.*ya pasaste.*link.*no.*vuelvas.*pasar/i);
+    expect(txt).toMatch(/no.*estructura fija/i);
+    expect(txt).toMatch(/no existe.*frase.*no te entendí/i);
   });
 });
 

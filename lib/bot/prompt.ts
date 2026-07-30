@@ -47,7 +47,7 @@ Escalá y dejá de responder cuando:
 Cuando escalás, el campo "texto" es lo último que le decís a la persona: avisale que en un rato le contesta alguien del equipo. El "resumen" NO lo lee el cliente: es para que la persona que retoma sepa en diez segundos qué quiere y dónde quedó la charla.
 
 # Clasificación
-Con cada respuesta clasificás la conversación. Se usa para el tablero del dueño, así que importa que sea fiel a lo que la persona pidió, no a lo que respondiste. Si no lo sabés, usá "otro" o null: no adivines.
+Con cada respuesta clasificás la conversación. Se usa para el tablero del dueño, así que importa que sea fiel a lo que la persona pidió, no a lo que respondiste. Si no lo sabés: intención y duda principal → usá "otro"; primera vez → usá "desconocido"; tamaño y fecha → null. No adivines.
 
 # Formato
 Respondé SIEMPRE llamando a la herramienta "responder". Podés usar antes las herramientas de datos las veces que necesites.`;
@@ -82,7 +82,12 @@ export const ESQUEMA_RESPONDER: Anthropic.Tool = {
       clasificacion: {
         type: "object",
         properties: {
-          intencion: { type: "string", enum: [...INTENCIONES] },
+          intencion: {
+            type: "string",
+            enum: [...INTENCIONES],
+            description:
+              "Por qué contacta la persona: partida abierta, privada (cumple/corp), tienda, socio, u otro.",
+          },
           grupo_tam: {
             type: ["integer", "null"],
             description: "Cuántas personas, si lo mencionaron. Si no, null.",
@@ -91,8 +96,17 @@ export const ESQUEMA_RESPONDER: Anthropic.Tool = {
             type: ["string", "null"],
             description: "YYYY-MM-DD si mencionaron una fecha. Si no, null.",
           },
-          duda_principal: { type: "string", enum: [...DUDAS] },
-          primera_vez: { type: "string", enum: [...PRIMERA_VEZ] },
+          duda_principal: {
+            type: "string",
+            enum: [...DUDAS],
+            description:
+              "Qué pregunta principalmente: precio, dolor/seguridad, edad, ubicación, equipo, clima, pago, u otro.",
+          },
+          primera_vez: {
+            type: "string",
+            enum: [...PRIMERA_VEZ],
+            description: "¿Es su primera vez en airsoft? (si, no, desconocido).",
+          },
         },
         required: [
           "intencion",
