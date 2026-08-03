@@ -2,7 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { upsertCheckinAction, actualizarRecargasInscripcionAction } from "./actions";
+import {
+  upsertCheckinAction,
+  actualizarRecargasInscripcionAction,
+  eliminarWalkinAction,
+} from "./actions";
 import {
   AgregarWalkin,
   type PreciosEntrada,
@@ -48,6 +52,8 @@ type Inscripcion = {
   /** Snapshot de entrada+alquiler en efectivo (el de transferencia = entrada+alquiler). */
   precio_fijo_efectivo: number;
   precio_total: number;
+  /** Lo agregó un admin a mano. Solo estos se pueden borrar desde acá. */
+  esWalkin?: boolean;
   checkin: Checkin | null;
 };
 
@@ -301,6 +307,7 @@ export function CheckinList({
       precio_recargas: 0,
       precio_fijo_efectivo,
       precio_total,
+      esWalkin: true,
       checkin: {
         presente: true,
         pago_estado: gratis ? "socio_presente" : d.pago,
@@ -313,6 +320,42 @@ export function CheckinList({
       },
     };
     setRows((prev) => [...prev, nueva]);
+  };
+
+  /**
+   * Borra un jugador cargado a mano. Optimista con rollback, igual que
+   * `update`: si el servidor lo rechaza, la fila vuelve a su lugar en la lista.
+   */
+  const eliminarWalkin = (r: Inscripcion) => {
+    if (
+      !confirm(
+        `¿Borrar a ${r.nombre} de esta partida? Se puede volver a cargar enseguida.`,
+      )
+    ) {
+      return;
+    }
+    setPendingId(r.id);
+    setError(null);
+
+    const indice = rows.findIndex((x) => x.id === r.id);
+    setRows((prev) => prev.filter((x) => x.id !== r.id));
+
+    startTransition(async () => {
+      const res = await eliminarWalkinAction(r.id);
+      if ("error" in res && res.error) {
+        setError(res.error);
+        // Se reinserta en la misma posición: si el borrado falló, la lista
+        // tiene que quedar exactamente como estaba.
+        setRows((prev) => {
+          const copia = [...prev];
+          copia.splice(indice < 0 ? copia.length : indice, 0, r);
+          return copia;
+        });
+      } else {
+        router.refresh();
+      }
+      setPendingId(null);
+    });
   };
 
   const togglePresente = (r: Inscripcion, checked: boolean) => {
@@ -392,6 +435,7 @@ export function CheckinList({
             onToggle={togglePresente}
             onPatch={update}
             onUpdateRecargas={updateRecargas}
+            onDelete={eliminarWalkin}
             preciosRecargas={preciosRecargas}
             contextoWa={contextoWa}
           />
@@ -447,6 +491,13 @@ export function CheckinList({
                           />
                         </div>
                       )}
+                      <div className="mt-1.5">
+                        <BorrarWalkin
+                          r={r}
+                          pending={isPending}
+                          onDelete={eliminarWalkin}
+                        />
+                      </div>
                     </td>
                     <td className="px-3 py-3 align-top text-center">
                       <input
@@ -504,12 +555,14 @@ function MobileCheckinCard({
   onToggle,
   onPatch,
   onUpdateRecargas,
+  onDelete,
   preciosRecargas,
   contextoWa,
 }: {
   r: Inscripcion;
   pending: boolean;
   onToggle: (r: Inscripcion, checked: boolean) => void;
+  onDelete: (r: Inscripcion) => void;
   onPatch: (id: string, patch: Partial<Checkin>) => void;
   onUpdateRecargas: (
     id: string,
@@ -540,6 +593,9 @@ function MobileCheckinCard({
           )}
           <div className="font-mono fluid-xs text-smoke mt-0.5">
             Total: {ars(r.precio_total)}
+          </div>
+          <div className="mt-1.5">
+            <BorrarWalkin r={r} pending={pending} onDelete={onDelete} />
           </div>
         </div>
         <label className="flex flex-col items-center gap-1 pt-1 cursor-pointer select-none">
@@ -699,6 +755,34 @@ function RecargaCounter({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Solo aparece en jugadores cargados a mano. Discreto a propósito: está para
+ * arreglar un tipeo, no es una acción de uso frecuente, y borrar por accidente
+ * a alguien que ya pagó es peor que tener que buscar el botón.
+ */
+function BorrarWalkin({
+  r,
+  pending,
+  onDelete,
+}: {
+  r: Inscripcion;
+  pending: boolean;
+  onDelete: (r: Inscripcion) => void;
+}) {
+  if (!r.esWalkin) return null;
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => onDelete(r)}
+      title="Borrar este jugador cargado a mano"
+      className="font-mono fluid-xs uppercase tracking-[.18em] text-smoke hover:text-orange-300 cursor-pointer disabled:opacity-50"
+    >
+      Borrar
+    </button>
   );
 }
 

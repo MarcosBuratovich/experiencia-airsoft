@@ -87,13 +87,35 @@ export function inicioDelDia(fecha: string): Date {
 }
 
 /**
+ * Cuánto tiempo después del fin de la partida se pueden seguir tocando los
+ * check-ins. Existe porque los errores se descubren cuando se cierra la caja,
+ * no durante la partida: un cobro mal cargado, un presente que faltó marcar, o
+ * un walk-in con el nombre mal tipeado.
+ */
+export const CHECKIN_CORRECCION_MS = 24 * 60 * 60 * 1000;
+
+/** Instante en que se cierra definitivamente el check-in de una partida. */
+function cierreCheckin(p: PartidaCore): number {
+  return (
+    inicioPartida(p.fecha, p.hora_inicio).getTime() +
+    p.duracion_min * 60_000 +
+    CHECKIN_CORRECCION_MS
+  );
+}
+
+/**
  * ¿Se puede hacer el check-in de esta partida?
  *
- * Ventana = [00:00 del día de la partida, fin de la partida], en hora
- * argentina. Arranca a la medianoche —y no a la hora de inicio— porque el
- * admin necesita poder cobrar y marcar presentes a todos los que van llegando
- * durante el día, no recién cuando la partida empieza. Termina junto con la
- * partida: a partir de ahí la pantalla pasa a ser el resumen.
+ * Ventana = [00:00 del día de la partida, fin de la partida + 24 hs], en hora
+ * argentina.
+ *
+ * Arranca a la medianoche —y no a la hora de inicio— porque el admin necesita
+ * poder cobrar y marcar presentes a todos los que van llegando durante el día,
+ * no recién cuando la partida empieza.
+ *
+ * Sigue abierta 24 hs después del fin para poder corregir. Antes cerraba junto
+ * con la partida, y cualquier error detectado al cerrar la caja quedaba sin
+ * arreglar.
  *
  * Una partida cancelada nunca habilita check-in. El estado 'cerrada' (que solo
  * cierra la inscripción) sí lo habilita.
@@ -101,8 +123,20 @@ export function inicioDelDia(fecha: string): Date {
 export function checkinAbierto(p: PartidaCore, now: Date = new Date()): boolean {
   if (p.estado === "cancelada") return false;
   const t = now.getTime();
-  const desde = inicioDelDia(p.fecha).getTime();
-  const hasta =
-    inicioPartida(p.fecha, p.hora_inicio).getTime() + p.duracion_min * 60_000;
-  return t >= desde && t < hasta;
+  return t >= inicioDelDia(p.fecha).getTime() && t < cierreCheckin(p);
+}
+
+/**
+ * ¿Estamos en la ventana posterior a la partida, donde el check-in sigue
+ * abierto solo para corregir?
+ *
+ * Sirve para que la interfaz no diga "Check-in abierto" el día después de una
+ * partida terminada, que sería confuso: ahí ya no llega nadie, solo se
+ * arreglan cosas.
+ */
+export function enPeriodoCorreccion(p: PartidaCore, now: Date = new Date()): boolean {
+  if (p.estado === "cancelada") return false;
+  const t = now.getTime();
+  const fin = finPartida(p.fecha, p.hora_inicio, p.duracion_min).getTime();
+  return t >= fin && t < cierreCheckin(p);
 }

@@ -35,7 +35,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     recargas: boolean;
     guestDni: boolean;
   }) =>
-    `id, estado, user_id, guest_nombre, ${guestDni ? "guest_dni, " : ""}tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, ${
+    `id, estado, user_id, guest_nombre, agregado_por, ${guestDni ? "guest_dni, " : ""}tipo_jugador, alquila_marcadora, alquila_premium, alquila_chaleco, precio_entrada, precio_alquiler, ${
       recargas
         ? "recarga_tracer_100, recarga_conv_200, precio_recargas, "
         : ""
@@ -114,6 +114,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
     precio_total?: number | null;
     guest_nombre?: string | null;
     guest_dni?: string | null;
+    agregado_por?: string | null;
     profiles:
       | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean; flair?: string | null }
       | { nombre: string; apellido: string; dni: string; celular: string; socio: boolean; flair?: string | null }[]
@@ -160,6 +161,9 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
       precio_recargas,
       precio_fijo_efectivo: fijoEfMap.get(i.id) ?? precio_entrada + precio_alquiler,
       precio_total: i.precio_total ?? precio_entrada + precio_alquiler + precio_recargas,
+      // Con valor = lo agregó un admin a mano. Es lo único que se puede
+      // borrar desde el check-in; una inscripción propia del jugador no.
+      esWalkin: !!i.agregado_por,
       checkin: c
         ? {
             presente: c.presente,

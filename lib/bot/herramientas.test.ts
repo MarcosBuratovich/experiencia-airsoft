@@ -87,6 +87,8 @@ describe("ejecutarHerramienta", () => {
       }),
     } as never;
 
+    // Sin reloj fijo a propósito: acá falla la consulta de partidas, así que
+    // no hay filtro por fecha que pueda alterar el resultado.
     const r = await ejecutarHerramienta(supabase, "proximas_partidas", {});
     expect(r.ok).toBe(false);
   });
@@ -103,6 +105,11 @@ describe("ejecutarHerramienta", () => {
       modalidad: "dinamica",
       cupo_max: 50,
     };
+    // Reloj fijo: sin esto el test se pudre solo. La partida del fixture pasó
+    // a ser pasado el 2026-08-01, inscripcionAbierta la filtró, y la consulta
+    // de ocupación que este test necesita que falle dejó de ejecutarse — el
+    // test pasaba a verde por el motivo equivocado.
+    const ahora = new Date("2026-08-01T10:00:00-03:00");
     const supabase = {
       from: (tabla: string) => {
         if (tabla === "partidas") {
@@ -131,7 +138,7 @@ describe("ejecutarHerramienta", () => {
       },
     } as never;
 
-    const r = await ejecutarHerramienta(supabase, "proximas_partidas", {});
+    const r = await ejecutarHerramienta(supabase, "proximas_partidas", {}, ahora);
     expect(r.ok).toBe(false);
   });
 

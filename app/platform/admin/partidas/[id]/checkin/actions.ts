@@ -408,3 +408,78 @@ export async function buscarPersonasAction(
     }),
   };
 }
+
+/**
+ * Borra un jugador que se agregó a mano en el check-in.
+ *
+ * Existe para arreglar errores de tipeo: se borra y se vuelve a cargar bien.
+ * El check-in asociado se va solo por la foreign key (`on delete cascade`).
+ *
+ * Dos restricciones que no son negociables:
+ *
+ * 1. **Solo se puede borrar lo que se agregó a mano** (`agregado_por` con
+ *    valor). Una inscripción que el jugador hizo por su cuenta es suya: si el
+ *    admin pudiera borrarla desde acá, esa persona perdería su lugar sin
+ *    enterarse. Para esos casos existe cancelar la inscripción, que es otro
+ *    flujo.
+ * 2. **Solo mientras el check-in esté abierto.** Una vez cerrada la ventana de
+ *    corrección, los números de la partida quedan firmes.
+ */
+export async function eliminarWalkinAction(inscripcionId: string) {
+  const parsed = z.uuid("Identificador inválido").safeParse(inscripcionId);
+  if (!parsed.success) return ERR(parsed.error.issues[0]?.message);
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return ERR("No autenticado");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    return ERR("No autorizado");
+  }
+
+  const { data: insc, error: inscErr } = await supabase
+    .from("inscripciones")
+    .select("id, partida_id, agregado_por, guest_nombre")
+    .eq("id", parsed.data)
+    .maybeSingle();
+  if (inscErr) return ERR(inscErr);
+  if (!insc) return ERR("Esa inscripción ya no existe");
+
+  if (!insc.agregado_por) {
+    return ERR(
+      "Ese jugador se anotó por su cuenta, así que no se puede borrar desde el check-in. Cancelá la inscripción desde la partida.",
+    );
+  }
+
+  const { data: partida, error: partErr } = await supabase
+    .from("partidas")
+    .select("id, estado, fecha, hora_inicio, duracion_min")
+    .eq("id", insc.partida_id)
+    .maybeSingle();
+  if (partErr) return ERR(partErr);
+  if (!partida) return ERR("Partida no encontrada");
+
+  if (!checkinAbierto(partida)) {
+    return ERR(
+      "El check-in de esta partida ya cerró (se puede corregir hasta 24 hs después de que termina)",
+    );
+  }
+
+  // Service role: la policy de borrado de inscripciones es más restrictiva que
+  // esta operación, que ya validó rol y ventana acá arriba.
+  const db = createServiceRoleClient();
+  const { error: delErr } = await db
+    .from("inscripciones")
+    .delete()
+    .eq("id", parsed.data);
+  if (delErr) return ERR(delErr);
+
+  revalidatePath(`/platform/admin/partidas/${insc.partida_id}/checkin`);
+  revalidatePath(`/platform/admin/partidas`);
+  return { ok: true as const };
+}
