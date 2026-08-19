@@ -54,8 +54,10 @@ function equipoLabel(f: Fila): string | null {
   if (f.tipo_jugador === "alquiler") {
     if (f.alquila_marcadora) bits.push("Marcadora simple");
     if (f.alquila_premium) bits.push("Marcadora avanzada");
-    if (f.alquila_chaleco) bits.push("Chaleco");
   }
+  // Fuera del bloque de alquiler a propósito: el chaleco se alquila suelto,
+  // un BYOP puede pedirlo sin alquilar marcadora.
+  if (f.alquila_chaleco) bits.push("Chaleco");
   if (f.recarga_tracer_100 > 0)
     bits.push(`${f.recarga_tracer_100}× tracer 200`);
   if (f.recarga_conv_200 > 0) bits.push(`${f.recarga_conv_200}× común 200`);

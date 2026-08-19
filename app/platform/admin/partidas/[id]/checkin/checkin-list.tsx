@@ -5,18 +5,21 @@ import { useRouter } from "next/navigation";
 import {
   upsertCheckinAction,
   actualizarRecargasInscripcionAction,
-  eliminarWalkinAction,
+  actualizarEquipoInscripcionAction,
+  eliminarInscripcionCheckinAction,
 } from "./actions";
 import {
   AgregarWalkin,
-  type PreciosEntrada,
+  dualLabel,
+  opcionesDePrecio,
+  type Tipo,
   type WalkinAdded,
 } from "./agregar-walkin";
 import { NombreConClanes } from "../../../../components/nombre-con-clanes";
 import { ContactoWa } from "../../../../components/contacto-wa";
 import { ErrorBanner } from "@/app/_components/error-banner";
 import type { ClanChip } from "@/lib/clanes";
-import type { PrecioDual } from "@/lib/precios";
+import { calcularPrecioInscripcion, type PrecioDual, type PreciosConfig } from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 
 type PreciosRecargas = {
@@ -52,10 +55,48 @@ type Inscripcion = {
   /** Snapshot de entrada+alquiler en efectivo (el de transferencia = entrada+alquiler). */
   precio_fijo_efectivo: number;
   precio_total: number;
-  /** Lo agregó un admin a mano. Solo estos se pueden borrar desde acá. */
+  /** Lo agregó un admin a mano (cambia el texto de confirmación al borrar). */
   esWalkin?: boolean;
+  /** Sin cuenta: cargado a mano con nombre y DNI. Para estos el admin elige
+   *  si es socio; para los que tienen cuenta sale del perfil. */
+  isGuest?: boolean;
   checkin: Checkin | null;
 };
+
+/** Opciones de tipo del editor de equipo, por si la fila tiene cuenta o no. */
+const TIPOS_CUENTA: { value: Tipo; label: string }[] = [
+  { value: "byop", label: "BYOP" },
+  { value: "alquiler_basico", label: "Alq. básico" },
+  { value: "alquiler_avanzado", label: "Alq. avanzado" },
+];
+const TIPOS_GUEST: { value: Tipo; label: string }[] = [
+  { value: "socio", label: "Socio" },
+  ...TIPOS_CUENTA,
+];
+
+/** Qué botón del editor de equipo está activo para esta fila. */
+function tipoDeFila(r: Inscripcion): Tipo {
+  if (r.tipo_jugador === "alquiler") {
+    return r.alquila_premium ? "alquiler_avanzado" : "alquiler_basico";
+  }
+  // 'socio' solo es un tipo elegible en los guests; en una cuenta el
+  // beneficio sale del perfil y del estado de cuota, no de este botón.
+  return r.isGuest && r.socio ? "socio" : "byop";
+}
+
+/**
+ * Las recargas se muestran en los alquileres —que es donde se piden— y en
+ * cualquier fila que ya tenga alguna cargada, para que un jugador que el
+ * admin pasó de alquiler a BYOP no quede con recargas cobradas y sin forma
+ * de sacárselas.
+ */
+function mostrarRecargas(r: Inscripcion): boolean {
+  return (
+    r.tipo_jugador === "alquiler" ||
+    r.recarga_tracer_100 > 0 ||
+    r.recarga_conv_200 > 0
+  );
+}
 
 const PAGO_OPTS = [
   { value: "efectivo", label: "Efectivo" },
@@ -94,8 +135,10 @@ function equipoLabel(i: Inscripcion): string | null {
   if (i.tipo_jugador === "alquiler") {
     if (i.alquila_marcadora) bits.push("Marcadora simple");
     if (i.alquila_premium) bits.push("Marcadora avanzada");
-    if (i.alquila_chaleco) bits.push("Chaleco");
   }
+  // Fuera del bloque de alquiler a propósito: el chaleco se alquila suelto,
+  // un BYOP puede pedirlo sin alquilar marcadora.
+  if (i.alquila_chaleco) bits.push("Chaleco");
   if (i.recarga_tracer_100 > 0)
     bits.push(`${i.recarga_tracer_100}× tracer 200`);
   if (i.recarga_conv_200 > 0) bits.push(`${i.recarga_conv_200}× común 200`);
@@ -113,12 +156,13 @@ export function CheckinList({
   partidaId: string;
   inscripciones: Inscripcion[];
   preciosRecargas: PreciosRecargas;
-  precios: PreciosEntrada;
+  precios: PreciosConfig;
   /** Cola del mensaje de WhatsApp al jugador (fecha/hora de la partida). */
   contextoWa?: string;
 }) {
   const [rows, setRows] = useState(inscripciones);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [error, setError] = useState<FriendlyError | null>(null);
   const [query, setQuery] = useState("");
   const [ocultarPresentes, setOcultarPresentes] = useState(false);
@@ -267,26 +311,12 @@ export function CheckinList({
   // Inserción optimista de un walk-in recién agregado por el admin. Construye
   // la fila con los mismos precios que usó el server (pasados como prop).
   const addWalkin = (d: WalkinAdded) => {
-    const esSocio = d.socio;
-    const esAvanzado = d.tipo === "alquiler_avanzado";
-    const esAlquiler = d.tipo === "alquiler_basico" || esAvanzado;
-    const alquilerDual = esAvanzado
-      ? precios.alquiler_premium
-      : precios.alquiler_marcadora;
-    // El alquiler ya incluye la entrada: para alquiler no se cobra entrada aparte.
-    const precio_entrada = esAlquiler
-      ? 0
-      : esSocio
-        ? precios.entrada_socio.transferencia
-        : precios.entrada_byop.transferencia;
-    const precio_alquiler = esAlquiler ? alquilerDual.transferencia : 0;
-    const precio_fijo_efectivo = esAlquiler
-      ? alquilerDual.efectivo
-      : esSocio
-        ? precios.entrada_socio.efectivo
-        : precios.entrada_byop.efectivo;
-    const precio_total = precio_entrada + precio_alquiler;
-    const gratis = esSocio && precio_total === 0;
+    // Misma cuenta que hizo el server (ver `opcionesDePrecio`), para que la
+    // fila optimista no muestre un total distinto al que quedó guardado.
+    const opts = opcionesDePrecio(d.tipo, d.chaleco, d.socio, precios);
+    const transf = calcularPrecioInscripcion(opts, "transferencia");
+    const efec = calcularPrecioInscripcion(opts, "efectivo");
+    const gratis = d.socio && transf.total === 0;
     const nueva: Inscripcion = {
       id: d.id,
       nombre: d.nombre,
@@ -294,28 +324,25 @@ export function CheckinList({
       flair: null,
       dni: d.dni || "—",
       celular: "—",
-      socio: esSocio,
-      tipo_jugador: esAlquiler ? "alquiler" : "byop",
+      socio: d.socio,
+      tipo_jugador: opts.tipo_jugador,
       estado: "confirmado",
-      alquila_marcadora: esAlquiler && !esAvanzado,
-      alquila_premium: esAvanzado,
-      alquila_chaleco: false,
+      alquila_marcadora: opts.alquila.marcadora,
+      alquila_premium: opts.alquila.premium,
+      alquila_chaleco: d.chaleco,
       recarga_tracer_100: 0,
       recarga_conv_200: 0,
-      precio_entrada,
-      precio_alquiler,
+      precio_entrada: transf.entrada,
+      precio_alquiler: transf.alquiler,
       precio_recargas: 0,
-      precio_fijo_efectivo,
-      precio_total,
+      precio_fijo_efectivo: efec.total,
+      precio_total: transf.total,
       esWalkin: true,
+      isGuest: d.isGuest,
       checkin: {
         presente: true,
         pago_estado: gratis ? "socio_presente" : d.pago,
-        pago_monto: gratis
-          ? 0
-          : d.pago === "efectivo"
-            ? precio_fijo_efectivo
-            : precio_total,
+        pago_monto: gratis ? 0 : d.pago === "efectivo" ? efec.total : transf.total,
         nota: null,
       },
     };
@@ -323,17 +350,139 @@ export function CheckinList({
   };
 
   /**
-   * Borra un jugador cargado a mano. Optimista con rollback, igual que
-   * `update`: si el servidor lo rechaza, la fila vuelve a su lugar en la lista.
+   * Cambia el tipo de jugador y/o el chaleco de una fila ya existente, y
+   * recalcula lo que hay que cobrarle.
+   *
+   * Optimista para que el cambio se vea al toque, pero al volver el server
+   * la fila se reescribe con los precios que él calculó: el cliente no
+   * conoce el estado de cuota de un socio, así que su cuenta puede diferir
+   * y la que manda es la del server.
    */
-  const eliminarWalkin = (r: Inscripcion) => {
-    if (
-      !confirm(
-        `¿Borrar a ${r.nombre} de esta partida? Se puede volver a cargar enseguida.`,
-      )
-    ) {
-      return;
-    }
+  const updateEquipo = (r: Inscripcion, tipo: Tipo, chaleco: boolean) => {
+    const snapshot = r;
+    setPendingId(r.id);
+    setError(null);
+
+    const metodoPrev = snapshot.checkin?.pago_estado ?? null;
+    const montoPrev = snapshot.checkin?.pago_monto ?? null;
+    // Si el admin escribió un monto a mano, no se lo pisamos… salvo que el
+    // medio de pago tenga que cambiar (ver abajo).
+    const montoSinEditar =
+      montoPrev == null ||
+      montoPrev === montoDeMetodo(snapshot, metodoPrev, preciosRecargas);
+
+    /** Reconstruye la fila con un desglose de precios dado. */
+    const conPrecios = (p: {
+      entrada: number;
+      alquiler: number;
+      fijoEfectivo: number;
+      socio: boolean;
+    }): Inscripcion => ({
+      ...snapshot,
+      socio: p.socio,
+      tipo_jugador:
+        tipo === "alquiler_basico" || tipo === "alquiler_avanzado"
+          ? "alquiler"
+          : "byop",
+      alquila_marcadora: tipo === "alquiler_basico",
+      alquila_premium: tipo === "alquiler_avanzado",
+      alquila_chaleco: chaleco,
+      precio_entrada: p.entrada,
+      precio_alquiler: p.alquiler,
+      precio_fijo_efectivo: p.fijoEfectivo,
+      precio_total: p.entrada + p.alquiler + snapshot.precio_recargas,
+    });
+
+    const socioOptimista = snapshot.isGuest ? tipo === "socio" : snapshot.socio;
+    const optsOpt = opcionesDePrecio(tipo, chaleco, socioOptimista, precios);
+    const filaOptimista = conPrecios({
+      entrada: calcularPrecioInscripcion(optsOpt, "transferencia").entrada,
+      alquiler: calcularPrecioInscripcion(optsOpt, "transferencia").alquiler,
+      fijoEfectivo: calcularPrecioInscripcion(optsOpt, "efectivo").total,
+      socio: socioOptimista,
+    });
+    setRows((prev) => prev.map((x) => (x.id === r.id ? filaOptimista : x)));
+
+    startTransition(async () => {
+      const res = await actualizarEquipoInscripcionAction({
+        inscripcionId: r.id,
+        tipo,
+        chaleco,
+      });
+      if ("error" in res) {
+        setRows((prev) => prev.map((x) => (x.id === r.id ? snapshot : x)));
+        setError(res.error);
+        setPendingId(null);
+        return;
+      }
+
+      const fila = conPrecios({
+        entrada: res.precio_entrada,
+        alquiler: res.precio_alquiler,
+        fijoEfectivo: res.precio_fijo_efectivo,
+        socio: res.socio,
+      });
+
+      // El medio de pago tiene que seguir al precio. Si el jugador pasó a
+      // entrar sin cargo, queda registrado como socio; si venía marcado como
+      // socio y ahora tiene que pagar, se limpia para que el admin elija —
+      // dejarlo en 'socio_presente' lo cobraría $0.
+      //
+      // La cuenta va contra el total, no contra entrada+alquiler: un socio con
+      // recargas cargadas tiene que pagar las recargas, y 'socio_presente'
+      // cobra 0 sí o sí.
+      const metodo =
+        res.socio && fila.precio_total === 0
+          ? "socio_presente"
+          : metodoPrev === "socio_presente" && fila.precio_total > 0
+            ? null
+            : metodoPrev;
+      const monto =
+        montoSinEditar || metodo !== metodoPrev
+          ? montoDeMetodo(fila, metodo, preciosRecargas)
+          : montoPrev;
+
+      setRows((prev) =>
+        prev.map((x) =>
+          x.id === r.id
+            ? {
+                ...fila,
+                checkin: x.checkin
+                  ? { ...x.checkin, pago_estado: metodo, pago_monto: monto }
+                  : x.checkin,
+              }
+            : x,
+        ),
+      );
+
+      // Solo hay algo que persistir si la fila ya tenía check-in; si todavía
+      // no se marcó presente, el monto se arma recién al marcarlo.
+      if (snapshot.checkin && (metodo !== metodoPrev || monto !== montoPrev)) {
+        await upsertCheckinAction(r.id, {
+          presente: snapshot.checkin.presente,
+          pago_estado: metodo,
+          pago_monto: monto,
+          nota: snapshot.checkin.nota,
+        });
+      }
+      setPendingId(null);
+      router.refresh();
+    });
+  };
+
+  /**
+   * Borra un jugador de la partida. Optimista con rollback, igual que
+   * `update`: si el servidor lo rechaza, la fila vuelve a su lugar en la lista.
+   *
+   * La confirmación distingue los dos casos, porque no pesan lo mismo: borrar
+   * un walk-in solo deshace una carga del propio admin, mientras que borrar a
+   * alguien que se anotó por su cuenta le saca el lugar sin avisarle.
+   */
+  const eliminarJugador = (r: Inscripcion) => {
+    const aviso = r.esWalkin
+      ? `¿Borrar a ${r.nombre} de esta partida? Se puede volver a cargar enseguida.`
+      : `${r.nombre} se anotó por su cuenta. Si lo borrás pierde el lugar en la partida y no se le avisa. ¿Lo borrás igual?`;
+    if (!confirm(aviso)) return;
     setPendingId(r.id);
     setError(null);
 
@@ -341,7 +490,7 @@ export function CheckinList({
     setRows((prev) => prev.filter((x) => x.id !== r.id));
 
     startTransition(async () => {
-      const res = await eliminarWalkinAction(r.id);
+      const res = await eliminarInscripcionCheckinAction(r.id);
       if ("error" in res && res.error) {
         setError(res.error);
         // Se reinserta en la misma posición: si el borrado falló, la lista
@@ -432,10 +581,14 @@ export function CheckinList({
             key={r.id}
             r={r}
             pending={pendingId === r.id}
+            editando={editandoId === r.id}
             onToggle={togglePresente}
             onPatch={update}
             onUpdateRecargas={updateRecargas}
-            onDelete={eliminarWalkin}
+            onToggleEditar={setEditandoId}
+            onEquipo={updateEquipo}
+            onDelete={eliminarJugador}
+            precios={precios}
             preciosRecargas={preciosRecargas}
             contextoWa={contextoWa}
           />
@@ -482,7 +635,7 @@ export function CheckinList({
                       >
                         Total: {ars(r.precio_total)}
                       </div>
-                      {r.tipo_jugador === "alquiler" && (
+                      {mostrarRecargas(r) && (
                         <div className="mt-2">
                           <RecargasControls
                             r={r}
@@ -492,10 +645,14 @@ export function CheckinList({
                         </div>
                       )}
                       <div className="mt-1.5">
-                        <BorrarWalkin
+                        <AccionesFila
                           r={r}
+                          precios={precios}
                           pending={isPending}
-                          onDelete={eliminarWalkin}
+                          editando={editandoId === r.id}
+                          onToggleEditar={setEditandoId}
+                          onEquipo={updateEquipo}
+                          onDelete={eliminarJugador}
                         />
                       </div>
                     </td>
@@ -552,15 +709,20 @@ export function CheckinList({
 function MobileCheckinCard({
   r,
   pending,
+  editando,
   onToggle,
   onPatch,
   onUpdateRecargas,
+  onToggleEditar,
+  onEquipo,
   onDelete,
+  precios,
   preciosRecargas,
   contextoWa,
 }: {
   r: Inscripcion;
   pending: boolean;
+  editando: boolean;
   onToggle: (r: Inscripcion, checked: boolean) => void;
   onDelete: (r: Inscripcion) => void;
   onPatch: (id: string, patch: Partial<Checkin>) => void;
@@ -568,6 +730,9 @@ function MobileCheckinCard({
     id: string,
     recargas: { tracer100: number; conv200: number },
   ) => void;
+  onToggleEditar: (id: string | null) => void;
+  onEquipo: (r: Inscripcion, tipo: Tipo, chaleco: boolean) => void;
+  precios: PreciosConfig;
   preciosRecargas: PreciosRecargas;
   contextoWa?: string;
 }) {
@@ -595,7 +760,15 @@ function MobileCheckinCard({
             Total: {ars(r.precio_total)}
           </div>
           <div className="mt-1.5">
-            <BorrarWalkin r={r} pending={pending} onDelete={onDelete} />
+            <AccionesFila
+              r={r}
+              precios={precios}
+              pending={pending}
+              editando={editando}
+              onToggleEditar={onToggleEditar}
+              onEquipo={onEquipo}
+              onDelete={onDelete}
+            />
           </div>
         </div>
         <label className="flex flex-col items-center gap-1 pt-1 cursor-pointer select-none">
@@ -609,7 +782,7 @@ function MobileCheckinCard({
         </label>
       </div>
 
-      {r.tipo_jugador === "alquiler" && (
+      {mostrarRecargas(r) && (
         <div className="mb-3">
           <RecargasControls
             r={r}
@@ -759,30 +932,136 @@ function RecargaCounter({
 }
 
 /**
- * Solo aparece en jugadores cargados a mano. Discreto a propósito: está para
- * arreglar un tipeo, no es una acción de uso frecuente, y borrar por accidente
- * a alguien que ya pagó es peor que tener que buscar el botón.
+ * Correcciones sobre una fila: cambiar el equipo o sacar al jugador.
+ *
+ * Discretas a propósito y con el editor plegado: son para arreglar algo que
+ * salió mal, no acciones de todos los días. Cambiarle el tipo a alguien
+ * modifica lo que se le cobra, y borrar por accidente a alguien que ya pagó
+ * es peor que tener que abrir un panel.
  */
-function BorrarWalkin({
+function AccionesFila({
   r,
+  precios,
   pending,
+  editando,
+  onToggleEditar,
+  onEquipo,
   onDelete,
 }: {
   r: Inscripcion;
+  precios: PreciosConfig;
   pending: boolean;
+  editando: boolean;
+  onToggleEditar: (id: string | null) => void;
+  onEquipo: (r: Inscripcion, tipo: Tipo, chaleco: boolean) => void;
   onDelete: (r: Inscripcion) => void;
 }) {
-  if (!r.esWalkin) return null;
+  const accion =
+    "font-mono fluid-xs uppercase tracking-[.18em] cursor-pointer disabled:opacity-50";
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => onDelete(r)}
-      title="Borrar este jugador cargado a mano"
-      className="font-mono fluid-xs uppercase tracking-[.18em] text-smoke hover:text-orange-300 cursor-pointer disabled:opacity-50"
-    >
-      Borrar
-    </button>
+    <div>
+      <div className="flex items-center gap-4 flex-wrap">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => onToggleEditar(editando ? null : r.id)}
+          className={`${accion} ${editando ? "text-orange" : "text-smoke hover:text-orange"}`}
+        >
+          {editando ? "Listo" : "Editar equipo"}
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => onDelete(r)}
+          title={
+            r.esWalkin
+              ? "Borrar este jugador cargado a mano"
+              : "Sacar a este jugador de la partida"
+          }
+          className={`${accion} text-smoke hover:text-orange-300`}
+        >
+          Borrar
+        </button>
+      </div>
+      {editando && (
+        <EquipoEditor r={r} precios={precios} pending={pending} onEquipo={onEquipo} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Cambia el tipo de jugador y el chaleco de una inscripción ya existente.
+ *
+ * Existe porque lo que la gente elige al anotarse no siempre es lo que pasa
+ * en la puerta: se anotan de alquiler y traen equipo propio, piden el chaleco
+ * recién al cambiarse, o eligen el básico y se llevan el avanzado.
+ *
+ * El tipo 'Socio' solo se ofrece en los jugadores cargados a mano. En una
+ * cuenta el beneficio sale del perfil y del estado de cuota — un socio con la
+ * cuota vencida paga como cualquiera, y eso no se saltea desde acá.
+ */
+function EquipoEditor({
+  r,
+  precios,
+  pending,
+  onEquipo,
+}: {
+  r: Inscripcion;
+  precios: PreciosConfig;
+  pending: boolean;
+  onEquipo: (r: Inscripcion, tipo: Tipo, chaleco: boolean) => void;
+}) {
+  const tipoActual = tipoDeFila(r);
+  const opciones = r.isGuest ? TIPOS_GUEST : TIPOS_CUENTA;
+  const chalecoTienePrecio =
+    precios.alquiler_chaleco.efectivo > 0 ||
+    precios.alquiler_chaleco.transferencia > 0;
+
+  return (
+    <div className="mt-2 border border-rail/40 bg-ink/40 clip-notch p-2.5">
+      <p className="sect-label mb-2">// Equipo</p>
+      <div className="flex gap-1.5 flex-wrap">
+        {opciones.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            disabled={pending}
+            onClick={() => onEquipo(r, o.value, r.alquila_chaleco)}
+            className={`px-2 py-1 font-mono fluid-xs uppercase tracking-[.15em] border transition cursor-pointer disabled:opacity-50 ${
+              tipoActual === o.value
+                ? "bg-orange text-ink border-orange"
+                : "border-rail/60 text-ash hover:border-orange"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <label className="mt-2 flex items-center gap-2 cursor-pointer select-none w-fit">
+        <input
+          type="checkbox"
+          checked={r.alquila_chaleco}
+          disabled={pending}
+          onChange={(e) => onEquipo(r, tipoActual, e.target.checked)}
+          className="w-4 h-4 accent-orange cursor-pointer"
+        />
+        <span className="font-mono fluid-xs uppercase tracking-[.15em] text-ash">
+          Chaleco
+          {chalecoTienePrecio && (
+            <span className="text-smoke normal-case tracking-normal">
+              {" "}
+              + {dualLabel(precios.alquiler_chaleco)}
+            </span>
+          )}
+        </span>
+      </label>
+      {!r.isGuest && r.socio && (
+        <p className="mt-2 font-mono fluid-xs text-smoke">
+          Socio se toma de la cuenta.
+        </p>
+      )}
+    </div>
   );
 }
 

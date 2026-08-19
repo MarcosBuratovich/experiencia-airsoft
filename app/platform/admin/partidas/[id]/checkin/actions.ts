@@ -8,6 +8,8 @@ import {
   calcularPrecioInscripcion,
   calcularPrecioRecargas,
   getPreciosConfig,
+  getPreciosConfigResultado,
+  type TipoJugador,
 } from "@/lib/precios";
 import { checkinAbierto } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
@@ -54,7 +56,10 @@ export async function upsertCheckinAction(inscripcionId: string, payload: Checki
  * Actualiza las recargas de munición asignadas a una inscripción y
  * recalcula `precio_recargas` con los precios actuales de precios_config.
  *
- * Solo aplica a inscripciones con tipo_jugador='alquiler'.
+ * Aplica a cualquier inscripción, no solo a los alquileres: un BYOP trae su
+ * marcadora pero igual puede comprar munición. Además, sin esto una
+ * inscripción que el admin pasa de alquiler a BYOP quedaría con recargas
+ * cobradas e imposibles de corregir.
  */
 export async function actualizarRecargasInscripcionAction(
   inscripcionId: string,
@@ -84,16 +89,13 @@ export async function actualizarRecargasInscripcionAction(
   const tracer100 = clamp(recargas.tracer100);
   const conv200 = clamp(recargas.conv200);
 
-  // Validar que la inscripción es de un alquiler
-  const { data: insc } = await supabase
+  const { data: insc, error: inscErr } = await supabase
     .from("inscripciones")
-    .select("id, tipo_jugador")
+    .select("id")
     .eq("id", inscripcionId)
     .maybeSingle();
+  if (inscErr) return ERR(inscErr);
   if (!insc) return ERR("Inscripción no encontrada");
-  if (insc.tipo_jugador !== "alquiler") {
-    return ERR("Solo se pueden cargar recargas a alquileres");
-  }
 
   // Calcular precio_recargas con los precios vigentes
   const precios = await getPreciosConfig(supabase);
@@ -105,15 +107,19 @@ export async function actualizarRecargasInscripcionAction(
     "transferencia",
   );
 
-  const { error } = await supabase
+  // `.select()` para distinguir "no se pudo escribir" de "se escribió": un
+  // UPDATE que la RLS filtra devuelve éxito con cero filas, no un error.
+  const { data: tocadas, error } = await supabase
     .from("inscripciones")
     .update({
       recarga_tracer_100: tracer100,
       recarga_conv_200: conv200,
       precio_recargas,
     })
-    .eq("id", inscripcionId);
+    .eq("id", inscripcionId)
+    .select("id");
   if (error) return ERR(error);
+  if (!tocadas?.length) return ERR("No se pudieron guardar las recargas");
 
   revalidatePath(`/admin/partidas`);
   return { ok: true, precio_recargas };
@@ -128,6 +134,7 @@ export async function actualizarRecargasInscripcionAction(
  *   - socio    → entrada 0, pago 'socio_presente' (monto 0).
  *   - byop     → entrada base.
  *   - alquiler → precio de alquiler (ya incluye la entrada).
+ * El chaleco es un extra opcional que suma en cualquiera de los tipos.
  * El DNI es opcional. Las recargas se cargan después con los controles de la fila.
  */
 const walkinSchema = z.object({
@@ -148,6 +155,7 @@ const walkinSchema = z.object({
     .regex(/^\d{7,8}$/, "DNI inválido (7-8 dígitos)")
     .optional(),
   tipo: z.enum(["socio", "byop", "alquiler_basico", "alquiler_avanzado"]),
+  chaleco: z.boolean().optional(),
   // El cliente solo elige medios "reales"; 'socio_presente' lo decide el
   // server cuando la entrada queda gratis (socio sin cargo).
   pago_estado: z.enum(["efectivo", "transferencia", "debe"]),
@@ -249,7 +257,7 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
     alquila: {
       marcadora: esAlquiler && !esAvanzado,
       premium: esAvanzado,
-      chaleco: false,
+      chaleco: !!v.chaleco,
     },
     precios,
   };
@@ -279,7 +287,7 @@ export async function agregarWalkinAction(input: z.infer<typeof walkinSchema>) {
       tipo_jugador: esAlquiler ? "alquiler" : "byop",
       alquila_marcadora: esAlquiler && !esAvanzado,
       alquila_premium: esAvanzado,
-      alquila_chaleco: false,
+      alquila_chaleco: !!v.chaleco,
       precio_entrada: transf.entrada,
       precio_alquiler: transf.alquiler,
       precio_fijo_efectivo: efec.total,
@@ -410,22 +418,25 @@ export async function buscarPersonasAction(
 }
 
 /**
- * Borra un jugador que se agregó a mano en el check-in.
+ * Borra a un jugador de la partida desde el check-in.
  *
- * Existe para arreglar errores de tipeo: se borra y se vuelve a cargar bien.
- * El check-in asociado se va solo por la foreign key (`on delete cascade`).
+ * Existe para arreglar errores: un nombre mal tipeado, alguien cargado dos
+ * veces, o una inscripción que quedó de más. Se borra y se vuelve a cargar
+ * bien. El check-in asociado se va solo por la foreign key
+ * (`on delete cascade`).
  *
- * Dos restricciones que no son negociables:
+ * Aplica a cualquier inscripción, la haya cargado el admin o el propio
+ * jugador. Al principio solo permitía borrar walk-ins, para que nadie perdiera
+ * su lugar sin enterarse; en la práctica el que está parado en la puerta
+ * también necesita corregir al que se anotó solo (se anotó como alquiler pero
+ * vino BYOP, se anotó dos veces, se equivocó de partida). La confirmación del
+ * cliente avisa cuando el jugador se anotó por su cuenta.
  *
- * 1. **Solo se puede borrar lo que se agregó a mano** (`agregado_por` con
- *    valor). Una inscripción que el jugador hizo por su cuenta es suya: si el
- *    admin pudiera borrarla desde acá, esa persona perdería su lugar sin
- *    enterarse. Para esos casos existe cancelar la inscripción, que es otro
- *    flujo.
- * 2. **Solo mientras el check-in esté abierto.** Una vez cerrada la ventana de
- *    corrección, los números de la partida quedan firmes.
+ * La restricción que sí queda: **solo mientras el check-in esté abierto**.
+ * Una vez cerrada la ventana de corrección, los números de la partida quedan
+ * firmes.
  */
-export async function eliminarWalkinAction(inscripcionId: string) {
+export async function eliminarInscripcionCheckinAction(inscripcionId: string) {
   const parsed = z.uuid("Identificador inválido").safeParse(inscripcionId);
   if (!parsed.success) return ERR(parsed.error.issues[0]?.message);
 
@@ -444,17 +455,11 @@ export async function eliminarWalkinAction(inscripcionId: string) {
 
   const { data: insc, error: inscErr } = await supabase
     .from("inscripciones")
-    .select("id, partida_id, agregado_por, guest_nombre")
+    .select("id, partida_id")
     .eq("id", parsed.data)
     .maybeSingle();
   if (inscErr) return ERR(inscErr);
   if (!insc) return ERR("Esa inscripción ya no existe");
-
-  if (!insc.agregado_por) {
-    return ERR(
-      "Ese jugador se anotó por su cuenta, así que no se puede borrar desde el check-in. Cancelá la inscripción desde la partida.",
-    );
-  }
 
   const { data: partida, error: partErr } = await supabase
     .from("partidas")
@@ -470,8 +475,8 @@ export async function eliminarWalkinAction(inscripcionId: string) {
     );
   }
 
-  // Service role: la policy de borrado de inscripciones es más restrictiva que
-  // esta operación, que ya validó rol y ventana acá arriba.
+  // Service role: rol y ventana ya se validaron acá arriba, y así el borrado
+  // no depende de que la policy de delete cubra este caso exacto.
   const db = createServiceRoleClient();
   const { error: delErr } = await db
     .from("inscripciones")
@@ -482,4 +487,157 @@ export async function eliminarWalkinAction(inscripcionId: string) {
   revalidatePath(`/platform/admin/partidas/${insc.partida_id}/checkin`);
   revalidatePath(`/platform/admin/partidas`);
   return { ok: true as const };
+}
+
+const equipoSchema = z.object({
+  inscripcionId: z.uuid("Identificador inválido"),
+  tipo: z.enum(["socio", "byop", "alquiler_basico", "alquiler_avanzado"]),
+  chaleco: z.boolean(),
+});
+
+export type EquipoInput = z.infer<typeof equipoSchema>;
+
+/**
+ * Cambia el equipo de una inscripción ya existente durante el check-in: el
+ * tipo de jugador (socio / BYOP / alquiler básico / alquiler avanzado) y el
+ * chaleco. Recalcula y regraba el snapshot de precios.
+ *
+ * Por qué existe: lo que la gente elige al anotarse no siempre es lo que pasa
+ * en la puerta. Se anotan de alquiler y vienen con equipo propio, eligen el
+ * básico y se llevan el avanzado, o piden el chaleco recién al cambiarse.
+ * Antes eso solo se podía arreglar borrando y volviendo a cargar, y solo si al
+ * jugador lo había cargado un admin.
+ *
+ * `socio` NO se toma del tipo cuando la inscripción tiene cuenta: se recalcula
+ * del perfil y de la cuota, igual que al anotarse. Un socio con la cuota
+ * vencida paga como no-socio, y el admin no puede saltear eso desde acá.
+ */
+export async function actualizarEquipoInscripcionAction(input: EquipoInput) {
+  const parsed = equipoSchema.safeParse(input);
+  if (!parsed.success) {
+    return ERR(parsed.error.issues[0]?.message ?? "Datos inválidos");
+  }
+  const v = parsed.data;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return ERR("No autenticado");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    return ERR("No autorizado");
+  }
+
+  const { data: insc, error: inscErr } = await supabase
+    .from("inscripciones")
+    .select("id, partida_id, user_id")
+    .eq("id", v.inscripcionId)
+    .maybeSingle();
+  if (inscErr) return ERR(inscErr);
+  if (!insc) return ERR("Esa inscripción ya no existe");
+
+  const { data: partida, error: partErr } = await supabase
+    .from("partidas")
+    .select("id, estado, fecha, hora_inicio, duracion_min")
+    .eq("id", insc.partida_id)
+    .maybeSingle();
+  if (partErr) return ERR(partErr);
+  if (!partida) return ERR("Partida no encontrada");
+  if (!checkinAbierto(partida)) {
+    return ERR(
+      "El check-in de esta partida ya cerró (se puede corregir hasta 24 hs después de que termina)",
+    );
+  }
+
+  // Con cuenta: el beneficio de socio sale del perfil + estado de cuota.
+  // Sin cuenta (guest cargado a mano): lo elige el admin con el tipo 'socio',
+  // que es el mismo criterio con el que se lo dio de alta.
+  let esSocio = v.tipo === "socio";
+  if (insc.user_id) {
+    const { data: persona, error: persErr } = await supabase
+      .from("profiles")
+      .select("id, socio, socio_desde, cuota_mensual")
+      .eq("id", insc.user_id)
+      .maybeSingle();
+    if (persErr) return ERR(persErr);
+    if (!persona) return ERR("No se encontró el perfil de ese jugador");
+    if (!persona.socio) {
+      esSocio = false;
+    } else {
+      const { data: pagos, error: pagosErr } = await supabase
+        .from("socio_pagos")
+        .select("periodo")
+        .eq("user_id", persona.id);
+      // Sin los pagos no se puede saber si la cuota está al día, y asumir que
+      // sí regala la entrada. Mejor cortar que cobrar de menos.
+      if (pagosErr) return ERR(pagosErr);
+      const cuota = computarEstadoCuota(
+        {
+          socio: true,
+          socio_desde: persona.socio_desde,
+          cuota_mensual: persona.cuota_mensual ?? 0,
+        },
+        pagos ?? [],
+      );
+      esSocio = cuota.esSocio && cuota.alDia;
+    }
+  }
+
+  // Acá SÍ importa la variante estricta: esto pisa un snapshot de precios que
+  // ya era correcto. Si `precios_config` no se puede leer, caer a los defaults
+  // reescribiría la inscripción con un precio inventado.
+  const preciosRes = await getPreciosConfigResultado(supabase);
+  if (!preciosRes.ok) {
+    return ERR(
+      "No se pudieron leer los precios, así que no se cambió nada. Probá de nuevo.",
+    );
+  }
+
+  const esAvanzado = v.tipo === "alquiler_avanzado";
+  const esAlquiler = v.tipo === "alquiler_basico" || esAvanzado;
+  const opts = {
+    tipo_jugador: (esAlquiler ? "alquiler" : "byop") as TipoJugador,
+    socio: esSocio,
+    alquila: {
+      marcadora: esAlquiler && !esAvanzado,
+      premium: esAvanzado,
+      chaleco: v.chaleco,
+    },
+    precios: preciosRes.config,
+  };
+  const transf = calcularPrecioInscripcion(opts, "transferencia");
+  const efec = calcularPrecioInscripcion(opts, "efectivo");
+
+  // `.select()` para no confundir "la RLS lo filtró" con "se guardó": un
+  // UPDATE filtrado devuelve éxito con cero filas. `precio_total` es columna
+  // generada (entrada + alquiler + recargas), no se escribe.
+  const { data: tocadas, error: updErr } = await supabase
+    .from("inscripciones")
+    .update({
+      tipo_jugador: opts.tipo_jugador,
+      alquila_marcadora: opts.alquila.marcadora,
+      alquila_premium: opts.alquila.premium,
+      alquila_chaleco: opts.alquila.chaleco,
+      precio_entrada: transf.entrada,
+      precio_alquiler: transf.alquiler,
+      precio_fijo_efectivo: efec.total,
+    })
+    .eq("id", v.inscripcionId)
+    .select("id");
+  if (updErr) return ERR(updErr);
+  if (!tocadas?.length) return ERR("No se pudo guardar el cambio de equipo");
+
+  revalidatePath(`/platform/admin/partidas/${insc.partida_id}/checkin`);
+  revalidatePath(`/platform/admin/partidas`);
+  return {
+    ok: true as const,
+    socio: esSocio,
+    precio_entrada: transf.entrada,
+    precio_alquiler: transf.alquiler,
+    precio_fijo_efectivo: efec.total,
+  };
 }

@@ -222,8 +222,8 @@ export type DesglosePrecio = {
  *   - ALQUILER: el precio de alquiler YA incluye la entrada, así que NO se
  *     suma la entrada aparte. Total = alquiler elegido (básico o avanzado) +
  *     chaleco opcional. El beneficio de socio no aplica (entrada incluida).
- *   - BYOP: paga solo la entrada (entrada_socio si socio al día, sino
- *     entrada_byop).
+ *   - BYOP: paga la entrada (entrada_socio si socio al día, sino
+ *     entrada_byop) + el chaleco si lo alquila.
  *
  * Las recargas NO se incluyen acá — las asigna el admin durante el check-in
  * (ver `calcularPrecioRecargas`).
@@ -250,7 +250,12 @@ export function calcularPrecioInscripcion(
   const entrada = socio
     ? precios.entrada_socio[metodo]
     : precios.entrada_byop[metodo];
-  return { entrada, alquiler: 0, total: entrada };
+  // El chaleco es lo único que un BYOP puede alquilar suelto: trae marcadora
+  // y protección facial propias, pero no siempre chaleco. Va en `alquiler`
+  // (no en `entrada`) para que el desglose siga leyéndose igual: entrada es
+  // lo que cuesta entrar, alquiler es lo que se le presta.
+  const alquiler = alquila.chaleco ? precios.alquiler_chaleco[metodo] : 0;
+  return { entrada, alquiler, total: entrada + alquiler };
 }
 
 /**

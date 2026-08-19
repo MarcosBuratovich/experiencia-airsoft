@@ -8,16 +8,13 @@ import {
   type PersonaBusqueda,
 } from "./actions";
 import { isCleanText } from "@/lib/sanitize-text";
-import type { PrecioDual } from "@/lib/precios";
+import {
+  calcularPrecioInscripcion,
+  type PrecioDual,
+  type PreciosConfig,
+} from "@/lib/precios";
 import type { FriendlyError } from "@/lib/errors";
 import { ErrorBanner } from "@/app/_components/error-banner";
-
-export type PreciosEntrada = {
-  entrada_byop: PrecioDual;
-  entrada_socio: PrecioDual;
-  alquiler_marcadora: PrecioDual;
-  alquiler_premium: PrecioDual;
-};
 
 export type Tipo = "socio" | "byop" | "alquiler_basico" | "alquiler_avanzado";
 export type Pago = "efectivo" | "transferencia" | "debe";
@@ -28,9 +25,40 @@ export type WalkinAdded = {
   nombre: string;
   dni: string;
   tipo: Tipo;
+  chaleco: boolean;
   pago: Pago;
   socio: boolean;
+  /** Cargado a mano (sin cuenta). Define si el editor de equipo de la fila
+   *  ofrece el tipo 'socio'. */
+  isGuest: boolean;
 };
+
+/**
+ * Traduce el tipo que se elige en la interfaz a los argumentos de
+ * `calcularPrecioInscripcion`. Vive acá porque lo usan el form y la lista, y
+ * porque tiene que dar exactamente lo mismo que hace el server: si las dos
+ * cuentas se separan, la fila optimista muestra un precio y la base guarda
+ * otro.
+ */
+export function opcionesDePrecio(
+  tipo: Tipo,
+  chaleco: boolean,
+  socio: boolean,
+  precios: PreciosConfig,
+) {
+  const esAvanzado = tipo === "alquiler_avanzado";
+  const esAlquiler = tipo === "alquiler_basico" || esAvanzado;
+  return {
+    tipo_jugador: (esAlquiler ? "alquiler" : "byop") as "alquiler" | "byop",
+    socio,
+    alquila: {
+      marcadora: esAlquiler && !esAvanzado,
+      premium: esAvanzado,
+      chaleco,
+    },
+    precios,
+  };
+}
 
 const PAGO_OPTS: { value: Pago; label: string }[] = [
   { value: "efectivo", label: "Efectivo" },
@@ -42,13 +70,20 @@ function ars(n: number) {
   return `$${n.toLocaleString("es-AR")}`;
 }
 
+/** Un solo precio si los dos medios coinciden, los dos si difieren. */
+export function dualLabel(p: PrecioDual): string {
+  return p.efectivo === p.transferencia
+    ? ars(p.transferencia)
+    : `${ars(p.efectivo)} ef. / ${ars(p.transferencia)} transf.`;
+}
+
 export function AgregarWalkin({
   partidaId,
   precios,
   onAdded,
 }: {
   partidaId: string;
-  precios: PreciosEntrada;
+  precios: PreciosConfig;
   onAdded: (data: WalkinAdded) => void;
 }) {
   const router = useRouter();
@@ -60,6 +95,7 @@ export function AgregarWalkin({
   const [nombre, setNombre] = useState("");
   const [dni, setDni] = useState("");
   const [tipo, setTipo] = useState<Tipo>("byop");
+  const [chaleco, setChaleco] = useState(false);
   const [pago, setPago] = useState<Pago>("efectivo");
   const [error, setError] = useState<FriendlyError | null>(null);
   const [pending, startTransition] = useTransition();
@@ -82,23 +118,13 @@ export function AgregarWalkin({
   }, [busq, personaSel]);
 
   const socio = personaSel ? personaSel.socio : tipo === "socio";
-  const esAvanzado = tipo === "alquiler_avanzado";
-  const esAlquiler = tipo === "alquiler_basico" || esAvanzado;
-  const alquilerDual = esAvanzado ? precios.alquiler_premium : precios.alquiler_marcadora;
-  // El alquiler ya incluye la entrada: para alquiler el total es solo el alquiler.
-  const totalEfectivo = esAlquiler
-    ? alquilerDual.efectivo
-    : socio
-      ? precios.entrada_socio.efectivo
-      : precios.entrada_byop.efectivo;
-  const totalTransferencia = esAlquiler
-    ? alquilerDual.transferencia
-    : socio
-      ? precios.entrada_socio.transferencia
-      : precios.entrada_byop.transferencia;
+  const opts = opcionesDePrecio(tipo, chaleco, socio, precios);
+  const totalEfectivo = calcularPrecioInscripcion(opts, "efectivo").total;
+  const totalTransferencia = calcularPrecioInscripcion(opts, "transferencia").total;
   // El medio elegido determina el total a cobrar ('debe' = lista = transferencia).
   const total = pago === "efectivo" ? totalEfectivo : totalTransferencia;
   const requierePago = totalEfectivo > 0 || totalTransferencia > 0;
+  const chalecoDual = precios.alquiler_chaleco;
 
   const dniValido = dni.trim() === "" || /^\d{7,8}$/.test(dni.trim());
   const nombreLimpio = isCleanText(nombre.trim());
@@ -126,6 +152,7 @@ export function AgregarWalkin({
     setNombre("");
     setDni("");
     setTipo("byop");
+    setChaleco(false);
     setPago("efectivo");
     setError(null);
   };
@@ -135,6 +162,7 @@ export function AgregarWalkin({
     setBusq("");
     setResultados([]);
     setTipo("byop");
+    setChaleco(false);
     setError(null);
   };
 
@@ -157,12 +185,13 @@ export function AgregarWalkin({
     startTransition(async () => {
       const res = await agregarWalkinAction(
         personaSel
-          ? { partidaId, userId: personaSel.id, tipo, pago_estado: pago }
+          ? { partidaId, userId: personaSel.id, tipo, chaleco, pago_estado: pago }
           : {
               partidaId,
               nombre: nombre.trim(),
               dni: dni.trim() || undefined,
               tipo,
+              chaleco,
               pago_estado: pago,
             },
       );
@@ -176,8 +205,10 @@ export function AgregarWalkin({
             : nombre.trim(),
           dni: personaSel ? personaSel.dni : dni.trim(),
           tipo,
+          chaleco,
           pago,
           socio,
+          isGuest: !personaSel,
         });
         reset();
         setOpen(false);
@@ -360,6 +391,26 @@ export function AgregarWalkin({
             </p>
           )}
         </div>
+
+        {/* Extra opcional, disponible en cualquier tipo: un BYOP puede traer
+            marcadora y no chaleco. */}
+        <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
+          <input
+            type="checkbox"
+            checked={chaleco}
+            onChange={(e) => setChaleco(e.target.checked)}
+            className="w-4 h-4 accent-orange cursor-pointer"
+          />
+          <span className="font-mono fluid-xs uppercase tracking-[.15em] text-ash">
+            Chaleco
+            {(chalecoDual.efectivo > 0 || chalecoDual.transferencia > 0) && (
+              <span className="text-smoke normal-case tracking-normal">
+                {" "}
+                + {dualLabel(chalecoDual)}
+              </span>
+            )}
+          </span>
+        </label>
 
         {requierePago ? (
           <div>

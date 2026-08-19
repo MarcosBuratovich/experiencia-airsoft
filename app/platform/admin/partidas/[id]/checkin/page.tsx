@@ -266,12 +266,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
             tracer100: precios.recarga_tracer_100,
             conv200: precios.recarga_conv_200,
           }}
-          precios={{
-            entrada_byop: precios.entrada_byop,
-            entrada_socio: precios.entrada_socio,
-            alquiler_marcadora: precios.alquiler_marcadora,
-            alquiler_premium: precios.alquiler_premium,
-          }}
+          precios={precios}
           contextoWa={contextoWa}
         />
       )}

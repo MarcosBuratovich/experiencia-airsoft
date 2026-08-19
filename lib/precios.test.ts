@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   PRECIOS_DEFAULT,
+  calcularPrecioInscripcion,
   getPreciosConfig,
   getPreciosConfigResultado,
+  type PreciosConfig,
 } from "./precios";
 
 /**
@@ -103,5 +105,101 @@ describe("getPreciosConfig (envoltorio sobre getPreciosConfigResultado)", () => 
 
     const cfg = await getPreciosConfig(supabase);
     expect(cfg).toEqual(PRECIOS_DEFAULT);
+  });
+});
+
+/**
+ * Precios de prueba con los cuatro ítems que participan del cálculo, todos
+ * distintos entre sí y con efectivo ≠ transferencia, para que un cruce de
+ * ítems o de medio de pago se note en el número.
+ */
+const P: PreciosConfig = {
+  ...PRECIOS_DEFAULT,
+  entrada_byop: { efectivo: 20000, transferencia: 25000 },
+  entrada_socio: { efectivo: 0, transferencia: 0 },
+  alquiler_marcadora: { efectivo: 54000, transferencia: 60000 },
+  alquiler_premium: { efectivo: 72000, transferencia: 80000 },
+  alquiler_chaleco: { efectivo: 4500, transferencia: 5000 },
+};
+
+const sinAlquiler = { marcadora: false, premium: false, chaleco: false };
+
+describe("calcularPrecioInscripcion", () => {
+  it("BYOP paga solo la entrada", () => {
+    const r = calcularPrecioInscripcion(
+      { tipo_jugador: "byop", socio: false, alquila: sinAlquiler, precios: P },
+      "transferencia",
+    );
+    expect(r).toEqual({ entrada: 25000, alquiler: 0, total: 25000 });
+  });
+
+  it("el alquiler ya incluye la entrada: no se cobra aparte", () => {
+    const r = calcularPrecioInscripcion(
+      {
+        tipo_jugador: "alquiler",
+        socio: false,
+        alquila: { ...sinAlquiler, marcadora: true },
+        precios: P,
+      },
+      "transferencia",
+    );
+    expect(r).toEqual({ entrada: 0, alquiler: 60000, total: 60000 });
+  });
+
+  it("el chaleco suma sobre el alquiler", () => {
+    const r = calcularPrecioInscripcion(
+      {
+        tipo_jugador: "alquiler",
+        socio: false,
+        alquila: { marcadora: false, premium: true, chaleco: true },
+        precios: P,
+      },
+      "efectivo",
+    );
+    expect(r).toEqual({ entrada: 0, alquiler: 76500, total: 76500 });
+  });
+
+  // --- Chaleco suelto -----------------------------------------------------
+  // Un BYOP trae marcadora y protección facial propias, pero no siempre
+  // chaleco. Antes el chaleco se ignoraba fuera del alquiler: se lo entregaban
+  // y no se lo cobraban.
+
+  it("un BYOP con chaleco paga entrada + chaleco", () => {
+    const r = calcularPrecioInscripcion(
+      {
+        tipo_jugador: "byop",
+        socio: false,
+        alquila: { ...sinAlquiler, chaleco: true },
+        precios: P,
+      },
+      "transferencia",
+    );
+    expect(r).toEqual({ entrada: 25000, alquiler: 5000, total: 30000 });
+  });
+
+  it("un socio con chaleco paga el chaleco aunque la entrada sea 0", () => {
+    const r = calcularPrecioInscripcion(
+      {
+        tipo_jugador: "byop",
+        socio: true,
+        alquila: { ...sinAlquiler, chaleco: true },
+        precios: P,
+      },
+      "efectivo",
+    );
+    expect(r).toEqual({ entrada: 0, alquiler: 4500, total: 4500 });
+  });
+
+  it("sin chaleco, un BYOP sigue pagando exactamente la entrada", () => {
+    // Regresión del cambio de arriba: agregar el chaleco al camino BYOP no
+    // tiene que mover el precio de quien no lo pide.
+    for (const socio of [true, false]) {
+      const r = calcularPrecioInscripcion(
+        { tipo_jugador: "byop", socio, alquila: sinAlquiler, precios: P },
+        "transferencia",
+      );
+      const esperado = socio ? 0 : 25000;
+      expect(r).toEqual({ entrada: esperado, alquiler: 0, total: esperado });
+    }
   });
 });
