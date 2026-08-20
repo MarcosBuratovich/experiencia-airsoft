@@ -25,8 +25,13 @@ export const ORG_ID = `${SITE_URL}/#organization`;
 export const BUSINESS_ID = `${SITE_URL}/#business`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 
-// Teléfono único en formato E.164 (con el "9" de móvil), consistente con
-// WHATSAPP_URL (wa.me/5491138689783) y con el JSON-LD de la tienda.
+// Teléfono de la marca en formato E.164 (con el "9" de móvil), consistente
+// con WHATSAPP_URL (wa.me/5491138689783).
+//
+// La tienda atiende por una línea propia, pero emite el nodo Organization con
+// este MISMO @id, así que ahí espeja este valor (BRAND_TELEPHONE_E164 en
+// tienda/app/_components/site-constants.ts) y su número propio va en el nodo
+// OnlineStore. Si este cambia, hay que cambiar el espejo también.
 export const TELEPHONE_E164 = "+5491138689783";
 
 // Logo canónico de la marca: MISMA URL en los 3 hosts (la tienda referencia
