@@ -210,7 +210,8 @@ el de tiempo al nombre de la columna:
 ```sql
 nullif(new.raw_user_meta_data->>'utm_source', ''),
 -- ... los otros cinco igual ...
-(new.raw_user_meta_data->>'first_seen_at')::timestamptz  -- → atribucion_first_seen_at
+v_atribucion_first_seen_at  -- variable cargada en un sub-bloque begin/exception,
+                             -- → atribucion_first_seen_at
 ```
 
 `nullif(..., '')` en vez de `coalesce(..., '')` a propósito: acá un string vacío
@@ -218,9 +219,13 @@ tiene que quedar `null` ("no sabemos"), no `''` ("sabemos que es vacío"). Es lo
 contrario de lo que hacen `nombre` y `apellido`, que son obligatorios y usan
 `coalesce`.
 
-El cast a `timestamptz` es el único que puede tirar si llega basura. Va envuelto
-para que un valor inválido no aborte el registro: si el cast falla, la columna
-queda `null`.
+El cast a `timestamptz` es el único que puede tirar si llega basura. Por eso no
+se hace inline: corre dentro de un sub-bloque `begin/exception` de plpgsql que
+carga una variable antes del `insert`. Un `case` con regex de validación previa
+no alcanza —un string con forma ISO-8601 pero semánticamente imposible, como
+`'2026-13-45T00:00:00Z'`, pasa cualquier regex y explota igual al castear—, así
+que la única garantía real de que un valor inválido no aborte el registro es
+capturar la excepción del cast: si falla, la columna queda `null`.
 
 **Riesgo asumido:** `handle_new_user()` está en el camino crítico del registro.
 Un error ahí y nadie se puede registrar. Mitigación: usar exclusivamente

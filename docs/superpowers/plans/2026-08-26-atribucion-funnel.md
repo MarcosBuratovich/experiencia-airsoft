@@ -131,8 +131,10 @@ create index if not exists profiles_utm_source_idx
 --   - `nullif(..., '')` en vez de `coalesce(..., '')`: acá un string vacío
 --     tiene que quedar NULL ("no sabemos"), al revés de nombre/apellido que
 --     son obligatorios y usan coalesce.
---   - El cast a timestamptz va con regex de validación previa: si llega
---     basura, queda NULL en vez de abortar el registro.
+--   - El cast a timestamptz corre dentro de un sub-bloque begin/exception
+--     en vez de validarse con un regex: un regex de forma no alcanza (ver
+--     el comentario de abajo). Si el cast falla, la columna queda NULL en
+--     vez de abortar el registro.
 -- =========================================================================
 create or replace function public.handle_new_user()
 returns trigger
@@ -142,7 +144,20 @@ set search_path = public
 as $$
 declare
   v_first_seen text := new.raw_user_meta_data->>'first_seen_at';
+  v_atribucion_first_seen_at timestamptz;
 begin
+  -- El valor viene de raw_user_meta_data, que controla el cliente. Un
+  -- string con forma de fecha pero valor imposible ('2026-13-45T...')
+  -- pasa cualquier regex de forma ISO-8601 y después explota al castear
+  -- ("date/time field value out of range"), lo que igual abortaría el
+  -- registro. Un sub-bloque con exception es la única forma de garantizar
+  -- que eso no pase: si no se puede castear, la columna queda NULL y listo.
+  begin
+    v_atribucion_first_seen_at := v_first_seen::timestamptz;
+  exception when others then
+    v_atribucion_first_seen_at := null;
+  end;
+
   insert into public.profiles (
     id, nombre, apellido, dni, celular, email, player_number,
     utm_source, utm_medium, utm_campaign, fbclid,
@@ -162,12 +177,7 @@ begin
     nullif(new.raw_user_meta_data->>'fbclid', ''),
     nullif(new.raw_user_meta_data->>'referrer_host', ''),
     nullif(new.raw_user_meta_data->>'landing_path', ''),
-    -- Solo casteamos si tiene pinta de ISO-8601. Cualquier otra cosa → NULL.
-    case
-      when v_first_seen ~ '^\d{4}-\d{2}-\d{2}T'
-      then v_first_seen::timestamptz
-      else null
-    end
+    v_atribucion_first_seen_at
   );
   return new;
 end;
@@ -197,18 +207,42 @@ Expected: 14 filas (7 por tabla), todas con `is_nullable = YES`.
 
 - [ ] **Step 4: Verificar que el registro sigue funcionando**
 
-Esto es lo que puede romper todo. En el SQL Editor, simular lo que hace el trigger:
+Esto es lo que puede romper todo. En el SQL Editor, simular el sub-bloque begin/exception del trigger para tres casos, incluido el que un regex de forma no detecta: una fecha con pinta de ISO-8601 pero semánticamente imposible.
 
 ```sql
--- Debe devolver un timestamptz válido
-select case when '2026-08-26T10:00:00.000Z' ~ '^\d{4}-\d{2}-\d{2}T'
-            then '2026-08-26T10:00:00.000Z'::timestamptz else null end as ok;
--- Debe devolver NULL, no tirar error
-select case when 'basura' ~ '^\d{4}-\d{2}-\d{2}T'
-            then 'basura'::timestamptz else null end as debe_ser_null;
+do $$
+declare
+  v timestamptz;
+begin
+  -- Caso 1: fecha válida. Debe imprimir el timestamptz.
+  begin
+    v := '2026-08-26T10:00:00.000Z'::timestamptz;
+  exception when others then
+    v := null;
+  end;
+  raise notice 'valido: %', v;
+
+  -- Caso 2: forma ISO pero fecha imposible (mes 13, día 45). Un regex de
+  -- forma la deja pasar igual y el cast explota con "date/time field
+  -- value out of range". Debe quedar en NULL sin abortar.
+  begin
+    v := '2026-13-45T00:00:00.000Z'::timestamptz;
+  exception when others then
+    v := null;
+  end;
+  raise notice 'forma valida pero fecha imposible -> null: %', v;
+
+  -- Caso 3: basura total. Debe quedar en NULL sin error, como antes.
+  begin
+    v := 'basura'::timestamptz;
+  exception when others then
+    v := null;
+  end;
+  raise notice 'basura -> null: %', v;
+end $$;
 ```
 
-Expected: la primera devuelve `2026-08-26 10:00:00+00`, la segunda devuelve `null` **sin error**.
+Expected: en el panel "Messages" del SQL Editor, tres `NOTICE` — el primero con un timestamptz real (`valido: 2026-08-26 10:00:00+00`), los otros dos con `null` — y **ningún error**.
 
 - [ ] **Step 5: Commit**
 
