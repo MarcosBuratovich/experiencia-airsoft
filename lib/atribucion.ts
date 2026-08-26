@@ -91,9 +91,16 @@ export function parsearAtribucion(
   // Sin timestamp válido no hay atribución que valga.
   const t = src.t;
   if (typeof t !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(t)) return null;
-  if (Number.isNaN(Date.parse(t))) return null;
 
-  const out = { first_seen_at: t } as Atribucion;
+  // Date.parse NO rechaza dias que no existen: "2026-02-30" rueda al 2 de
+  // marzo en vez de fallar. Postgres si valida el calendario y tirar
+  // date/time field value out of range abortaria el insert. Guardamos el
+  // valor ya normalizado por Date, que siempre es una fecha real, en vez
+  // del string crudo que vino en la cookie.
+  const fecha = new Date(t);
+  if (Number.isNaN(fecha.getTime())) return null;
+
+  const out = { first_seen_at: fecha.toISOString() } as Atribucion;
   for (const [clave, campo] of Object.entries(CLAVES)) {
     const max = campo === "fbclid" ? MAX_LARGO_FBCLID : MAX_LARGO;
     out[campo] = sanitizar(src[clave], max);

@@ -93,6 +93,24 @@ describe("parsearAtribucion", () => {
     const p = JSON.stringify({ l: "/blog/que-es-airsoft", t: "2026-08-26T10:00:00.000Z" });
     expect(parsearAtribucion(p)?.landing_path).toBe("/blog/que-es-airsoft");
   });
+
+  it("normaliza una fecha con forma valida pero dia inexistente", () => {
+    // Postgres rechazaria "2026-02-30"; Date lo rueda al 2 de marzo.
+    const raro = JSON.stringify({ s: "google", t: "2026-02-30T00:00:00.000Z" });
+    expect(parsearAtribucion(raro)?.first_seen_at).toBe("2026-03-02T00:00:00.000Z");
+  });
+
+  it("devuelve null si la fecha no se puede parsear ni rodando", () => {
+    const imposible = JSON.stringify({ s: "google", t: "2026-13-45T99:99:99.000Z" });
+    expect(parsearAtribucion(imposible)).toBeNull();
+  });
+
+  it("no explota con una cookie que rompe decodeURIComponent", () => {
+    // decodeURIComponent("%") tira URIError. El catch interno tiene que
+    // contenerlo: parsearAtribucion nunca puede propagar una excepcion.
+    expect(() => parsearAtribucion("%")).not.toThrow();
+    expect(parsearAtribucion("%")).toBeNull();
+  });
 });
 
 describe("aColumnas", () => {
