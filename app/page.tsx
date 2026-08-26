@@ -118,7 +118,7 @@ const reels: Reel[] = [
   {
     title: "Normas de seguridad",
     index: "01",
-    image: "/img/10_como_me_uno.jpg",
+    image: "/img/10_como_me_uno.webp",
     alt: "Video: normas de seguridad en partidas de airsoft CQB indoor de Experiencia Airsoft",
     video: "/videos/normas-de-seguridad.mp4",
     delayClass: "",
@@ -126,7 +126,7 @@ const reels: Reel[] = [
   {
     title: "¿No tengo nada para jugar?",
     index: "02",
-    image: "/img/11_no_tengo_nada_para_jugar.jpg",
+    image: "/img/11_no_tengo_nada_para_jugar.webp",
     alt: "Video: alquiler de equipo de airsoft incluido en Experiencia Airsoft",
     video: "/videos/no-tengo-nada-para-jugar.mp4",
     delayClass: "reveal-delay-1",
@@ -134,7 +134,7 @@ const reels: Reel[] = [
   {
     title: "¿No tengo con quién ir?",
     index: "03",
-    image: "/img/12_no_tengo_con_quien_ir.jpg",
+    image: "/img/12_no_tengo_con_quien_ir.webp",
     alt: "Video: partidas públicas abiertas para anotarse solo en Experiencia Airsoft",
     video: "/videos/no-tengo-con-quien-ir.mp4",
     delayClass: "reveal-delay-2",
@@ -142,7 +142,7 @@ const reels: Reel[] = [
   {
     title: "Cómo reservar",
     index: "04",
-    image: "/img/13_como_reservar.jpg",
+    image: "/img/13_como_reservar.webp",
     alt: "Video: cómo reservar tu lugar en una partida de airsoft CQB por WhatsApp",
     video: "/videos/como-reservar.mp4",
     delayClass: "reveal-delay-3",
@@ -150,7 +150,7 @@ const reels: Reel[] = [
   {
     title: "Mitos del airsoft",
     index: "05",
-    image: "/img/14_mitos_del_airsoft.jpg",
+    image: "/img/14_mitos_del_airsoft.webp",
     alt: "Video: mitos del airsoft desarmados — máximo 330 FPS, táctica antes que potencia",
     video: "/videos/mitos-del-airsoft.mp4",
     delayClass: "",
@@ -158,7 +158,7 @@ const reels: Reel[] = [
   {
     title: "¿Qué llevar a una partida?",
     index: "06",
-    image: "/img/15_que_traer_primer_juego.jpg",
+    image: "/img/15_que_traer_primer_juego.webp",
     alt: "Video: qué traer a tu primera partida de airsoft en Buenos Aires",
     video: "/videos/que-llevar-a-una-partida.mp4",
     delayClass: "reveal-delay-1",
@@ -166,7 +166,7 @@ const reels: Reel[] = [
   {
     title: "Tips para tu primera partida",
     index: "07",
-    image: "/img/17_tips_primer_partida.jpg",
+    image: "/img/17_tips_primer_partida.webp",
     alt: "Video: tips para tu primera partida de airsoft CQB indoor",
     video: "/videos/tips-primera-partida.mp4",
     delayClass: "reveal-delay-2",
@@ -174,7 +174,7 @@ const reels: Reel[] = [
   {
     title: "Testimonios",
     index: "08",
-    image: "/img/18_testimonios.jpg",
+    image: "/img/18_testimonios.webp",
     alt: "Video: testimonios de jugadores de Experiencia Airsoft",
     video: "/videos/testimonios.mp4",
     delayClass: "reveal-delay-3",
@@ -1490,9 +1490,11 @@ export default function Home() {
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/img/07_zona_fria_hero.jpg"
+            src="/img/07_zona_fria_hero_blur.webp"
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover scale-110 blur-md opacity-40"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/90 to-ink"></div>
