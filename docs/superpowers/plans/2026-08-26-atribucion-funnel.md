@@ -981,7 +981,14 @@ select
   case
     when i.atribucion_first_seen_at is null
       then 'sin dato (carga manual / pre-deploy)'
-    else coalesce(i.utm_source, i.referrer_host, 'directo')
+    -- gclid llega sin utm_* (auto-etiquetado de Google Ads) y casi siempre
+    -- sin referrer, así que sin este caso el canal pago caía en 'directo'.
+    else coalesce(
+      i.utm_source,
+      i.referrer_host,
+      case when i.gclid is not null then 'google-ads' end,
+      'directo'
+    )
   end                                                              as canal,
   count(*)                                                         as reservas,
   count(*) filter (where c.presente)                               as asistieron,

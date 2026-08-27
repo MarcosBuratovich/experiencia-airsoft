@@ -13,6 +13,7 @@ import { computarEstadoCuota } from "@/lib/socios";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
 import { enviarEventoMeta } from "@/lib/meta-capi";
 import { aColumnas, leerAtribucion } from "@/lib/atribucion";
+import { leerGclid } from "@/lib/gclid";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -138,14 +139,18 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     // recargas se asignan despues por el admin durante el check-in
   };
 
-  // De dónde vino esta persona la primera vez. Si la migración fase 20
-  // todavía no corrió, o la cookie está corrupta, la inscripción se crea
-  // igual: una reserva jamás se pierde por un tema de analytics.
+  // De dónde vino esta persona la primera vez (cookie ea_attr), y si llegó
+  // por un anuncio de Google Ads (cookie _gcl_aw, independiente: gclid no
+  // vive en Atribucion). Si la migración fase 20 todavía no corrió, o
+  // alguna cookie está corrupta, la inscripción se crea igual: una reserva
+  // jamás se pierde por un tema de analytics.
   const attr = await leerAtribucion();
-  const conAttr = attr ? { ...base, ...aColumnas(attr) } : base;
+  const gclid = await leerGclid();
+  const extra = { ...(attr ? aColumnas(attr) : {}), ...(gclid ? { gclid } : {}) };
+  const conAttr = Object.keys(extra).length > 0 ? { ...base, ...extra } : base;
 
   let { error } = await supabase.from("inscripciones").insert(conAttr);
-  if (error && attr) {
+  if (error && conAttr !== base) {
     // La causa puede ser cupo lleno o un unique constraint, nada que ver
     // con la atribución; reintentamos sin ella por si acaso lo fuera, sin
     // afirmar que lo es.

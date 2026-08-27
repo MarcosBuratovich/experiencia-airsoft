@@ -9,10 +9,19 @@
 -- `gclid` desde la fase 18, pero solo para privadas y solo para Google Ads.
 --
 -- CÓMO FUNCIONA
--- Un componente cliente escribe la cookie `ea_attr` en el primer pageview,
--- en el dominio raíz (.experienciaairsoft.com) para que sobreviva el salto
--- www → app. Es first-touch: si la cookie ya existe, no se toca. Al
--- anotarse o al registrarse, el server la lee y copia el origen acá.
+-- `proxy.ts` escribe la cookie `ea_attr` con Set-Cookie en el primer
+-- pageview, en el dominio raíz (.experienciaairsoft.com) para que sobreviva
+-- el salto www → app. Es first-touch: si la cookie ya existe, no se toca.
+-- Al anotarse o al registrarse, el server la lee y copia el origen acá.
+--
+-- Además se captura el clic de Google Ads (`gclid`): con auto-etiquetado el
+-- click llega sin utm_* y casi siempre sin referrer, así que sin esto el
+-- canal por el que se paga plata cae en "directo". `gclid` NO viaja en la
+-- cookie `ea_attr` ni en el tipo `Atribucion` (lib/atribucion.ts): es un
+-- dato independiente, lo escribe el tag de Google en su propia cookie
+-- (`_gcl_aw`) y lo lee `leerGclid()` (lib/gclid.ts), en producción desde la
+-- fase 18 — acá solo se agrega la columna para poder guardarlo junto con el
+-- resto de la atribución al momento de convertir.
 --
 -- Todas las columnas son nullable a propósito: una inscripción cargada por
 -- un admin (walk-in, o alguien que arregló por WhatsApp) no tiene navegador
@@ -34,6 +43,10 @@ alter table public.inscripciones
   add column if not exists utm_campaign text,
   -- Identificador del clic en un anuncio de Meta.
   add column if not exists fbclid       text,
+  -- Identificador del clic en un anuncio de Google Ads (auto-etiquetado).
+  -- Independiente de la cookie ea_attr: lo lee leerGclid() de su propia
+  -- cookie (_gcl_aw), no del tipo Atribucion.
+  add column if not exists gclid        text,
   -- SOLO el host del referrer (instagram.com), nunca la URL completa: no
   -- queremos guardar por qué páginas navegó la persona.
   add column if not exists referrer_host text,
@@ -47,6 +60,7 @@ alter table public.profiles
   add column if not exists utm_medium   text,
   add column if not exists utm_campaign text,
   add column if not exists fbclid       text,
+  add column if not exists gclid        text,
   add column if not exists referrer_host text,
   add column if not exists landing_path  text,
   add column if not exists atribucion_first_seen_at timestamptz;
@@ -98,7 +112,7 @@ begin
 
   insert into public.profiles (
     id, nombre, apellido, dni, celular, email, player_number,
-    utm_source, utm_medium, utm_campaign, fbclid,
+    utm_source, utm_medium, utm_campaign, fbclid, gclid,
     referrer_host, landing_path, atribucion_first_seen_at
   )
   values (
@@ -113,6 +127,7 @@ begin
     nullif(new.raw_user_meta_data->>'utm_medium', ''),
     nullif(new.raw_user_meta_data->>'utm_campaign', ''),
     nullif(new.raw_user_meta_data->>'fbclid', ''),
+    nullif(new.raw_user_meta_data->>'gclid', ''),
     nullif(new.raw_user_meta_data->>'referrer_host', ''),
     nullif(new.raw_user_meta_data->>'landing_path', ''),
     v_atribucion_first_seen_at

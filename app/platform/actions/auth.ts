@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { numeroDisponible, sugerirNumeroLibre } from "@/lib/player-number";
 import { aMetadata, leerAtribucion } from "@/lib/atribucion";
+import { leerGclid } from "@/lib/gclid";
 import {
   actionError,
   actionFieldErrors,
@@ -74,6 +75,10 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
   const attr = await leerAtribucion();
   const datosAttr = attr ? aMetadata(attr) : {};
 
+  // gclid es independiente de ea_attr/Atribucion: lo pone el tag de Google
+  // en su propia cookie (_gcl_aw), no la cookie de atribución.
+  const gclid = await leerGclid();
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -81,6 +86,7 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
       data: {
         nombre, apellido, dni, celular, player_number,
         ...datosAttr,
+        ...(gclid ? { gclid } : {}),
       },
       emailRedirectTo: `${appUrl}/`,
     },
