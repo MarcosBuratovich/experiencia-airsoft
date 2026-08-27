@@ -11,7 +11,7 @@ export default async function EditarClanPage({
   const { slug } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`/login?next=/clanes/${slug}/editar`);
 
   const { data: clan } = await supabase
     .from("clanes")

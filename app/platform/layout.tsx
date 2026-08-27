@@ -59,6 +59,10 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       <Suspense fallback={null}>
         <ParamEventTracker param="login" event="login" params={{ method: "email" }} />
       </Suspense>
+      {/* auth/callback redirige con ?confirmado=1 tras verifyOtp de signup. */}
+      <Suspense fallback={null}>
+        <ParamEventTracker param="confirmado" event="email_confirmado" />
+      </Suspense>
       <header className="sticky top-0 z-40 border-b border-rail/60 bg-carbon/85 backdrop-blur">
         <div className="fluid-gutter-x flex items-center justify-between gap-3 py-3 sm:py-4">
           <Link

@@ -10,7 +10,7 @@ import { PreciosForm } from "./precios-form";
 export default async function PreciosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/admin/precios");
 
   const { data: profile } = await supabase
     .from("profiles")

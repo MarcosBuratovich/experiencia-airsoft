@@ -118,6 +118,25 @@ export default async function LoginPage({
 
   return (
     <div className="max-w-md mx-auto">
+      {/* Llego acá porque quiso entrar a algo que requiere cuenta. Es el
+          primer escalon del embudo de registro y hoy es invisible: sin
+          esto no se puede distinguir "no le interesó crear cuenta" de
+          "ni siquiera pudo ver las partidas". */}
+      {next && (
+        <TrackEvent
+          event="muro_login"
+          // Acotado a 200 caracteres: mismo criterio que `link_url` en
+          // ClickTracker (google-analytics.tsx). `dest` es un path interno
+          // (nunca debería acercarse a ese largo) pero es un string
+          // reflejado de la query (`?next=`), así que sin tope un valor
+          // crafteado mete texto arbitrario en los reportes, y un
+          // `/partidas/<uuid>` real sin acotar igual explota la cardinalidad
+          // de la dimensión en GA4.
+          params={{ destino: dest.slice(0, 200) }}
+          once={`muro_login:${dest}`}
+        />
+      )}
+
       {/* Banner para usuarios nuevos — primera cosa que ven */}
       <div className="mb-6 border border-orange/60 bg-orange/5 clip-notch p-4 sm:p-5">
         <p className="sect-label mb-1 text-orange">// Primera vez acá</p>
