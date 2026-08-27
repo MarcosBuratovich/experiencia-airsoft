@@ -123,6 +123,17 @@ export async function proxy(request: NextRequest) {
     if (!user && !publicPaths.has(url.pathname) && !url.pathname.startsWith("/platform/auth")) {
       const loginUrl = url.clone();
       loginUrl.pathname = "/platform/login";
+      // Preservamos a donde queria ir para (a) devolverla ahi despues de
+      // loguearse y (b) poder medir que la freno el muro y hacia donde iba.
+      // `url.pathname` acá siempre tiene el prefijo /platform: a este bloque
+      // solo se llega cuando isAlreadyUnderPlatform es true (la rama sin
+      // prefijo ya retornó más arriba). Lo sacamos porque el login redirige
+      // a rutas sin ese prefijo.
+      const destino = url.pathname.replace(/^\/platform/, "") || "/";
+      loginUrl.search = "";
+      if (destino !== "/" && destino !== "/login") {
+        loginUrl.searchParams.set("next", destino);
+      }
       const redirectResponse = NextResponse.redirect(loginUrl);
       // `response` (de updateSession) puede traer Set-Cookie de
       // @supabase/ssr —p.ej. limpiando una sesión con refresh token
