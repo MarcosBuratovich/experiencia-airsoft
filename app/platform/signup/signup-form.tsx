@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
   signupAction,
   sugerirNumeroAction,
@@ -8,6 +8,7 @@ import {
 } from "../actions/auth";
 import { PhoneInput } from "../components/phone-input";
 import { ErrorBanner } from "../../_components/error-banner";
+import { track } from "@/lib/ga";
 
 const initial: SignupState = undefined;
 
@@ -48,6 +49,23 @@ export function SignupForm() {
 
   const formErrors = state && "formErrors" in state ? state.formErrors : undefined;
   const error = state && "error" in state ? state.error : undefined;
+
+  // Abrio el formulario. Es el denominador del embudo de registro: contra
+  // esto se mide cuantos lo completan.
+  useEffect(() => {
+    track("signup_iniciado");
+  }, []);
+
+  // Que campo lo freno. Va el NOMBRE del campo, nunca el valor: es PII.
+  // Ordenado y unido para que GA agrupe combinaciones iguales.
+  const camposConError = formErrors
+    ? Object.keys(formErrors).sort().join(",")
+    : "";
+
+  useEffect(() => {
+    if (!camposConError) return;
+    track("signup_error", { campos: camposConError });
+  }, [camposConError]);
 
   return (
     <form action={action} className="space-y-4">
