@@ -5,6 +5,7 @@ import {
   armarDatosAtribucion,
   COOKIE_ATRIBUCION,
   COOKIE_MAX_AGE,
+  superaTopeCookie,
 } from "@/lib/atribucion-cookie";
 
 const PLATFORM_HOSTS = new Set(
@@ -13,6 +14,22 @@ const PLATFORM_HOSTS = new Set(
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean),
 );
+
+/**
+ * Quita el `:puerto` de un host, si lo tiene.
+ *
+ * `esHostProduccion()` (`lib/ga.ts`) se escribió pensando en
+ * `location.hostname` del browser, que nunca trae puerto. Acá recibe el
+ * header `Host` del request, que sí puede traerlo (`www.dominio.com:443`,
+ * o cualquier puerto en local/previews). Hoy no rompe nada porque
+ * producción no manda puerto, pero si algún día lo mandara, apagaría la
+ * atribución en silencio —el regex de `esHostProduccion()` no matchea con
+ * un `:` colgando al final—. No se toca `lib/ga.ts`: tiene otros
+ * consumidores que sí pasan `location.hostname` tal cual.
+ */
+function sinPuerto(host: string): string {
+  return host.split(":")[0] ?? host;
+}
 
 /**
  * Arma el valor de la cookie `ea_attr` para este request, o `null` si no
@@ -38,14 +55,21 @@ function construirCookieAtribucion(request: NextRequest, host: string): string |
 
     // Solo en hosts de producción: localhost y previews quedan sin
     // atribución, igual que los hits internos de GA.
-    if (!esHostProduccion(host)) return null;
+    if (!esHostProduccion(sinPuerto(host))) return null;
 
     const datos = armarDatosAtribucion({
       searchParams: request.nextUrl.searchParams,
       refererHeader: request.headers.get("referer"),
       pathname: request.nextUrl.pathname,
     });
-    return JSON.stringify(datos);
+    const valor = JSON.stringify(datos);
+
+    // Preferible no atribuir a escribir una cookie que el browser va a
+    // descartar entera y en silencio por superar el límite de tamaño de
+    // Set-Cookie (ver superaTopeCookie en lib/atribucion-cookie.ts).
+    if (superaTopeCookie(valor)) return null;
+
+    return valor;
   } catch {
     return null;
   }
@@ -61,6 +85,11 @@ function aplicarCookieAtribucion(response: NextResponse, valor: string | null): 
       maxAge: COOKIE_MAX_AGE,
       sameSite: "lax",
       secure: true,
+      // Nadie en el cliente la lee: el Client Component que la leía se
+      // eliminó (ahora la escribe el proxy) y no hay ningún otro
+      // consumidor JS. httpOnly evita que un tag de terceros pueda
+      // leerla o pisarla.
+      httpOnly: true,
     });
   } catch {
     // Analytics jamás puede romper la página.
@@ -95,6 +124,14 @@ export async function proxy(request: NextRequest) {
       const loginUrl = url.clone();
       loginUrl.pathname = "/platform/login";
       const redirectResponse = NextResponse.redirect(loginUrl);
+      // `response` (de updateSession) puede traer Set-Cookie de
+      // @supabase/ssr —p.ej. limpiando una sesión con refresh token
+      // vencido—. Si no se copian acá, se pierden al descartar `response`
+      // y el browser queda con cookies stale hasta que expiren. Mismo
+      // patrón que el camino de rewrite unas líneas más arriba.
+      response.cookies.getAll().forEach((c) =>
+        redirectResponse.cookies.set(c.name, c.value, c),
+      );
       aplicarCookieAtribucion(redirectResponse, cookieAtribucion);
       return redirectResponse;
     }

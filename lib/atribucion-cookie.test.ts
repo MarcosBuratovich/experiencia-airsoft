@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   armarDatosAtribucion,
   MAX_LARGO,
+  MAX_LARGO_COOKIE,
   MAX_LARGO_FBCLID,
+  superaTopeCookie,
 } from "./atribucion-cookie";
 
 const AHORA = new Date("2026-08-26T10:00:00.000Z");
@@ -131,5 +133,64 @@ describe("armarDatosAtribucion", () => {
     const t = new Date(datos.t).getTime();
     expect(t).toBeGreaterThanOrEqual(antes);
     expect(t).toBeLessThanOrEqual(despues);
+  });
+});
+
+describe("superaTopeCookie", () => {
+  it("no supera el tope en un caso normal (utms, fbclid, referrer y landing path ASCII)", () => {
+    const q = new URLSearchParams({
+      utm_source: "instagram",
+      utm_medium: "social",
+      utm_campaign: "reels-agosto",
+      fbclid: "IwAR0abc-DEF_1234567890123456789012345",
+    });
+    const datos = armarDatosAtribucion({
+      searchParams: q,
+      refererHeader: "https://l.instagram.com/algo",
+      pathname: "/precios",
+      ahora: AHORA,
+    });
+    const raw = JSON.stringify(datos);
+    expect(superaTopeCookie(raw)).toBe(false);
+    // Documenta el orden de magnitud real: bien por debajo del tope.
+    expect(encodeURIComponent(raw).length).toBeLessThan(MAX_LARGO_COOKIE / 2);
+  });
+
+  it("supera el tope con campos llenos de caracteres multi-byte (CJK)", () => {
+    // \p{L} en LIMPIO acepta letras Unicode, incluidas las de alfabetos
+    // multi-byte. encodeURIComponent expande cada byte UTF-8 no-ASCII a 3
+    // caracteres (%XX): varios campos truncados a MAX_LARGO/MAX_LARGO_FBCLID
+    // caracteres CJK cada uno arman un valor que el browser descartaría
+    // entero y en silencio si se lo dejara pasar.
+    const cjk = "商".repeat(MAX_LARGO);
+    const cjkFbclid = "商".repeat(MAX_LARGO_FBCLID);
+    const q = new URLSearchParams({
+      utm_source: cjk,
+      utm_medium: cjk,
+      utm_campaign: cjk,
+      fbclid: cjkFbclid,
+    });
+    const datos = armarDatosAtribucion({
+      searchParams: q,
+      refererHeader: null,
+      pathname: `/${cjk}`,
+      ahora: AHORA,
+    });
+    const raw = JSON.stringify(datos);
+    expect(superaTopeCookie(raw)).toBe(true);
+    expect(encodeURIComponent(raw).length).toBeGreaterThan(MAX_LARGO_COOKIE);
+  });
+
+  it("mide sobre el largo YA encodeado, no sobre el largo crudo", () => {
+    // 400 caracteres CJK: cada uno son 3 bytes UTF-8 que encodeURIComponent
+    // expande a 9 caracteres (%XX%XX%XX). El crudo queda comodo, muy por
+    // debajo del tope; encodeado lo supera. Si superaTopeCookie midiera
+    // sobre `valorSerializado.length` en vez del encodeado, este caso
+    // pasaría de largo y la cookie se escribiria igual para que el browser
+    // la descarte en silencio.
+    const raw = JSON.stringify({ l: "商".repeat(400), t: AHORA.toISOString() });
+    expect(raw.length).toBeLessThan(MAX_LARGO_COOKIE / 2);
+    expect(encodeURIComponent(raw).length).toBeGreaterThan(MAX_LARGO_COOKIE);
+    expect(superaTopeCookie(raw)).toBe(true);
   });
 });

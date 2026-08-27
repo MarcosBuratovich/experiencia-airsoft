@@ -51,6 +51,43 @@ export const MAX_LARGO_FBCLID = 255;
  */
 export const LIMPIO = /^[\p{L}\p{N}_ .:/-]+$/u;
 
+/**
+ * Tope de bytes para el valor final de la cookie, ya serializado y
+ * encodeado — lo que realmente termina en el header `Set-Cookie`.
+ *
+ * `MAX_LARGO`/`MAX_LARGO_FBCLID` truncan por CANTIDAD DE CARACTERES, pero
+ * `LIMPIO` acepta `\p{L}` (letras Unicode), que incluye alfabetos
+ * multi-byte (chino, japonés, coreano...). `response.cookies.set()`
+ * serializa el valor con `encodeURIComponent` (así arma el header
+ * `Set-Cookie` el paquete `@edge-runtime/cookies` que usa Next por
+ * debajo), y ese encoding expande cada byte UTF-8 no-ASCII a 3
+ * caracteres (`%XX`). Medido: varios campos truncados a 100 caracteres
+ * CJK cada uno superan los 5000 bytes ya encodeados, aun respetando el
+ * tope por campo.
+ *
+ * La mayoría de los browsers descartan el `Set-Cookie` COMPLETO en
+ * silencio si supera unos ~4096 bytes (el límite exacto varía por
+ * browser y no se reporta como error visible en ningún lado). 3500 deja
+ * margen para el nombre de la cookie y sus atributos (`Domain`, `Path`,
+ * `Max-Age`, etc.), que también cuentan contra ese límite.
+ */
+export const MAX_LARGO_COOKIE = 3500;
+
+/**
+ * `true` si el valor ya serializado (el JSON crudo que arma
+ * `armarDatosAtribucion`, todavía sin encodear) va a superar
+ * `MAX_LARGO_COOKIE` bytes una vez que `response.cookies.set()` lo pase
+ * por `encodeURIComponent` para armar el `Set-Cookie`.
+ *
+ * Mide sobre la versión YA encodeada (no sobre `valorSerializado.length`)
+ * porque es la que realmente viaja por la red y la que el browser puede
+ * llegar a descartar entera y en silencio. Preferible no atribuir a
+ * escribir una cookie que el browser va a tirar igual.
+ */
+export function superaTopeCookie(valorSerializado: string): boolean {
+  return encodeURIComponent(valorSerializado).length > MAX_LARGO_COOKIE;
+}
+
 function limpiar(valor: string | null | undefined, max: number): string | null {
   if (!valor) return null;
   const v = valor.trim();
@@ -89,7 +126,7 @@ export function armarDatosAtribucion(input: {
       const h = new URL(input.refererHeader).hostname;
       if (!esHostProduccion(h)) refHost = h;
     } catch {
-      refHost = null;
+      // Referer con forma inválida: refHost ya arrancó en null.
     }
   }
 
