@@ -1,5 +1,9 @@
 import { cookies } from "next/headers";
-import { COOKIE_ATRIBUCION } from "./atribucion-cookie";
+import {
+  COOKIE_ATRIBUCION,
+  MAX_LARGO,
+  MAX_LARGO_FBCLID,
+} from "./atribucion-cookie";
 
 /**
  * Atribución de origen — de dónde vino la persona la PRIMERA vez.
@@ -42,10 +46,6 @@ const CLAVES = {
  * viene del cliente y es manipulable.
  */
 const LIMPIO = /^[\w./-]+$/;
-
-const MAX_LARGO = 100;
-/** Los fbclid son largos de verdad. */
-const MAX_LARGO_FBCLID = 255;
 
 function sanitizar(valor: unknown, max: number): string | null {
   if (typeof valor !== "string") return null;

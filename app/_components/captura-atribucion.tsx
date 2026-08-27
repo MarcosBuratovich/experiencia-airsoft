@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { COOKIE_ATRIBUCION, COOKIE_MAX_AGE } from "@/lib/atribucion-cookie";
+import {
+  COOKIE_ATRIBUCION,
+  COOKIE_MAX_AGE,
+  MAX_LARGO,
+  MAX_LARGO_FBCLID,
+} from "@/lib/atribucion-cookie";
 import { esHostProduccion } from "@/lib/ga";
 
 /**
@@ -17,8 +22,15 @@ import { esHostProduccion } from "@/lib/ga";
 export function CapturaAtribucion() {
   useEffect(() => {
     try {
-      // Ya la tenemos: es un visitante que vuelve. No se toca.
-      if (document.cookie.includes(`${COOKIE_ATRIBUCION}=`)) return;
+      // includes() daria falso positivo con cualquier cookie que termine en
+      // "ea_attr" (beta_ea_attr, x_ea_attr, una de un tercero). Si eso pasa
+      // nunca escribimos la nuestra y perdemos la atribucion en silencio,
+      // porque el catch de abajo se traga todo. Comparamos entrada por
+      // entrada.
+      const yaExiste = document.cookie
+        .split("; ")
+        .some((c) => c.startsWith(`${COOKIE_ATRIBUCION}=`));
+      if (yaExiste) return;
 
       // Fuera de producción no ensuciamos: localhost y previews quedan sin
       // atribución, igual que los hits internos de GA.
@@ -39,18 +51,21 @@ export function CapturaAtribucion() {
         refHost = null;
       }
 
-      // Claves de una letra: la cookie viaja en cada request.
+      // Claves de una letra: la cookie viaja en cada request. Recortamos acá
+      // con los mismos límites que aplica lib/atribucion.ts al leer (vía
+      // lib/atribucion-cookie.ts), para que un utm_campaign larguísimo no
+      // empuje el Set-Cookie sobre el límite de ~4KB de los navegadores.
       const datos: Record<string, string> = { t: new Date().toISOString() };
       const s = q.get("utm_source");
       const m = q.get("utm_medium");
       const c = q.get("utm_campaign");
       const f = q.get("fbclid");
-      if (s) datos.s = s;
-      if (m) datos.m = m;
-      if (c) datos.c = c;
-      if (f) datos.f = f;
-      if (refHost) datos.r = refHost;
-      datos.l = window.location.pathname;
+      if (s) datos.s = s.slice(0, MAX_LARGO);
+      if (m) datos.m = m.slice(0, MAX_LARGO);
+      if (c) datos.c = c.slice(0, MAX_LARGO);
+      if (f) datos.f = f.slice(0, MAX_LARGO_FBCLID);
+      if (refHost) datos.r = refHost.slice(0, MAX_LARGO);
+      datos.l = window.location.pathname.slice(0, MAX_LARGO);
 
       const valor = encodeURIComponent(JSON.stringify(datos));
       document.cookie =
