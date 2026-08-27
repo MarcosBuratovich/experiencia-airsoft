@@ -12,6 +12,8 @@ import { inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
 import { enviarEventoMeta } from "@/lib/meta-capi";
+import { aColumnas, leerAtribucion } from "@/lib/atribucion";
+import { leerGclid } from "@/lib/gclid";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -122,7 +124,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     posicion_waitlist = (wlCount ?? 0) + 1;
   }
 
-  const { error } = await supabase.from("inscripciones").insert({
+  const base = {
     partida_id: partidaId,
     user_id: user.id,
     estado,
@@ -135,7 +137,34 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     precio_alquiler: transf.alquiler,
     precio_fijo_efectivo: efec.total,
     // recargas se asignan despues por el admin durante el check-in
-  });
+  };
+
+  // De dónde vino esta persona la primera vez (cookie ea_attr), y si llegó
+  // por un anuncio de Google Ads (cookie _gcl_aw, independiente: gclid no
+  // vive en Atribucion). Si la migración fase 20 todavía no corrió, o
+  // alguna cookie está corrupta, la inscripción se crea igual: una reserva
+  // jamás se pierde por un tema de analytics.
+  const attr = await leerAtribucion();
+  const gclid = await leerGclid();
+  const extra = { ...(attr ? aColumnas(attr) : {}), ...(gclid ? { gclid } : {}) };
+  // Guard por contenido, no por identidad de referencia: `conAttr !== base`
+  // se vuelve siempre verdadero si alguien simplifica la línea de abajo a
+  // un spread incondicional, y dispararía el reintento ante cualquier
+  // error, tenga o no que ver con analytics.
+  const hayExtra = Object.keys(extra).length > 0;
+  const conAttr = hayExtra ? { ...base, ...extra } : base;
+
+  let { error } = await supabase.from("inscripciones").insert(conAttr);
+  if (error && hayExtra) {
+    // La causa puede ser cupo lleno o un unique constraint, nada que ver
+    // con la atribución; reintentamos sin ella por si acaso lo fuera, sin
+    // afirmar que lo es.
+    console.error(
+      "[anotarmeAction] insert falló, reintento sin atribución por si esa fuera la causa:",
+      error.message,
+    );
+    ({ error } = await supabase.from("inscripciones").insert(base));
+  }
   if (error) {
     console.error("[partidas actions] supabase falló:", error);
     return ERR(error);
