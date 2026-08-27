@@ -118,6 +118,18 @@ export default async function LoginPage({
 
   return (
     <div className="max-w-md mx-auto">
+      {/* Llego acá porque quiso entrar a algo que requiere cuenta. Es el
+          primer escalon del embudo de registro y hoy es invisible: sin
+          esto no se puede distinguir "no le interesó crear cuenta" de
+          "ni siquiera pudo ver las partidas". */}
+      {next && (
+        <TrackEvent
+          event="muro_login"
+          params={{ destino: dest }}
+          once={`muro_login:${dest}`}
+        />
+      )}
+
       {/* Banner para usuarios nuevos — primera cosa que ven */}
       <div className="mb-6 border border-orange/60 bg-orange/5 clip-notch p-4 sm:p-5">
         <p className="sect-label mb-1 text-orange">// Primera vez acá</p>
