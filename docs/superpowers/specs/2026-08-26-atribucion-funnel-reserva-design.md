@@ -96,20 +96,26 @@ Fase 1.
 Espejo de `lib/gclid.ts`, que ya funciona en producción desde la fase 18. Mismo
 contrato, misma degradación elegante, misma ubicación de cookie.
 
+**Nota (post-implementación):** el diagrama y la sección de abajo describían
+originalmente un componente cliente que escribía la cookie con
+`document.cookie`. Eso cambió durante la implementación — la escribe
+`proxy.ts` — por qué y el detalle completo están en "Quién escribe la cookie:
+`proxy.ts`, no un componente cliente", más abajo.
+
 ```
 primer pageview (www o app)
         │
         ▼
-[CapturaAtribucion]  ── si NO existe cookie ──▶  escribe `ea_attr`
-   (client, root layout)                          en .experienciaairsoft.com
-                                                          │
+   proxy.ts         ── si NO existe cookie ──▶  Set-Cookie `ea_attr`
+(construirCookieAtribucion /                     en .experienciaairsoft.com
+ aplicarCookieAtribucion)                                │
               ... la persona navega, se va, vuelve ...     │
                                                           ▼
         conversión (anotarse / registrarse)  ──▶  leerAtribucion()  ──▶  columnas
                                                    (server)              en Supabase
 ```
 
-### `lib/atribucion.ts` (server)
+### `lib/atribucion.ts` y `lib/atribucion-cookie.ts` (server)
 
 ```ts
 export type Atribucion = {
@@ -130,25 +136,55 @@ Lee la cookie `ea_attr`, la parsea y la valida. **Nunca tira**: cualquier error
 que `leerGclid()`.
 
 Validación de cada campo, porque el contenido viene del cliente y es
-manipulable: máximo 200 caracteres, se descarta cualquier campo que no matchee
-`/^[\w .:/-]+$/`. Un valor sucio no invalida la cookie entera, solo ese campo.
+manipulable: 100 caracteres (255 para `fbclid`, que son largos de verdad), se
+descarta cualquier campo que no matchee `/^[\p{L}\p{N}_ .:/-]+$/u` — letras
+Unicode incluidas, porque las campañas de este negocio se nombran en español
+("Black Friday", "Promoción Agosto"). Un valor sucio no invalida la cookie
+entera, solo ese campo. El mismo criterio vive en un solo lugar
+(`lib/atribucion-cookie.ts`) y lo aplican tanto la escritura
+(`armarDatosAtribucion`) como la lectura (`parsearAtribucion`), para que no se
+desincronicen.
 
-### `app/_components/captura-atribucion.tsx` (client)
+### Quién escribe la cookie: `proxy.ts`, no un componente cliente
 
-Se monta en el root layout, al lado de `GoogleAnalytics`. En el primer pageview:
+**Corrección respecto al diseño original de este documento:** la idea inicial
+era un componente cliente (`app/_components/captura-atribucion.tsx`), montado
+en el root layout, que escribía `ea_attr` con `document.cookie` en el primer
+pageview. Ese componente **nunca se implementó así** y no existe en el repo.
 
-1. Si ya existe la cookie `ea_attr`, **no hace nada**. Esto es lo que la vuelve
-   first-touch.
-2. Si no existe, la escribe con los `utm_*` y `fbclid` de la URL, el host del
-   `document.referrer`, el `pathname` de aterrizaje y el timestamp.
+En cambio, la escribe `proxy.ts` con el header `Set-Cookie`, en
+`construirCookieAtribucion()` (arma el valor, con el chequeo first-touch
+primero que nada) y `aplicarCookieAtribucion()` (lo aplica a la respuesta que
+se devuelve).
 
-Cookie en `.experienciaairsoft.com` (dominio raíz), `max-age` 400 días —el techo
-que respeta Chrome—, `SameSite=Lax`, sin `HttpOnly` porque la escribe el
-cliente. El dominio raíz es lo que la hace sobrevivir el salto www → app, el
-mismo motivo por el que funciona `_gcl_aw`.
+**Por qué el cambio:** Safari con Intelligent Tracking Prevention (ITP), y
+Firefox con una protección similar, recortan a **7 días** el `max-age` de
+cualquier cookie escrita por JavaScript del lado del cliente
+(`document.cookie`) — y a solo **24 horas** si el aterrizaje trae *link
+decoration* de un dominio clasificado como tracker, que es exactamente el
+caso de un `?fbclid=...` llegando desde Instagram. Con first-touch a 400 días
+(el techo que respeta Chrome), escribir desde el cliente hubiera sesgado
+sistemáticamente el tráfico de Instagram/Facebook —uno de los canales que más
+importa medir en este negocio— hacia "sin dato" mucho antes de que esa
+persona vuelva a convertir. Una cookie de servidor (`Set-Cookie`) no está
+sujeta a ese recorte.
 
-Se monta solo en hosts de producción, reusando `esHostProduccion()` de
-`lib/ga.ts`, para no ensuciar con datos de localhost y previews.
+Igual que el diseño original: cookie en `.experienciaairsoft.com` (dominio
+raíz, para sobrevivir el salto www → app, el mismo motivo por el que funciona
+`_gcl_aw`), `max-age` 400 días, `SameSite=Lax`, `Secure`. A diferencia del
+diseño original, **sí lleva `HttpOnly`**: al escribirla el servidor (no el
+cliente) no hace falta que ningún JavaScript propio la lea, y `HttpOnly`
+evita que un tag de terceros la lea o la pise.
+
+Se escribe solo en hosts de producción, reusando `esHostProduccion()` de
+`lib/ga.ts` (con el host normalizado sin el `:puerto` que puede traer el
+header `Host`, algo que `location.hostname` del browser nunca tiene), para no
+ensuciar con datos de localhost y previews.
+
+**De paso, también se captura `gclid`:** independiente de `ea_attr` y del tipo
+`Atribucion`, `anotarmeAction` lee además la cookie `_gcl_aw` —la que ya
+escribe el tag de Google Ads— vía `leerGclid()` (`lib/gclid.ts`) y persiste
+`gclid` junto con el resto de las columnas de atribución en el mismo insert.
 
 ### Por qué first-touch
 

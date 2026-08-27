@@ -4,7 +4,7 @@
 
 **Goal:** Capturar de dónde viene cada persona en su primer contacto con el sitio, y persistir ese origen hasta la reserva y hasta el registro, para poder responder con SQL qué canal trae gente que efectivamente reserva y paga.
 
-**Architecture:** Una cookie first-party `ea_attr` en el dominio raíz —igual que `_gcl_aw`, para sobrevivir el salto www → app— que un componente cliente escribe **una sola vez** en el primer pageview. Al momento de convertir, dos server actions la leen y copian el origen a `inscripciones` y a `profiles`. La lógica de parseo y validación es una **función pura, sin `next/headers`**, para que sea testeable con el patrón de inyección que ya usa el repo.
+**Architecture:** Una cookie first-party `ea_attr` en el dominio raíz —igual que `_gcl_aw`, para sobrevivir el salto www → app— que **`proxy.ts` escribe con `Set-Cookie`** (no un componente cliente: ver "Corrección post-implementación" más abajo) **una sola vez** en el primer pageview. Al momento de convertir, dos server actions la leen y copian el origen a `inscripciones` y a `profiles`, junto con el `gclid` capturado por separado (`lib/gclid.ts`, cookie `_gcl_aw`). La lógica de parseo y validación es una **función pura, sin `next/headers`**, para que sea testeable con el patrón de inyección que ya usa el repo.
 
 **Tech Stack:** Next.js 16.2.6 (App Router), TypeScript, Supabase (Postgres + RLS), Vitest 4.1.10, pnpm.
 
@@ -33,19 +33,58 @@ Este plan lo parte en dos, sin cambiar el comportamiento:
 
 Toda la lógica que puede fallar vive en la función pura. El wrapper no tiene lógica que testear.
 
+## Corrección post-implementación: quién escribe la cookie
+
+**Este plan (Task 3 más abajo) y el spec original planificaban un componente
+cliente (`app/_components/captura-atribucion.tsx`) que escribía `ea_attr`
+con `document.cookie` en el primer pageview. Eso no es lo que terminó
+implementado ni lo que corre en producción, y ese archivo no existe en el
+repo.**
+
+La cookie la escribe `proxy.ts` con `Set-Cookie` (funciones
+`construirCookieAtribucion()` y `aplicarCookieAtribucion()`), a partir de
+la función pura `armarDatosAtribucion()` en `lib/atribucion-cookie.ts`. La
+lee `lib/atribucion.ts` (`leerAtribucion()` / `parsearAtribucion()`) al
+momento de convertir, sin ningún cambio de contrato: mismas claves, mismo
+regex, mismos límites de largo.
+
+**Por qué el cambio de arquitectura:** Safari con ITP (y Firefox con
+protección similar) recorta a **7 días** el `max-age` de cualquier cookie
+escrita por JavaScript (`document.cookie`), y a solo **24 horas** si el
+aterrizaje trae link decoration de un dominio clasificado como tracker —
+exactamente el caso de un `?fbclid=...` llegando desde Instagram. Con
+first-touch a 400 días, escribir desde el cliente hubiera sesgado
+sistemáticamente el tráfico de Instagram/Facebook —uno de los canales que
+más importa medir— hacia "sin dato" apenas pasadas 24-48hs, mucho antes de
+que esa persona vuelva a convertir. Una cookie de servidor (`Set-Cookie`)
+no está sujeta a ese recorte.
+
+De paso, el punto de escritura del lado del servidor también permite sumar
+el `gclid` de Google Ads: `anotarmeAction` (`app/platform/partidas/[id]/actions.ts`)
+lee `ea_attr` con `leerAtribucion()` **y**, por separado, `gclid` con
+`leerGclid()` (`lib/gclid.ts`, que lee la cookie `_gcl_aw` que ya escribe
+el tag de Google) y los persiste juntos en el mismo insert. `gclid` no es
+parte del tipo `Atribucion`: vive en su propia cookie y su propio helper,
+independiente de `ea_attr`.
+
+Los pasos de Task 3 más abajo quedan como registro histórico de lo que se
+planificó originalmente; no reflejan el archivo final. La Task 2 y la
+tabla de "Estructura de archivos" de abajo ya están actualizadas al
+estado real.
+
 ## Estructura de archivos
 
 | Archivo | Responsabilidad |
 |---|---|
 | `db/schema-phase-20.sql` | Columnas de atribución en `inscripciones` y `profiles` + `handle_new_user()` actualizado |
-| `lib/atribucion.ts` | Tipo `Atribucion`, claves de la cookie, `parsearAtribucion()` (pura) y `leerAtribucion()` (wrapper) |
-| `lib/atribucion.test.ts` | Tests de `parsearAtribucion()` |
-| `app/_components/captura-atribucion.tsx` | Client component: escribe la cookie en el primer pageview |
-| `app/layout.tsx:142-148` | Montaje del componente junto a los otros trackers |
-| `app/platform/partidas/[id]/actions.ts` | `anotarmeAction` escribe la atribución en `inscripciones` |
+| `lib/atribucion-cookie.ts` | Constantes de la cookie, `armarDatosAtribucion()` (pura, arma el objeto sin encodear) y `superaTopeCookie()` |
+| `lib/atribucion.ts` | Tipo `Atribucion`, `parsearAtribucion()` (pura), `leerAtribucion()` (wrapper), `aColumnas()` y `aMetadata()` |
+| `lib/atribucion.test.ts`, `lib/atribucion-cookie.test.ts` | Tests de las funciones puras de arriba |
+| `proxy.ts` | Escribe `ea_attr` con `Set-Cookie` en el primer pageview de producción (`construirCookieAtribucion()` / `aplicarCookieAtribucion()`) |
+| `app/platform/partidas/[id]/actions.ts` | `anotarmeAction` escribe la atribución (+ `gclid`) en `inscripciones` |
 | `app/platform/actions/auth.ts` | `signupAction` manda la atribución en `options.data` |
 
-**Por qué así:** `lib/atribucion.ts` no importa nada de Supabase ni de React, así que se puede testear y reusar desde cualquier server action. El componente de captura es lo único que toca el browser y no tiene lógica de negocio: arma el objeto y lo escribe.
+**Por qué así:** `lib/atribucion.ts` y `lib/atribucion-cookie.ts` no importan nada de Supabase ni de React, así que se pueden testear y reusar desde cualquier server action. `proxy.ts` es el único lugar que toca el request/response crudo; no tiene lógica de negocio propia, arma el objeto vía `armarDatosAtribucion()` y lo escribe.
 
 ---
 
@@ -592,7 +631,16 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ### Task 3: Componente de captura en el navegador
 
-**Files:**
+> **⚠️ Desactualizado — ver "Corrección post-implementación: quién escribe
+> la cookie" más arriba.** Esta task, tal como está escrita abajo, nunca
+> se implementó así: `app/_components/captura-atribucion.tsx` no existe.
+> La cookie la escribe `proxy.ts` con `Set-Cookie`, para no quedar sujeta
+> al recorte de 7 días (24hs con link decoration de un tracker) que
+> Safari ITP y Firefox aplican a las cookies escritas por
+> `document.cookie` — justo el caso de `?fbclid=...` desde Instagram. Los
+> pasos de abajo quedan solo como registro histórico de lo planificado.
+
+**Files (como se planificó originalmente; no lo que se implementó):**
 - Create: `app/_components/captura-atribucion.tsx`
 - Modify: `app/layout.tsx` (imports y el bloque `<body>`, líneas 142-148)
 
@@ -981,12 +1029,17 @@ select
   case
     when i.atribucion_first_seen_at is null
       then 'sin dato (carga manual / pre-deploy)'
-    -- gclid llega sin utm_* (auto-etiquetado de Google Ads) y casi siempre
-    -- sin referrer, así que sin este caso el canal pago caía en 'directo'.
+    -- gclid tiene que ganarle a referrer_host, no perderle. Un click pago
+    -- de Google Ads llega con ?gclid=... pero el navegador igual manda
+    -- Referer: https://www.google.com/ en el request siguiente; si
+    -- referrer_host se evalúa primero, ese click cae en el canal
+    -- 'www.google.com' —indistinguible de tráfico orgánico— y el coalesce
+    -- nunca llega a la rama de gclid. Si hay gclid, el click es pago por
+    -- definición: tiene que ganar antes que cualquier referrer.
     else coalesce(
       i.utm_source,
-      i.referrer_host,
       case when i.gclid is not null then 'google-ads' end,
+      i.referrer_host,
       'directo'
     )
   end                                                              as canal,
