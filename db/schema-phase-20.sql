@@ -24,6 +24,8 @@
 -- da cuánto tarda alguien desde que descubre el sitio hasta que reserva.
 -- =========================================================================
 
+begin;
+
 alter table public.inscripciones
   -- Campaña: de dónde vino (instagram, google), qué tipo de tráfico
   -- (social, cpc, organic) y qué campaña puntual.
@@ -118,3 +120,5 @@ begin
   return new;
 end;
 $$;
+
+commit;
