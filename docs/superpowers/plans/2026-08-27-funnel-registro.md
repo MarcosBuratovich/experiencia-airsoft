@@ -74,7 +74,9 @@ loginUrl.pathname = "/platform/login";
 return NextResponse.redirect(loginUrl);
 ```
 
-Las `page.tsx` individuales sí pasan `next` (`redirect("/login?next=/partidas")`), pero el proxy corre **antes** y se queda con el request. O sea que en la práctica el `next` de las páginas casi nunca se usa: el proxy ya redirigió.
+**Corrección post-review (2026-08-27):** el párrafo original de este plan decía que el proxy corre antes que las `page.tsx` y por eso el `next` de las páginas "casi nunca se usa". Eso es falso: en `proxy.ts:111-120`, la rama de rewrite (host de plataforma, pathname **sin** `/platform`) retorna de inmediato con `NextResponse.rewrite()` y nunca llega al bloque de auth-wall. Navegar a `app.experienciaairsoft.com/partidas` —el caso normal— toma exactamente esa rama: el proxy no chequea sesión ni redirige a login. Quien redirige ahí es el propio `redirect("/login?next=/partidas")` de `partidas/page.tsx`, que ya pasaba el `next` correctamente antes de este plan.
+
+El bloque de auth-wall del proxy (`proxy.ts:122-148`, el que esta Task 1 toca) solo es alcanzable cuando el request entra con `/platform` ya en el pathname —es decir, alguien escribe a mano `app.experienciaairsoft.com/platform/partidas`—, no en la navegación normal. La Task 1 es entonces un *hardening* de ese camino directo, no el mecanismo que habilita `muro_login` en el caso normal: ese lo habilita el `redirect()` de cada `page.tsx`.
 
 - [ ] **Step 2: Pasar el destino**
 
