@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   signupAction,
   sugerirNumeroAction,
@@ -51,21 +51,59 @@ export function SignupForm() {
   const error = state && "error" in state ? state.error : undefined;
 
   // Abrio el formulario. Es el denominador del embudo de registro: contra
-  // esto se mide cuantos lo completan.
+  // esto se mide cuantos lo completan. `once` evita que un F5 o un
+  // back/forward en la misma pestaña sumen otra "persona": sin esto el
+  // denominador queda inflado y todo el resto del embudo parece peor de
+  // lo que es.
   useEffect(() => {
+    const key = "ga_once:signup_iniciado";
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // sessionStorage bloqueado (modo incógnito estricto): trackear igual.
+    }
     track("signup_iniciado");
   }, []);
 
-  // Que campo lo freno. Va el NOMBRE del campo, nunca el valor: es PII.
-  // Ordenado y unido para que GA agrupe combinaciones iguales.
+  // Cuenta los envios del formulario (transicion pending false->true de
+  // useActionState), para distinguir un primer intento de un reintento.
+  // No se manda crudo a GA (explotaria cardinalidad si se cruzara con
+  // otras dims); se acota a 1 | 2 | "3+" mas abajo.
+  const [intentos, setIntentos] = useState(0);
+  const pendingAnterior = useRef(false);
+  useEffect(() => {
+    if (pending && !pendingAnterior.current) {
+      setIntentos((n) => n + 1);
+    }
+    pendingAnterior.current = pending;
+  }, [pending]);
+
+  // Dos clases de fallo distintas y ambas importan: validacion de campos
+  // (Zod, del lado cliente/action) y rechazo del servidor (email ya
+  // registrado, rate limit). La segunda no trae formErrors, asi que sin
+  // esto el error mas comun del registro era invisible.
   const camposConError = formErrors
     ? Object.keys(formErrors).sort().join(",")
     : "";
+  const huboErrorServidor = !!error && !formErrors;
 
   useEffect(() => {
-    if (!camposConError) return;
-    track("signup_error", { campos: camposConError });
-  }, [camposConError]);
+    if (!camposConError && !huboErrorServidor) return;
+    // Acotado a 1 | 2 | "3+": no queremos el numero crudo (cardinalidad),
+    // pero pelear varias veces con el mismo campo es la señal de friccion
+    // mas fuerte que hay y `camposConError` solo (mismo string en cada
+    // reintento) no la re-dispara sin este contador en las deps.
+    const intento: 1 | 2 | "3+" =
+      intentos <= 1 ? 1 : intentos === 2 ? 2 : "3+";
+    if (huboErrorServidor) {
+      // Nunca titulo ni detalle acá: friendlyError() puede reflejar el
+      // email que tipeó la persona ("Ese email ya está registrado").
+      track("signup_error", { tipo: "servidor", intento });
+    } else {
+      track("signup_error", { tipo: "validacion", campos: camposConError, intento });
+    }
+  }, [camposConError, huboErrorServidor, intentos]);
 
   return (
     <form action={action} className="space-y-4">
