@@ -771,7 +771,7 @@ El insert actual (alrededor de la línea 125) arma un objeto literal directo. Ex
   }
 ```
 
-El objeto `base` de arriba es **exactamente** el que ya estaba en el insert original (los 12 campos, sin cambiar ningún valor). El único cambio es extraerlo a una variable para poder reintentar con él. El bloque que sigue —`if (error) { console.error(...); return ERR(error); }`, los `revalidatePath` y el envío a `enviarEventoMeta`— queda igual, sin tocar.
+El objeto `base` de arriba es **exactamente** el que ya estaba en el insert original (los 11 campos, sin cambiar ningún valor). El único cambio es extraerlo a una variable para poder reintentar con él. El bloque que sigue —`if (error) { console.error(...); return ERR(error); }`, los `revalidatePath` y el envío a `enviarEventoMeta`— queda igual, sin tocar.
 
 - [ ] **Step 3: Verificar que compila y que nada se rompió**
 
