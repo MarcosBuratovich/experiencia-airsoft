@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aColumnas, parsearAtribucion } from "./atribucion";
+import { aColumnas, aMetadata, parsearAtribucion } from "./atribucion";
 
 /** Cookie válida, con las claves cortas que escribe el cliente. */
 const COMPLETA = JSON.stringify({
@@ -94,6 +94,37 @@ describe("parsearAtribucion", () => {
     expect(parsearAtribucion(p)?.landing_path).toBe("/blog/que-es-airsoft");
   });
 
+  it("acepta nombres de campaña en español, con espacio y tilde", () => {
+    // Regresión del FIX 2: el regex original (/^[\w./-]+$/) descartaba
+    // estos valores ENTEROS, dejando utm_source lleno y utm_campaign en
+    // NULL — una fila que parecía completa y no lo estaba.
+    const cookie = JSON.stringify({
+      c: "Black Friday",
+      t: "2026-08-26T10:00:00.000Z",
+    });
+    expect(parsearAtribucion(cookie)?.utm_campaign).toBe("Black Friday");
+
+    const conTilde = JSON.stringify({
+      c: "Promoción Agosto",
+      t: "2026-08-26T10:00:00.000Z",
+    });
+    expect(parsearAtribucion(conTilde)?.utm_campaign).toBe("Promoción Agosto");
+  });
+
+  it("sigue descartando intentos de inyección", () => {
+    const script = JSON.stringify({
+      c: "<script>alert(1)</script>",
+      t: "2026-08-26T10:00:00.000Z",
+    });
+    expect(parsearAtribucion(script)?.utm_campaign).toBeNull();
+
+    const puntoYComa = JSON.stringify({
+      c: "a;b=c",
+      t: "2026-08-26T10:00:00.000Z",
+    });
+    expect(parsearAtribucion(puntoYComa)?.utm_campaign).toBeNull();
+  });
+
   it("normaliza una fecha con forma valida pero dia inexistente", () => {
     // Postgres rechazaria "2026-02-30"; Date lo rueda al 2 de marzo.
     const raro = JSON.stringify({ s: "google", t: "2026-02-30T00:00:00.000Z" });
@@ -130,5 +161,42 @@ describe("aColumnas", () => {
   it("no deja ninguna clave que no sea columna real", () => {
     const attr = parsearAtribucion(COMPLETA)!;
     expect(Object.keys(aColumnas(attr))).not.toContain("first_seen_at");
+  });
+});
+
+describe("aMetadata", () => {
+  it("arma las 7 claves que lee handle_new_user() de raw_user_meta_data", () => {
+    // Fija letra por letra las claves que signupAction manda en
+    // options.data y que db/schema-phase-20.sql lee con
+    // raw_user_meta_data->>'...'. Un rename futuro de una de estas 7
+    // claves tiene que romper este test, no la columna en silencio.
+    const attr = parsearAtribucion(COMPLETA)!;
+    expect(aMetadata(attr)).toEqual({
+      utm_source: "instagram",
+      utm_medium: "social",
+      utm_campaign: "reels-agosto",
+      fbclid: "IwAR0abc-DEF_123",
+      referrer_host: "instagram.com",
+      landing_path: "/precios",
+      first_seen_at: "2026-08-26T10:00:00.000Z",
+    });
+  });
+
+  it("convierte los campos null en string vacío, salvo first_seen_at", () => {
+    // El metadata serializa a JSON y el trigger usa nullif(..., ''), que
+    // convierte '' en NULL. first_seen_at nunca es null: el tipo
+    // Atribucion no lo permite.
+    const soloTimestamp = parsearAtribucion(
+      JSON.stringify({ t: "2026-08-26T10:00:00.000Z" }),
+    )!;
+    expect(aMetadata(soloTimestamp)).toEqual({
+      utm_source: "",
+      utm_medium: "",
+      utm_campaign: "",
+      fbclid: "",
+      referrer_host: "",
+      landing_path: "",
+      first_seen_at: "2026-08-26T10:00:00.000Z",
+    });
   });
 });

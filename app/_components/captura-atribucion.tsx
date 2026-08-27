@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import {
   COOKIE_ATRIBUCION,
   COOKIE_MAX_AGE,
+  LIMPIO,
   MAX_LARGO,
   MAX_LARGO_FBCLID,
 } from "@/lib/atribucion-cookie";
@@ -51,21 +52,35 @@ export function CapturaAtribucion() {
         refHost = null;
       }
 
-      // Claves de una letra: la cookie viaja en cada request. Recortamos acá
-      // con los mismos límites que aplica lib/atribucion.ts al leer (vía
-      // lib/atribucion-cookie.ts), para que un utm_campaign larguísimo no
-      // empuje el Set-Cookie sobre el límite de ~4KB de los navegadores.
+      // Claves de una letra: la cookie viaja en cada request. Validamos con
+      // el mismo regex LIMPIO que usa el server al leer (lib/atribucion.ts)
+      // ANTES de truncar: un valor que no matchea no se guarda. Sin esto,
+      // el truncado corría sobre el valor crudo controlable por link y
+      // después encodeURIComponent lo inflaba hasta ×3 — escritura y
+      // lectura tienen que aplicar exactamente el mismo criterio.
+      const limpiar = (v: string, max: number): string | null => {
+        const t = v.trim();
+        if (!t || !LIMPIO.test(t)) return null;
+        return t.slice(0, max);
+      };
+
       const datos: Record<string, string> = { t: new Date().toISOString() };
       const s = q.get("utm_source");
       const m = q.get("utm_medium");
       const c = q.get("utm_campaign");
       const f = q.get("fbclid");
-      if (s) datos.s = s.slice(0, MAX_LARGO);
-      if (m) datos.m = m.slice(0, MAX_LARGO);
-      if (c) datos.c = c.slice(0, MAX_LARGO);
-      if (f) datos.f = f.slice(0, MAX_LARGO_FBCLID);
-      if (refHost) datos.r = refHost.slice(0, MAX_LARGO);
-      datos.l = window.location.pathname.slice(0, MAX_LARGO);
+      const sLimpio = s ? limpiar(s, MAX_LARGO) : null;
+      const mLimpio = m ? limpiar(m, MAX_LARGO) : null;
+      const cLimpio = c ? limpiar(c, MAX_LARGO) : null;
+      const fLimpio = f ? limpiar(f, MAX_LARGO_FBCLID) : null;
+      const rLimpio = refHost ? limpiar(refHost, MAX_LARGO) : null;
+      const lLimpio = limpiar(window.location.pathname, MAX_LARGO);
+      if (sLimpio) datos.s = sLimpio;
+      if (mLimpio) datos.m = mLimpio;
+      if (cLimpio) datos.c = cLimpio;
+      if (fLimpio) datos.f = fLimpio;
+      if (rLimpio) datos.r = rLimpio;
+      if (lLimpio) datos.l = lLimpio;
 
       const valor = encodeURIComponent(JSON.stringify(datos));
       document.cookie =

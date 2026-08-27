@@ -25,3 +25,19 @@ export const MAX_LARGO = 100;
 
 /** Los fbclid son largos de verdad. */
 export const MAX_LARGO_FBCLID = 255;
+
+/**
+ * Caracteres permitidos en un campo de la cookie. Acepta letras Unicode
+ * (además de dígitos, `_`, espacio, `.`, `:`, `/` y `-`) porque las
+ * campañas de este negocio se nombran en español: "Black Friday",
+ * "Promoción Agosto". Un regex solo-ASCII (`\w`) las descartaba enteras,
+ * dejando la fila con `utm_source` lleno y `utm_campaign` en NULL —
+ * parecía completa y no lo estaba. Sigue rechazando cualquier intento de
+ * inyección (`<script>...`, `a;b=c`): el contenido viene del cliente y es
+ * manipulable.
+ *
+ * Vive acá (no en `lib/atribucion.ts`) porque `CapturaAtribucion` la
+ * necesita del lado cliente para aplicar el mismo criterio al escribir
+ * que el server aplica al leer.
+ */
+export const LIMPIO = /^[\p{L}\p{N}_ .:/-]+$/u;

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import {
   COOKIE_ATRIBUCION,
+  LIMPIO,
   MAX_LARGO,
   MAX_LARGO_FBCLID,
 } from "./atribucion-cookie";
@@ -16,7 +17,6 @@ import {
  * dominio (incluidos los assets estáticos), así que cada byte se paga
  * muchas veces por visita.
  */
-export { COOKIE_ATRIBUCION, COOKIE_MAX_AGE } from "./atribucion-cookie";
 
 export type Atribucion = {
   utm_source: string | null;
@@ -38,14 +38,6 @@ const CLAVES = {
   r: "referrer_host",
   l: "landing_path",
 } as const;
-
-/**
- * Caracteres permitidos. Alcanza para un utm real (`reels-agosto`), un
- * host (`instagram.com`), un path (`/blog/que-es-airsoft`) y un fbclid
- * (alfanumérico con `-` y `_`). Todo lo demás se descarta: el contenido
- * viene del cliente y es manipulable.
- */
-const LIMPIO = /^[\w./-]+$/;
 
 function sanitizar(valor: unknown, max: number): string | null {
   if (typeof valor !== "string") return null;
@@ -145,5 +137,30 @@ export function aColumnas(attr: Atribucion): ColumnasAtribucion {
     referrer_host: attr.referrer_host,
     landing_path: attr.landing_path,
     atribucion_first_seen_at: attr.first_seen_at,
+  };
+}
+
+/**
+ * Mapea a las 7 claves que `signupAction` manda en `options.data` del
+ * `signUp`, y que `handle_new_user()` (`db/schema-phase-20.sql`) lee de
+ * `raw_user_meta_data->>'...'`. Existe para que un rename futuro de una
+ * columna rompa en un test en vez de en silencio: antes de esta función,
+ * `auth.ts` armaba este mismo objeto a mano y nada verificaba que las
+ * claves coincidieran con los strings del lado de PL/pgSQL.
+ *
+ * `?? ""` en los 6 strings (no en `first_seen_at`): el metadata serializa
+ * a JSON y el trigger usa `nullif(..., '')`, que convierte el string
+ * vacío en NULL. `first_seen_at` siempre viene con valor porque
+ * `Atribucion.first_seen_at` no es nullable.
+ */
+export function aMetadata(attr: Atribucion): Record<string, string> {
+  return {
+    utm_source: attr.utm_source ?? "",
+    utm_medium: attr.utm_medium ?? "",
+    utm_campaign: attr.utm_campaign ?? "",
+    fbclid: attr.fbclid ?? "",
+    referrer_host: attr.referrer_host ?? "",
+    landing_path: attr.landing_path ?? "",
+    first_seen_at: attr.first_seen_at,
   };
 }

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { numeroDisponible, sugerirNumeroLibre } from "@/lib/player-number";
-import { leerAtribucion } from "@/lib/atribucion";
+import { aMetadata, leerAtribucion } from "@/lib/atribucion";
 import {
   actionError,
   actionFieldErrors,
@@ -72,17 +72,7 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
   // El origen viaja en el metadata del usuario; handle_new_user() lo baja a
   // profiles. Si no hay cookie, no se manda nada y las columnas quedan NULL.
   const attr = await leerAtribucion();
-  const datosAttr = attr
-    ? {
-        utm_source: attr.utm_source ?? "",
-        utm_medium: attr.utm_medium ?? "",
-        utm_campaign: attr.utm_campaign ?? "",
-        fbclid: attr.fbclid ?? "",
-        referrer_host: attr.referrer_host ?? "",
-        landing_path: attr.landing_path ?? "",
-        first_seen_at: attr.first_seen_at,
-      }
-    : {};
+  const datosAttr = attr ? aMetadata(attr) : {};
 
   const { error } = await supabase.auth.signUp({
     email,
