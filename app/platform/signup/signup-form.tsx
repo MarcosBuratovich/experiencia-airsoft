@@ -89,6 +89,15 @@ export function SignupForm() {
   const huboErrorServidor = !!error && !formErrors;
 
   useEffect(() => {
+    // Mientras la action esta en vuelo, `state` todavia es el del intento
+    // anterior: useActionState pone pending=true de forma sincrona pero
+    // recien actualiza state cuando la action resuelve. Sin esta guarda,
+    // el cambio de `intentos` (que sube ANTES de que se sepa el resultado)
+    // re-dispara este efecto con datos viejos: un evento fantasma si el
+    // reintento termina en éxito, o un duplicado si termina en un campo
+    // distinto al anterior. Filtrar acá, y no sacar `intentos` de las deps,
+    // porque sigue haciendo falta para contar reintentos con el MISMO campo.
+    if (pending) return;
     if (!camposConError && !huboErrorServidor) return;
     // Acotado a 1 | 2 | "3+": no queremos el numero crudo (cardinalidad),
     // pero pelear varias veces con el mismo campo es la señal de friccion
@@ -103,7 +112,7 @@ export function SignupForm() {
     } else {
       track("signup_error", { tipo: "validacion", campos: camposConError, intento });
     }
-  }, [camposConError, huboErrorServidor, intentos]);
+  }, [camposConError, huboErrorServidor, intentos, pending]);
 
   return (
     <form action={action} className="space-y-4">
