@@ -125,7 +125,14 @@ export default async function LoginPage({
       {next && (
         <TrackEvent
           event="muro_login"
-          params={{ destino: dest }}
+          // Acotado a 200 caracteres: mismo criterio que `link_url` en
+          // ClickTracker (google-analytics.tsx). `dest` es un path interno
+          // (nunca debería acercarse a ese largo) pero es un string
+          // reflejado de la query (`?next=`), así que sin tope un valor
+          // crafteado mete texto arbitrario en los reportes, y un
+          // `/partidas/<uuid>` real sin acotar igual explota la cardinalidad
+          // de la dimensión en GA4.
+          params={{ destino: dest.slice(0, 200) }}
           once={`muro_login:${dest}`}
         />
       )}
