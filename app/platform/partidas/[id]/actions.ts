@@ -147,10 +147,15 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
   const attr = await leerAtribucion();
   const gclid = await leerGclid();
   const extra = { ...(attr ? aColumnas(attr) : {}), ...(gclid ? { gclid } : {}) };
-  const conAttr = Object.keys(extra).length > 0 ? { ...base, ...extra } : base;
+  // Guard por contenido, no por identidad de referencia: `conAttr !== base`
+  // se vuelve siempre verdadero si alguien simplifica la línea de abajo a
+  // un spread incondicional, y dispararía el reintento ante cualquier
+  // error, tenga o no que ver con analytics.
+  const hayExtra = Object.keys(extra).length > 0;
+  const conAttr = hayExtra ? { ...base, ...extra } : base;
 
   let { error } = await supabase.from("inscripciones").insert(conAttr);
-  if (error && conAttr !== base) {
+  if (error && hayExtra) {
     // La causa puede ser cupo lleno o un unique constraint, nada que ver
     // con la atribución; reintentamos sin ella por si acaso lo fuera, sin
     // afirmar que lo es.
