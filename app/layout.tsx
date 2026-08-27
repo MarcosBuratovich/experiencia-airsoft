@@ -4,7 +4,6 @@ import "./globals.css";
 import { SiteJsonLd } from "./_components/site-jsonld";
 import { MetaPixel } from "./_components/meta-pixel";
 import { GoogleAnalytics } from "./_components/google-analytics";
-import { CapturaAtribucion } from "./_components/captura-atribucion";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -141,7 +140,6 @@ export default function RootLayout({
       className={`${anton.variable} ${oswald.variable} ${inter.variable} ${jetbrains.variable}`}
     >
       <body className="relative">
-        <CapturaAtribucion />
         <GoogleAnalytics />
         <MetaPixel />
         <SiteJsonLd />

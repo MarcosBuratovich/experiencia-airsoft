@@ -9,9 +9,9 @@ import {
 /**
  * Atribución de origen — de dónde vino la persona la PRIMERA vez.
  *
- * La escribe `CapturaAtribucion` en el navegador y la leen las server
- * actions al momento de convertir. Es first-touch: si la cookie ya existe
- * no se toca nunca más.
+ * La escribe `proxy.ts` con `Set-Cookie` (ver `armarDatosAtribucion` en
+ * `lib/atribucion-cookie.ts`) y la leen las server actions al momento de
+ * convertir. Es first-touch: si la cookie ya existe no se toca nunca más.
  *
  * La cookie usa claves de una letra a propósito. Viaja en CADA request al
  * dominio (incluidos los assets estáticos), así que cada byte se paga

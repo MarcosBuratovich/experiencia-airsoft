@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aColumnas, aMetadata, parsearAtribucion } from "./atribucion";
+import { armarDatosAtribucion } from "./atribucion-cookie";
 
 /** Cookie válida, con las claves cortas que escribe el cliente. */
 const COMPLETA = JSON.stringify({
@@ -141,6 +142,58 @@ describe("parsearAtribucion", () => {
     // contenerlo: parsearAtribucion nunca puede propagar una excepcion.
     expect(() => parsearAtribucion("%")).not.toThrow();
     expect(parsearAtribucion("%")).toBeNull();
+  });
+});
+
+describe("armarDatosAtribucion (proxy) → parsearAtribucion (server actions)", () => {
+  it("las claves que escribe el proxy son exactamente las que lee parsearAtribucion", () => {
+    // Esto es lo que garantiza que mover la escritura de la cookie del
+    // navegador (CapturaAtribucion, eliminado) al proxy no cambió el
+    // contrato: proxy.ts arma el objeto con armarDatosAtribucion() y lo
+    // manda tal cual a response.cookies.set(); parsearAtribucion() tiene
+    // que poder leerlo sin ningún ajuste.
+    const q = new URLSearchParams({
+      utm_source: "google",
+      utm_medium: "cpc",
+      utm_campaign: "Black Friday",
+      fbclid: "IwAR0abc-DEF_123",
+    });
+    const datos = armarDatosAtribucion({
+      searchParams: q,
+      refererHeader: "https://www.google.com/search",
+      pathname: "/precios",
+      ahora: new Date("2026-08-26T10:00:00.000Z"),
+    });
+
+    const raw = JSON.stringify(datos);
+    expect(parsearAtribucion(raw)).toEqual({
+      utm_source: "google",
+      utm_medium: "cpc",
+      utm_campaign: "Black Friday",
+      fbclid: "IwAR0abc-DEF_123",
+      referrer_host: "www.google.com",
+      landing_path: "/precios",
+      first_seen_at: "2026-08-26T10:00:00.000Z",
+    });
+  });
+
+  it("un pageview directo (sin utms ni referrer externo) igual produce una atribucion valida", () => {
+    const datos = armarDatosAtribucion({
+      searchParams: new URLSearchParams(),
+      refererHeader: null,
+      pathname: "/",
+      ahora: new Date("2026-08-26T10:00:00.000Z"),
+    });
+    const raw = JSON.stringify(datos);
+    expect(parsearAtribucion(raw)).toEqual({
+      utm_source: null,
+      utm_medium: null,
+      utm_campaign: null,
+      fbclid: null,
+      referrer_host: null,
+      landing_path: "/",
+      first_seen_at: "2026-08-26T10:00:00.000Z",
+    });
   });
 });
 
