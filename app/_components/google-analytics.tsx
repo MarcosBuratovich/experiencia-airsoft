@@ -11,7 +11,7 @@ import { GA_ID, sanitizarUrl, track } from "@/lib/ga";
  * router.replace). El page_view los quita ANTES de enviar y deduplica, así la
  * limpieza de URL no genera un segundo page_view.
  */
-const PARAMS_MARCADORES = ["login", "creado"];
+const PARAMS_MARCADORES = ["login", "creado", "confirmado"];
 
 function urlCanonica(href: string): string {
   try {

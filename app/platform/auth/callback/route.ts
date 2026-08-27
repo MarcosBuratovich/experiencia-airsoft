@@ -59,5 +59,12 @@ export async function GET(req: NextRequest) {
   // Sanitizar `next` para evitar open redirect: solo path relativo permitido.
   if (!dest.startsWith("/")) dest = "/partidas";
 
-  return NextResponse.redirect(`${origin}${dest}`, { status: 302 });
+  // Marcador para medir la confirmacion de mail, que es el ultimo tramo
+  // ciego del embudo: hoy quien se registro y nunca confirmo es
+  // indistinguible de quien confirmo y no volvio. Lo limpia
+  // ParamEventTracker con router.replace.
+  const url = new URL(`${origin}${dest}`);
+  if (type === "signup") url.searchParams.set("confirmado", "1");
+
+  return NextResponse.redirect(url.toString(), { status: 302 });
 }
