@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function ClanesRankingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/clanes/ranking");
 
   return (
     <div className="max-w-2xl mx-auto">

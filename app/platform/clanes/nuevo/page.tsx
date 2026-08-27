@@ -6,7 +6,7 @@ import { NuevoClanForm } from "./nuevo-clan-form";
 export default async function NuevoClanPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/clanes/nuevo");
 
   const { count } = await supabase
     .from("profile_clanes")

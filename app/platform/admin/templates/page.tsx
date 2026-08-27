@@ -6,7 +6,7 @@ import { NuevoTemplateForm } from "./nuevo-template-form";
 export default async function TemplatesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/admin/templates");
 
   const { data: profile } = await supabase
     .from("profiles")
