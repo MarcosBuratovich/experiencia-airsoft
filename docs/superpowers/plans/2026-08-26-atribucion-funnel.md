@@ -959,6 +959,12 @@ delete from inscripciones where utm_source = 'test_plan';
 -- y borrar la cuenta de prueba desde el panel de Auth de Supabase
 ```
 
+Y en la consola del navegador, borrar la cookie corrupta que dejó el Step 8 (si no, queda 400 días ensuciando cada request):
+
+```js
+document.cookie = "ea_attr=; domain=.experienciaairsoft.com; path=/; max-age=0";
+```
+
 ---
 
 ## Verificación final del plan
@@ -972,21 +978,30 @@ Cuando esté todo, la pregunta del negocio se responde con esto:
 
 ```sql
 select
-  coalesce(i.utm_source, i.referrer_host, 'directo') as canal,
-  count(*)                                           as reservas,
-  count(*) filter (where c.presente)                 as asistieron,
-  sum(c.pago_monto)                                  as ingreso_real
+  case
+    when i.atribucion_first_seen_at is null
+      then 'sin dato (carga manual / pre-deploy)'
+    else coalesce(i.utm_source, i.referrer_host, 'directo')
+  end                                                              as canal,
+  count(*)                                                         as reservas,
+  count(*) filter (where c.presente)                               as asistieron,
+  sum(c.pago_monto)                                                as ingreso_real,
+  round(100.0 * count(*) filter (where i.atribucion_first_seen_at is not null)
+        / nullif(count(*), 0), 1)                                  as pct_con_dato
 from inscripciones i
 left join checkins c on c.inscripcion_id = i.id
 where i.created_at >= now() - interval '90 days'
+  and i.estado <> 'cancelado'
 group by 1
 order by ingreso_real desc nulls last;
 ```
+
+`pct_con_dato` importa porque separa el ranking de la calidad del dato que lo sostiene: en este negocio la carga manual (walk-ins, WhatsApp) es volumen grande y queda en NULL por diseño, junto con las inscripciones anteriores al deploy. Sin esta columna, `'directo'` gana el ranking por construcción —no porque la gente realmente llegue sin canal, sino porque "no sabemos" y "vino directo" quedan mezclados en el mismo balde— y la conclusión sería falsa. `pct_con_dato` bajo es la señal que le avisa al dueño del negocio que el número de arriba no se puede leer todavía como un ranking de canales real.
 
 ## Lo que este plan deja afuera (a propósito)
 
 - **Fase 2 — pasos intermedios del registro.** Hoy se ve `reservar_click` y se ve `anotarse_partida`, pero nada en el medio. Se planifica después de correr la query de Fase 0, que puede mostrar que la fuga real está en otro lado.
 - **Fase 3 — loop de WhatsApp.** Requiere un cambio operativo, no solo código.
 - **Dashboard en el admin.** SQL primero; panel cuando sepamos qué se mira a diario.
-- **Backfill de filas viejas.** No hay dato de origen para recuperar. Las inscripciones anteriores a este deploy quedan en `NULL` para siempre, y está bien: `NULL` es "no sabemos".
+- **Backfill de filas viejas.** Es falso a medias que no haya nada para recuperar. Para `inscripciones` sí se pierde: no hay dónde estaba guardado el origen antes de este deploy, así que quedan en `NULL` para siempre, y está bien: `NULL` es "no sabemos". Para `profiles` en cambio los registros hechos **entre el deploy del código y la aplicación de la migración** sí son recuperables: `options.data` del `signUp` queda en `auth.users.raw_user_meta_data` para siempre, así que se pueden backfillear con un `update profiles set ... from auth.users where profiles.id = auth.users.id` una vez corrida la migración de la Task 1.
 - **`agregarWalkinAction` y `organizador-actions.ts`.** Esas inscripciones no tienen navegador de origen y deben quedar en `NULL`.
