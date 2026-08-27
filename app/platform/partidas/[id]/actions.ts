@@ -146,8 +146,11 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
 
   let { error } = await supabase.from("inscripciones").insert(conAttr);
   if (error && attr) {
+    // La causa puede ser cupo lleno o un unique constraint, nada que ver
+    // con la atribución; reintentamos sin ella por si acaso lo fuera, sin
+    // afirmar que lo es.
     console.error(
-      "[anotarmeAction] insert con atribución falló, reintento sin ella:",
+      "[anotarmeAction] insert falló, reintento sin atribución por si esa fuera la causa:",
       error.message,
     );
     ({ error } = await supabase.from("inscripciones").insert(base));
