@@ -12,6 +12,7 @@ import { inscripcionAbierta } from "@/lib/partidas";
 import { computarEstadoCuota } from "@/lib/socios";
 import { friendlyError, type FriendlyError } from "@/lib/errors";
 import { enviarEventoMeta } from "@/lib/meta-capi";
+import { aColumnas, leerAtribucion } from "@/lib/atribucion";
 
 const ERR = (input: unknown): { error: FriendlyError } => ({
   error: friendlyError(input),
@@ -122,7 +123,7 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     posicion_waitlist = (wlCount ?? 0) + 1;
   }
 
-  const { error } = await supabase.from("inscripciones").insert({
+  const base = {
     partida_id: partidaId,
     user_id: user.id,
     estado,
@@ -135,7 +136,22 @@ export async function anotarmeAction(partidaId: string, input: AnotarmeInput) {
     precio_alquiler: transf.alquiler,
     precio_fijo_efectivo: efec.total,
     // recargas se asignan despues por el admin durante el check-in
-  });
+  };
+
+  // De dónde vino esta persona la primera vez. Si la migración fase 20
+  // todavía no corrió, o la cookie está corrupta, la inscripción se crea
+  // igual: una reserva jamás se pierde por un tema de analytics.
+  const attr = await leerAtribucion();
+  const conAttr = attr ? { ...base, ...aColumnas(attr) } : base;
+
+  let { error } = await supabase.from("inscripciones").insert(conAttr);
+  if (error && attr) {
+    console.error(
+      "[anotarmeAction] insert con atribución falló, reintento sin ella:",
+      error.message,
+    );
+    ({ error } = await supabase.from("inscripciones").insert(base));
+  }
   if (error) {
     console.error("[partidas actions] supabase falló:", error);
     return ERR(error);
