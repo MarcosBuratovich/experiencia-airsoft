@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { COOKIE_ATRIBUCION, COOKIE_MAX_AGE } from "@/lib/atribucion";
+import { COOKIE_ATRIBUCION, COOKIE_MAX_AGE } from "@/lib/atribucion-cookie";
 import { esHostProduccion } from "@/lib/ga";
 
 /**

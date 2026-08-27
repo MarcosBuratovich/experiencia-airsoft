@@ -1,3 +1,6 @@
+import { cookies } from "next/headers";
+import { COOKIE_ATRIBUCION } from "./atribucion-cookie";
+
 /**
  * Atribución de origen — de dónde vino la persona la PRIMERA vez.
  *
@@ -9,10 +12,7 @@
  * dominio (incluidos los assets estáticos), así que cada byte se paga
  * muchas veces por visita.
  */
-export const COOKIE_ATRIBUCION = "ea_attr";
-
-/** 400 días: el techo que respeta Chrome para cookies. */
-export const COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
+export { COOKIE_ATRIBUCION, COOKIE_MAX_AGE } from "./atribucion-cookie";
 
 export type Atribucion = {
   utm_source: string | null;
@@ -109,15 +109,9 @@ export function parsearAtribucion(
 /**
  * Lee la cookie del request. Wrapper delgado sobre `parsearAtribucion`:
  * toda la lógica que puede fallar está en la función pura.
- *
- * `next/headers` se importa acá adentro (dinámico) y no arriba del
- * archivo: un import estático "envenena" el módulo entero para cualquier
- * bundle de cliente, y `COOKIE_ATRIBUCION`/`COOKIE_MAX_AGE` los necesita
- * `CapturaAtribucion`, un Client Component.
  */
 export async function leerAtribucion(): Promise<Atribucion | null> {
   try {
-    const { cookies } = await import("next/headers");
     const c = await cookies();
     return parsearAtribucion(c.get(COOKIE_ATRIBUCION)?.value);
   } catch {
