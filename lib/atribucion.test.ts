@@ -166,7 +166,13 @@ describe("armarDatosAtribucion (proxy) → parsearAtribucion (server actions)", 
     });
 
     const raw = JSON.stringify(datos);
-    expect(parsearAtribucion(raw)).toEqual({
+    // Fiel a lo que pasa en producción: `response.cookies.set()` encodea
+    // el valor con `encodeURIComponent` para armar el `Set-Cookie`, y el
+    // browser lo devuelve decodeado en el header `Cookie` del próximo
+    // request. Afirmar sobre `raw` a secas no protege de una regresión
+    // real de encoding.
+    const viajado = decodeURIComponent(encodeURIComponent(raw));
+    expect(parsearAtribucion(viajado)).toEqual({
       utm_source: "google",
       utm_medium: "cpc",
       utm_campaign: "Black Friday",
@@ -185,7 +191,8 @@ describe("armarDatosAtribucion (proxy) → parsearAtribucion (server actions)", 
       ahora: new Date("2026-08-26T10:00:00.000Z"),
     });
     const raw = JSON.stringify(datos);
-    expect(parsearAtribucion(raw)).toEqual({
+    const viajado = decodeURIComponent(encodeURIComponent(raw));
+    expect(parsearAtribucion(viajado)).toEqual({
       utm_source: null,
       utm_medium: null,
       utm_campaign: null,
